@@ -1,0 +1,149 @@
+type Site 
+  @versioned
+  @model 
+  @auth(rules: [
+      {allow: groups, groups: ["AdminGroup"], queries: [get, list], mutations: [create, update, delete]},
+      {allow: groups, groups: ["ManagerGroup"], queries: [get, list], mutations: null},
+      {allow: groups, groups: ["AssociateGroup"], queries: [get, list], mutations: null},
+      {allow: groups, groups: ["EngineerGroup"], queries: [get, list], mutations: null}
+    ])
+{
+  id: ID!
+  name: String!
+  area: [Area]! @connection(name: "SiteAreas")
+  description: String
+}
+
+type Area 
+  @versioned
+  @model 
+  @auth(rules: [
+      {allow: groups, groups: ["AdminGroup"], queries: [get, list], mutations: [create, update, delete]},
+      {allow: groups, groups: ["ManagerGroup"], queries: [get, list], mutations: null},
+      {allow: groups, groups: ["AssociateGroup"], queries: [get, list], mutations: null},
+      {allow: groups, groups: ["EngineerGroup"], queries: [get, list], mutations: null}
+    ])
+{
+  id: ID!
+  site: Site! @connection(name: "SiteAreas")
+  name: String! 
+  process: [Process] @connection(name: "AreaProcesses")
+  station: [Station] @connection(name: "AreaStations")
+  description: String
+}
+
+type Process
+  @versioned
+  @model
+  @auth(rules: [
+      {allow: groups, groups: ["AdminGroup"], queries: [get, list], mutations: [create, update, delete]},
+      {allow: groups, groups: ["ManagerGroup"], queries: [get, list], mutations: null},
+      {allow: groups, groups: ["AssociateGroup"], queries: [get, list], mutations: null},
+      {allow: groups, groups: ["EngineerGroup"], queries: [get, list], mutations: null}
+    ])
+{
+  id: ID!
+  name: String!
+  description: String!
+  area: Area! @connection(name: "AreaProcesses")
+  event: [Event] @connection(name: "ProcessEvents")
+}
+
+type Event 
+@versioned
+@model(queries: {list: "listEvents", get: "getEvents"}) 
+@auth(rules: [
+      {allow: groups, groups: ["AdminGroup"], queries: [get, list], mutations: [create, update, delete]},
+      {allow: groups, groups: ["ManagerGroup"], queries: [get, list], mutations: null},
+      {allow: groups, groups: ["AssociateGroup"], queries: [get, list], mutations: null},
+      {allow: groups, groups: ["EngineerGroup"], queries: [get, list], mutations: null}
+    ])
+{
+  id: ID!
+  name: String!
+  description: String!
+  type: String
+  priority: Priority!
+  sms: String
+  email: String
+  process: Process! @connection(name: "ProcessEvents")
+}
+
+type Station
+  @versioned
+  @model
+  @auth(rules: [
+      {allow: groups, groups: ["AdminGroup"], queries: [get, list], mutations: [create, update, delete]},
+      {allow: groups, groups: ["ManagerGroup"], queries: [get, list], mutations: null},
+      {allow: groups, groups: ["AssociateGroup"], queries: [get, list], mutations: null},
+      {allow: groups, groups: ["EngineerGroup"], queries: [get, list], mutations: null}
+    ])
+{
+  id: ID!
+  name: String!
+  description: String
+  area: Area! @connection(name: "AreaStations")
+  device: [Device] @connection(name: "StationDevices")
+}
+
+type Device
+  @versioned
+  @model
+  @auth(rules: [
+      {allow: groups, groups: ["AdminGroup"], queries: [get, list], mutations: [create, update, delete]},
+      {allow: groups, groups: ["ManagerGroup"], queries: [get, list], mutations: null},
+      {allow: groups, groups: ["AssociateGroup"], queries: [get, list], mutations: null},
+      {allow: groups, groups: ["EngineerGroup"], queries: [get, list], mutations: null}
+    ])
+{
+  id: ID!
+  name: String!
+  description: String
+  station: Station! @connection(name: "StationDevices")
+}
+
+type Issue @model(queries: {list: "listIssue", get: "getIssue"}) 
+ @key (fields: ["id"])
+ @key (name: "ByStatusOnly", fields: ["status", "created"], queryField: "issuesByStatusOnly")
+ @key (name: "BySiteAreaStatus", fields: ["siteName", "areaName", "status", "processName", "eventDescription" "stationName", "deviceName", "created"], queryField: "issuesBySiteAreaStatus")
+ @key (name: "ByDevice", fields: ["siteName", "areaName", "status", "processName", "stationName", "deviceName", "created"], queryField: "issuesByDevice")
+ @auth(rules: [
+ {allow: groups, groups: ["AdminGroup"], queries: [get, list], mutations: [create, update, delete]},
+ {allow: groups, groups: ["ManagerGroup"], queries: [get, list], mutations: [create, update, delete]},
+ {allow: groups, groups: ["AssociateGroup"], queries: [get, list], mutations: [create, update, delete]},
+ {allow: groups, groups: ["EngineerGroup"], queries: [get, list], mutations: [create, update, delete]},
+ {allow: public, provider: iam, queries: [get, list], mutations: [create, update, delete]}
+ ])
+ @versioned {
+    id: ID!
+    eventDescription: String!
+    type: String
+    priority: Priority!
+    siteName: String!
+    processName: String!
+    areaName: String!
+    stationName: String
+    deviceName: String
+    created: AWSDateTime!
+    acknowledged: AWSDateTime
+    closed: AWSDateTime
+    resolutionTime: Int
+    acknowledgedTime: Int
+    status: Status!
+}
+
+enum Status {
+    open
+    acknowledged
+    closed
+    inprogress
+    rejected
+}
+
+enum Priority {
+    low
+    medium
+    high
+    critical
+}
+

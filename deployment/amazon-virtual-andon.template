@@ -1,0 +1,1092 @@
+# Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Amazon Software License (the "License").
+# You may not use this file except in compliance with the License.
+# A copy of the License is located at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# or in the "license" file accompanying this file. This file is distributed
+# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language governing
+# permissions and limitations under the License.
+
+Description: "(SO0071) - The AWS CloudFormation template for deployment of the %%SOLUTION_NAME%%. Version %%VERSION%%"
+
+Parameters:
+  CodeCommitRepository:
+    Description: Enter the repository name that will be created
+    Type: String
+    AllowedPattern: "[a-zA-Z0-9-]+"
+    Default: andon-reference-architecture
+
+Mappings:
+  BuildEnv:
+    Images:
+      Ubuntu: "aws/codebuild/nodejs:8.11.0"
+      Ruby: "aws/codebuild/ruby:2.5.1"
+    Metrics:
+      SendAnonymousUsage: "true"
+      SolutionId: "SO0071"
+      SolutionMetricsEndpoint: "https://metrics.awssolutionsbuilder.com/page"
+      SolutionVersion: "%%VERSION%%"
+  SourceCode:
+    DistSource:
+      S3Bucket: "%%BUCKET_NAME%%" # asset bucket
+      KeyPrefix: "%%SOLUTION_NAME%%/%%VERSION%%"
+  Amplify:
+    SSMParameter:
+      AccessKey: "/Andon/IAM/AccessKey"
+      SecretKey: "/Andon/IAM/SecretKey"
+      GraphQLEndpoint: "/Andon/GraphQL/Endpoint"
+      GraphQLApiId: "/Andon/GraphQL/ApiId"
+      CognitoAuthRole: "/Andon/Cognito/AuthRole"
+      StackName: "/Andon/Amplify/StackName"
+      AdminEmail: "/Andon/Cognito/AdminEmail"
+      CognitoUserPool: "/Andon/Cognito/UserPoolId"
+      CognitoStack: "/Andon/Cognito/StackName"
+
+Resources:
+  # CICD code resources [START]
+  DevOutputBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+      LoggingConfiguration:
+        DestinationBucketName: !Ref S3LoggingBucket
+
+  AndonRepo:
+    Type: AWS::CodeCommit::Repository
+    DeletionPolicy: Retain
+    Properties:
+      RepositoryName: !Ref CodeCommitRepository
+      RepositoryDescription: "ANDON reference architecture"
+
+  ArtifactS3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+      LoggingConfiguration:
+        DestinationBucketName: !Ref S3LoggingBucket
+
+  S3LoggingBucket:
+    DeletionPolicy: Retain
+    Type: AWS::S3::Bucket
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: "This S3 bucket is used as the destination for storing access logs'"
+    Properties:
+      BucketName: !Sub andon-access-logs-${AWS::AccountId}-${AWS::Region}
+      AccessControl: LogDeliveryWrite
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  DevCodePipeline:
+    Type: AWS::CodePipeline::Pipeline
+    DependsOn: SSMCustomResource
+    Properties:
+      Name: !Sub ${CodeCommitRepository}
+      RoleArn: !Sub ${CodePipelineRole.Arn}
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactS3Bucket
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: CodeCommit
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Version: "1"
+                Provider: CodeCommit
+              OutputArtifacts:
+                - Name: SourceApp
+              Configuration:
+                RepositoryName: !Ref CodeCommitRepository
+                BranchName: master
+                PollForSourceChanges: false
+        - Name: AmplifyDeployment
+          Actions:
+            - Name: AmplifyDeployment
+              InputArtifacts:
+                - Name: SourceApp
+              OutputArtifacts:
+                - Name: BuiltOutput
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: "1"
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildAmplify
+        - Name: AmplifyConfig
+          Actions:
+            - Name: AmplifyConfig
+              InputArtifacts:
+                - Name: BuiltOutput
+              OutputArtifacts:
+                - Name: ConfigOutput
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: "1"
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildAmplifyUpdate
+
+  CodeBuildAmplify:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${CodeCommitRepository}
+      Description: "build project for adding andon auth"
+      ServiceRole: !Sub ${CodeBuildRole.Arn}
+      EncryptionKey: !Sub arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: |
+          version: 0.2
+          phases:
+            install:
+              commands:
+                - node -v
+                - apt-get update
+                - apt-get install expect
+                - apt-get install jq
+                - expect -version
+                - cd source/console 
+                - npm i
+                - npm install -g @aws-amplify/cli@3.11.0
+                - amplify --version
+                - pip install awscli --upgrade
+                - aws --version
+            pre_build:
+              commands:
+                - echo "############################################"
+                - echo "## Getting IAM keys for Amplify Project \##"
+                - echo "############################################"
+                - export ACCESS_KEY=$(aws ssm get-parameter --name $ANDON_ACCESS_KEY  --with-decryption --query Parameter.Value --output text)
+                - export SECRET_ACCESS_KEY=$(aws ssm get-parameter --name $ANDON_SECRET_KEY --with-decryption --query Parameter.Value --output text)
+                - echo "############################################"
+                - echo "## Initialize Amplify Project \##"
+                - echo "############################################"
+                - export PROJECT_NAME=ava
+                - chmod +x amplify_headless_init_project.sh
+                - sh ./amplify_headless_init_project.sh $ACCESS_KEY $SECRET_ACCESS_KEY $AWS_REGION $PROJECT_NAME
+                - chmod +x ./amplify_add_api.sh
+                - expect amplify_auth_api.exp
+                - chmod +x ./amplify_add_hosting.sh
+                - expect amplify_add_hosting.exp
+                - amplify status
+            build:
+              commands:
+                - echo "############################################"
+                - echo "######### Deploy Amplify Project \##########"
+                - echo "############################################"
+                - chmod +x ./amplify_headless_publish.sh
+                - sh ./amplify_headless_publish.sh
+                - aws s3 cp amplify/ s3://$DEV_OUTPUT_BUCKET/amplify --recursive
+                - echo "############################################"
+                - echo "########## Update ANDON Config \############"
+                - echo "############################################"
+                - HostingBucket=`jq -r .hosting.S3AndCloudFront.output.HostingBucketName amplify/#current-cloud-backend/amplify-meta.json`
+                - IotEndpoint=$(aws iot describe-endpoint --endpoint-type iot:Data-ATS --output text)
+                - ac=$(sed -e '1,/{/d' -e '/};/,$d' src/aws-exports.js) && echo "const andon_config ={$ac, \"aws_iot_endpoint\":\"wss://$IotEndpoint\", \"aws_iot_policy_name\":\"$IOT_POLICY_NAME\", \"solutions_send_metrics\":\"$SEND_METRICS\", \"solutions_metrics_endpoint\":\"$METRICS_ENDPOINT\", \"solutions_solutionId\":\"$SOLUTION_ID\", \"solutions_solutionUuId\":\"$UUID\",\"solutions_version\":\"$SOLUTION_VERSION\"}" > ./public/assets/andon_config.js
+                - aws s3 cp ./public/assets/andon_config.js s3://$HostingBucket/assets/
+                - aws s3api put-bucket-encryption --bucket $HostingBucket --server-side-encryption-configuration {\"Rules\":[{\"ApplyServerSideEncryptionByDefault\":{\"SSEAlgorithm\":\"AES256\"}}]}
+                - aws s3api put-bucket-versioning --bucket $HostingBucket --versioning-configuration Status=Enabled
+                - aws s3api put-public-access-block --bucket $HostingBucket --public-access-block-configuration "{\"BlockPublicAcls\":true,\"IgnorePublicAcls\":true,\"BlockPublicPolicy\":true,\"RestrictPublicBuckets\":true}"
+                - aws s3api put-bucket-logging --bucket $HostingBucket --bucket-logging-status "{\"LoggingEnabled\":{\"TargetBucket\":\"$S3_LOGGING_BUCKET\",\"TargetPrefix\":\"hostingBucketAccessLogs\"}}"
+                - DeploymentBucket=`jq -r .providers.awscloudformation.DeploymentBucketName amplify/#current-cloud-backend/amplify-meta.json`
+                - aws s3api put-bucket-encryption --bucket $DeploymentBucket --server-side-encryption-configuration {\"Rules\":[{\"ApplyServerSideEncryptionByDefault\":{\"SSEAlgorithm\":\"AES256\"}}]}
+                - aws s3api put-bucket-versioning --bucket $DeploymentBucket --versioning-configuration Status=Enabled
+                - aws s3api put-public-access-block --bucket $DeploymentBucket --public-access-block-configuration "{\"BlockPublicAcls\":true,\"IgnorePublicAcls\":true,\"BlockPublicPolicy\":true,\"RestrictPublicBuckets\":true}"
+                - aws s3api put-bucket-logging --bucket $DeploymentBucket --bucket-logging-status "{\"LoggingEnabled\":{\"TargetBucket\":\"$S3_LOGGING_BUCKET\",\"TargetPrefix\":\"deploymentBucketAccessLogs\"}}"
+            post_build:
+              commands:
+                - echo "############################################"
+                - echo "#### Update SSM Parameters with Config \####"
+                - echo "############################################"
+                - CognitoAuthRole=`jq -r .providers.awscloudformation.AuthRoleArn amplify/#current-cloud-backend/amplify-meta.json`
+                - CognitoAuthRoleName=`jq -r .providers.awscloudformation.AuthRoleName amplify/#current-cloud-backend/amplify-meta.json`
+                - StackName=`jq -r .providers.awscloudformation.StackName amplify/#current-cloud-backend/amplify-meta.json`
+                - AuthP=`jq -r '.auth | keys[] as $k | "\($k)"' amplify/#current-cloud-backend/amplify-meta.json`
+                - CognitoUserPoolId=`jq -r .auth.$AuthP.output.UserPoolId amplify/#current-cloud-backend/amplify-meta.json`
+                - GraphQLEndpoint=`jq -r .api.$PROJECT_NAME.output.GraphQLAPIEndpointOutput amplify/#current-cloud-backend/amplify-meta.json`
+                - GraphQLApiId=`jq -r .api.$PROJECT_NAME.output.GraphQLAPIIdOutput amplify/#current-cloud-backend/amplify-meta.json`
+                - aws ssm put-parameter --cli-input-json '{"Name":"'$GRAPHQL_ENDPOINT_KEY'","Value":"'$GraphQLEndpoint'","Type":"SecureString","Overwrite":true}'
+                - aws ssm put-parameter --name $GRAPHQL_API_KEY --type "SecureString" --value $GraphQLApiId --overwrite
+                - aws ssm put-parameter --name $COGNITO_AUTH_ROLE_KEY --type "SecureString" --value $CognitoAuthRole --overwrite
+                - aws ssm put-parameter --name $AMPLIFY_STACK_NAME --type "SecureString" --value $StackName --overwrite
+                - aws ssm put-parameter --name $USER_POOL_ID --type "SecureString" --value $CognitoUserPoolId --overwrite
+                - echo "############################################"
+                - echo "## Update Cognito Auth Role Permissions \###"
+                - echo "############################################"
+                - AccountId=$(echo $CognitoAuthRole | awk -F ':' '{print $5}')
+                - aws cognito-idp update-user-pool --user-pool-id $CognitoUserPoolId --auto-verified-attributes email --admin-create-user-config AllowAdminCreateUserOnly=true --sms-verification-message "Your verification code is {####}" --email-verification-message "Your verification code is {####}" --email-verification-subject "Your verification code"
+                - aws iam put-role-policy --role-name $CognitoAuthRoleName --policy-name "AndonSNSPolicy" --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":{\"Effect\":\"Allow\",\"Action\":[\"sns:CreateTopic\",\"sns:Subscribe\"],\"Resource\":\"arn:aws:sns:$AWS_REGION:$AccountId:*\"}}"
+                - aws iam attach-role-policy --role-name $CognitoAuthRoleName --policy-arn arn:aws:iam::aws:policy/AWSIoTConfigAccess
+                - aws iam attach-role-policy --role-name $CognitoAuthRoleName --policy-arn arn:aws:iam::aws:policy/AWSIoTDataAccess
+                - aws iam attach-role-policy --role-name $CognitoAuthRoleName --policy-arn arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess
+          artifacts:
+            files:
+              - deployment/**/*
+              - source/**/*
+              - LICENSE.txt
+              - NOTICE.txt
+              - README.md
+              - CODE_OF_CONDUCT.md
+              - CONTRIBUTING.md
+              - CHANGELOG.md
+              - .github/PULL_REQUEST_TEMPLATE.md
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: !FindInMap [BuildEnv, Images, Ubuntu]
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+          - Name: DEV_OUTPUT_BUCKET
+            Value: !Ref DevOutputBucket
+          - Name: SOLUTION_NAME
+            Value: "%%SOLUTION_NAME%%"
+          - Name: ANDON_ACCESS_KEY
+            Value: !FindInMap ["Amplify", "SSMParameter", "AccessKey"]
+          - Name: ANDON_SECRET_KEY
+            Value: !FindInMap ["Amplify", "SSMParameter", "SecretKey"]
+          - Name: COGNITO_AUTH_ROLE_KEY
+            Value: !FindInMap ["Amplify", "SSMParameter", "CognitoAuthRole"]
+          - Name: AMPLIFY_STACK_NAME
+            Value: !FindInMap ["Amplify", "SSMParameter", "StackName"]
+          - Name: USER_POOL_ID
+            Value: !FindInMap ["Amplify", "SSMParameter", "CognitoUserPool"]
+          - Name: GRAPHQL_ENDPOINT_KEY
+            Value: !FindInMap ["Amplify", "SSMParameter", "GraphQLEndpoint"]
+          - Name: GRAPHQL_API_KEY
+            Value: !FindInMap ["Amplify", "SSMParameter", "GraphQLApiId"]
+          - Name: IOT_POLICY_NAME
+            Value: !Ref AVAIoTResourcePolicy
+          - Name: S3_LOGGING_BUCKET
+            Value: !Ref S3LoggingBucket
+          - Name: UUID
+            Value: !GetAtt GetUUID.UUID
+          - Name: SEND_METRICS
+            Value: !FindInMap ["BuildEnv", "Metrics", "SendAnonymousUsage"]
+          - Name: SOLUTION_ID
+            Value: !FindInMap ["BuildEnv", "Metrics", "SolutionId"]
+          - Name: METRICS_ENDPOINT
+            Value: !FindInMap ["BuildEnv", "Metrics", "SolutionMetricsEndpoint"]
+          - Name: SOLUTION_VERSION
+            Value: !FindInMap ["BuildEnv", "Metrics", "SolutionVersion"]
+      TimeoutInMinutes: 120
+      Artifacts:
+        Name: !Sub ${CodeCommitRepository}
+        Type: CODEPIPELINE
+
+  CodeBuildAmplifyUpdate:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${CodeCommitRepository}-Cognito
+      Description: "build project for creating andon cognito resources"
+      ServiceRole: !Sub ${CodeBuildRole.Arn}
+      EncryptionKey: !Sub arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !Sub |
+          version: 0.2
+          phases:
+            install:
+              commands:
+                - node -v
+                - pip install awscli --upgrade
+                - aws --version
+                - apt-get update
+                - apt-get install jq
+            pre_build:
+              commands:
+                - echo "nothing to do"
+            build:
+              commands:
+                - echo "nothing to do"
+            post_build:
+              commands:
+                - echo "############################################"
+                - echo "######## Create Cognito Resources \#########"
+                - echo "############################################"
+                - CognitoUserPoolId=$(aws ssm get-parameter --name $USER_POOL_ID --with-decryption --query Parameter.Value --output text)
+                - AdminEmail=$(aws ssm get-parameter --name $ADMIN_EMAIL --with-decryption --query Parameter.Value --output text)
+                - aws cloudformation create-stack --stack-name ava-cognito-user --template-body file://deployment/andon-admin-user.template --parameters ParameterKey=Email,ParameterValue=$AdminEmail ParameterKey=UserPoolId,ParameterValue=$CognitoUserPoolId
+                - aws ssm put-parameter --name $COGNITO_STACK --type "SecureString" --value ava-cognito-user --overwrite
+                - aws cloudformation wait stack-create-complete --stack-name ava-cognito-user
+                - echo "############################################"
+                - echo "###### Update buildspecs for Updates \######"
+                - echo "############################################"
+                - cd source/console
+                - HostingBucket=`jq -r .hosting.S3AndCloudFront.output.HostingBucketName amplify/#current-cloud-backend/amplify-meta.json`
+                - aws codebuild update-project --name ${CodeCommitRepository} --source "{\"type\":\"CODEPIPELINE\", \"buildspec\":\"version:\n  0.2\nphases:\n  install:\n    runtime-versions:\n      nodejs:\n        10\n    commands:\n      - node -v\n      - cd deployment/manifest-generator\n      - npm i\n      - cd ../../source/console\n      - npm i\n      - pip install awscli --upgrade\n      - aws --version\n  build:\n    commands:\n      - npm run build\n      - node ../../deployment/manifest-generator/app.js --target build/ --output build/site-manifest.json\n      - aws s3 sync build/ s3://$HostingBucket --exclude '*assets/andon_config.js'\nartifacts:\n  files:\n    - deployment/**/*\n    - source/*\n    - LICENSE.txt\n    - NOTICE.txt\n    - README.md\n    - CODE_OF_CONDUCT.md\n    - CONTRIBUTING.md\n    - CHANGELOG.md\n    - .github/PULL_REQUEST_TEMPLATE.md\", \"insecureSsl\":false}" --region $AWS_REGION
+                - aws codebuild update-project --name ${CodeCommitRepository}-Cognito --source "{\"type\":\"CODEPIPELINE\", \"buildspec\":\"version:\n  0.2\nphases:\n  install:\n    runtime-versions:\n      nodejs:\n        10\n    commands:\n      - echo 'do nothing'\nartifacts:\n  files:\n    - deployment/**/*\n    - source/*\n    - LICENSE.txt\n    - NOTICE.txt\n    - README.md\n    - CODE_OF_CONDUCT.md\n    - CONTRIBUTING.md\n    - CHANGELOG.md\n    - .github/PULL_REQUEST_TEMPLATE.md\", \"insecureSsl\":false}" --region $AWS_REGION
+          artifacts:
+            files:
+              - deployment/**/*
+              - source/**/*
+              - LICENSE.txt
+              - NOTICE.txt
+              - README.md
+              - CODE_OF_CONDUCT.md
+              - CONTRIBUTING.md
+              - CHANGELOG.md
+              - .github/PULL_REQUEST_TEMPLATE.md
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: !FindInMap [BuildEnv, Images, Ubuntu]
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+          - Name: USER_POOL_ID
+            Value: !FindInMap ["Amplify", "SSMParameter", "CognitoUserPool"]
+          - Name: ADMIN_EMAIL
+            Value: !FindInMap ["Amplify", "SSMParameter", "AdminEmail"]
+          - Name: COGNITO_STACK
+            Value: !FindInMap ["Amplify", "SSMParameter", "CognitoStack"]
+      Artifacts:
+        Name: !Sub ${CodeCommitRepository}
+        Type: CODEPIPELINE
+  # CICD code* resources [END]
+
+  # CICD helper resources [START]
+  CICDHelper:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Description: "ANDON CICD helper"
+      Code:
+        S3Bucket:
+          !Join [
+            "-",
+            [
+              !FindInMap ["SourceCode", "DistSource", "S3Bucket"],
+              Ref: "AWS::Region",
+            ],
+          ]
+        S3Key:
+          !Join [
+            "/",
+            [
+              !FindInMap ["SourceCode", "DistSource", "KeyPrefix"],
+              "ava-cicd.zip",
+            ],
+          ]
+      Handler: index.handler
+      Runtime: nodejs10.x
+      Role: !GetAtt CICDHelperRole.Arn
+      Timeout: 300
+      MemorySize: 256
+      Environment:
+        Variables:
+          SOLUTION_NAME: "%%SOLUTION_NAME%%"
+          CODE_URL: !Join
+            - ""
+            - - !Sub https://s3.${AWS::Region}.amazonaws.com/
+              - !FindInMap ["SourceCode", "DistSource", "S3Bucket"]
+              - !Sub -${AWS::Region}/
+              - !FindInMap ["SourceCode", "DistSource", "KeyPrefix"]
+              - /amazon-virtual-andon.zip
+          CODECOMMIT_REPO: !Sub ${AndonRepo.Name}
+          LOGGING_LEVEL: 2
+  # CICD helper resources [END]
+
+  # Customer resources [START]
+  CICDCustomResource:
+    Type: "Custom::CreateCommit"
+    DependsOn: CICDHelperPolicy
+    Properties:
+      ServiceToken: !GetAtt CICDHelper.Arn
+
+  SSMCustomResource:
+    Type: "Custom::CreateSSMParameter"
+    DependsOn: CICDCustomResource
+    Properties:
+      ServiceToken: !GetAtt CICDHelper.Arn
+      ANDON_ACCESS_KEY: !FindInMap ["Amplify", "SSMParameter", "AccessKey"]
+      ANDON_SECRET_KEY: !FindInMap ["Amplify", "SSMParameter", "SecretKey"]
+      GRAPHQL_ENDPOINT_KEY:
+        !FindInMap ["Amplify", "SSMParameter", "GraphQLEndpoint"]
+      GRAPHQL_API_KEY: !FindInMap ["Amplify", "SSMParameter", "GraphQLApiId"]
+      COGNITO_AUTH_ROLE_KEY:
+        !FindInMap ["Amplify", "SSMParameter", "CognitoAuthRole"]
+      STACK_NAME: !FindInMap ["Amplify", "SSMParameter", "StackName"]
+      ADMIN_EMAIL: !FindInMap ["Amplify", "SSMParameter", "AdminEmail"]
+      USER_POOL_ID: !FindInMap ["Amplify", "SSMParameter", "CognitoUserPool"]
+      COGNITO_STACK: !FindInMap ["Amplify", "SSMParameter", "CognitoStack"]
+
+  CICDDeleteStack:
+    Type: "Custom::DeleteStack"
+    DependsOn: CICDHelperPolicy
+    Properties:
+      ServiceToken: !GetAtt CICDHelper.Arn
+      STACK_NAME: !FindInMap ["Amplify", "SSMParameter", "StackName"]
+      COGNITO_STACK: !FindInMap ["Amplify", "SSMParameter", "CognitoStack"]
+      COGNITO_AUTH_ROLE_KEY:
+        !FindInMap ["Amplify", "SSMParameter", "CognitoAuthRole"]
+
+  GetUUID:
+    Type: "Custom::UUID"
+    DependsOn: CICDHelperPolicy
+    Properties:
+      ServiceToken: !GetAtt CICDHelper.Arn
+
+  # Customer resources [START]
+
+  # IAM resources [START]
+  CodePipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument: |
+        {
+            "Statement": [{
+                "Action": "sts:AssumeRole",
+                "Effect": "Allow",
+                "Principal": {
+                    "Service": "codepipeline.amazonaws.com"
+                }
+            }]
+        }
+      Policies:
+        - PolicyName: !Sub ${CodeCommitRepository}-codepipeline
+          PolicyDocument: !Sub |
+            {
+                "Statement": [
+                    {
+                        "Action": [ "s3:GetBucketVersioning" ],
+                        "Resource": [ "arn:aws:s3:::${ArtifactS3Bucket}" ],
+                        "Effect": "Allow"
+                    },
+                    {
+                        "Action": [
+                            "s3:PutObject",
+                            "s3:GetObject",
+                            "S3:GetObjectVersion"
+                        ],
+                        "Resource": [
+                            "arn:aws:s3:::${ArtifactS3Bucket}/*"
+                        ],
+                        "Effect": "Allow"
+                    },
+                    {
+                        "Action": [
+                            "codecommit:BatchGetRepositories",
+                            "codecommit:UploadArchive",
+                            "codecommit:Get*",
+                            "codecommit:List*",
+                            "codecommit:GitPull"
+                        ],
+                        "Resource": [
+                          "arn:aws:codecommit:${AWS::Region}:${AWS::AccountId}:${CodeCommitRepository}"
+                          ],
+                        "Effect": "Allow"
+                    },
+                    {
+                        "Action": [
+                            "codebuild:BatchGetBuilds",
+                            "codebuild:StartBuild"
+                        ],
+                        "Resource": [
+                            "arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:project/${CodeBuildAmplify}",
+                            "arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:project/${CodeBuildAmplifyUpdate}"
+                        ],
+                        "Effect": "Allow"
+                    }
+                ]
+            }
+
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument: |
+        {
+            "Statement": [{
+                "Action": "sts:AssumeRole",
+                "Effect": "Allow",
+                "Principal": {
+                    "Service": "codebuild.amazonaws.com"
+                }
+            }]
+        }
+      Policies:
+        - PolicyName: !Sub ${CodeCommitRepository}-codebuild
+          PolicyDocument: !Sub |
+            {
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Resource": [ "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*" ],
+                        "Action": [
+                            "logs:CreateLogGroup",
+                            "logs:CreateLogStream",
+                            "logs:PutLogEvents"
+                        ]
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action":[
+                          "ssm:GetParameter",
+                          "ssm:PutParameter"
+                        ],
+                        "Resource": ["arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*"],
+                        "Condition": {
+                        "StringLike": {
+                            "ssm:ResourceTag/SOLUTION_NAME": [
+                                "%%SOLUTION_NAME%%"
+                            ]
+                        }
+                      }
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Resource": [
+                          "arn:aws:s3:::${ArtifactS3Bucket}/*",
+                          "arn:aws:s3:::${DevOutputBucket}/*",
+                          "arn:aws:s3:::${DevOutputBucket}"
+                        ],
+                        "Action": [
+                          "s3:GetObject",
+                          "s3:GetObjectVersion",
+                          "s3:PutObject",
+                          "s3:ListObjects",
+                          "s3:ListBucket"
+                        ]
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Resource": [
+                          "arn:aws:s3:::*"
+                        ],
+                        "Action": [
+                          "s3:PutObject",
+                          "s3:PutObjectAcl",
+                          "s3:PutBucketLogging",
+                          "s3:PutEncryptionConfiguration",
+                          "s3:PutBucketVersioning",
+                          "s3:PutBucketPublicAccessBlock",
+                          "s3:ListBucket",
+                          "s3:ListObjects",
+                          "s3:ListObjectsV2"
+                        ]
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Resource": [
+                          "*"
+                        ],
+                        "Action": [
+                          "iot:DescribeEndpoint"
+                        ]
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action":[
+                          "iam:PutRolePolicy",
+                          "iam:AttachRolePolicy"
+                        ],
+                        "Resource": ["arn:aws:iam::${AWS::AccountId}:role/*"]
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action":[
+                          "cognito-idp:AdminCreateUser",
+                          "cognito-idp:CreateGroup",
+                          "cognito-idp:AdminAddUserToGroup",
+                          "cognito-idp:UpdateUserPool"
+                        ],
+                        "Resource": ["arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/*"]
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action":[
+                          "cloudformation:CreateStack",
+                          "cloudformation:DescribeStacks"
+                        ],
+                        "Resource": ["arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/*"]
+                    },
+                    {
+                        "Effect": "Allow",
+                        "Action":[
+                          "codebuild:UpdateProject"
+                        ],
+                        "Resource": [
+                          "arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:project/${CodeCommitRepository}-Cognito",
+                          "arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:project/${CodeCommitRepository}"
+                        ]
+                    }
+                  ]
+            }
+
+  CICDHelperRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+
+  CICDHelperPolicy:
+    Type: "AWS::IAM::ManagedPolicy"
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W13
+            reason: "Reviewed, actions split per service, and which cannot be applied at resource level. Because of Amplify deployment we do not know the exact resource ARN"
+          - id: F5
+            reason: "Reviewed, need permissions to delete IAM resources"
+    Properties:
+      Description: "Policy for the Andon CICD Lambda function."
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "logs:CreateLogGroup"
+              - "logs:CreateLogStream"
+              - "logs:PutLogEvents"
+            Resource:
+              - !Join [
+                  "",
+                  [
+                    "arn:aws:logs:",
+                    Ref: "AWS::Region",
+                    ":",
+                    Ref: "AWS::AccountId",
+                    ":log-group:/aws/lambda/",
+                    !Ref CICDHelper,
+                    ":*",
+                  ],
+                ]
+          - Effect: "Allow"
+            Action:
+              - "codecommit:CreateCommit"
+              - "codecommit:PutFile"
+              - "codecommit:GetBranch"
+            Resource:
+              - !Sub ${AndonRepo.Arn}
+          - Effect: "Allow"
+            Action:
+              - "cloudformation:DeleteStack"
+              - "cloudformation:Describe*"
+              - "cloudformation:Delete*"
+            Resource:
+              - !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:*"
+          - Effect: "Allow"
+            Action:
+              - "ssm:GetParameter"
+              - "ssm:PutParameter"
+              - "ssm:GetParameters"
+              - "ssm:AddTagsToResource"
+            Resource:
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*Andon*
+          - Effect: "Allow"
+            Action:
+              - "iam:DeleteRolePolicy"
+              - "iam:DetachRolePolicy"
+              - "iam:DeleteRole"
+            Resource:
+              - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
+          - Effect: "Allow"
+            Action:
+              - "cognito-idp:DeleteGroup"
+              - "cognito-idp:AdminRemoveUserFromGroup"
+              - "cognito-idp:AdminDeleteUser"
+              - "cognito-idp:DeleteUserPoolClient"
+              - "cognito-idp:DeleteUserPool"
+            Resource:
+              - !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/*"
+          - Effect: "Allow"
+            Action:
+              - "cognito-identity:SetIdentityPoolRoles"
+              - "cognito-identity:DeleteIdentityPool"
+            Resource:
+              - !Sub "arn:aws:cognito-identity:${AWS::Region}:${AWS::AccountId}:identitypool/*"
+          - Effect: "Allow"
+            Action:
+              - "lambda:InvokeFunction"
+              - "lambda:DeleteFunction"
+            Resource:
+              - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:*"
+          - Effect: "Allow"
+            Action:
+              - "cloudfront:GetDistribution"
+              - "cloudfront:GetCloudFrontOriginAccessIdentityConfig"
+              - "cloudfront:UpdateDistribution"
+              - "cloudfront:DeleteCloudFrontOriginAccessId"
+              - "cloudfront:DeleteDistribution"
+              - "cloudfront:DeleteCloudFrontOriginAccessIdentity"
+            Resource:
+              - !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/*"
+              - !Sub "arn:aws:cloudfront::${AWS::AccountId}:origin-access-identity/*"
+          - Effect: "Allow"
+            Action:
+              - "appsync:DeleteResolver"
+              - "appsync:DeleteDataSource"
+              - "appsync:DeleteGraphqlApi"
+            Resource:
+              - !Sub "arn:aws:appsync:${AWS::Region}:${AWS::AccountId}:*"
+          - Effect: "Allow"
+            Action:
+              - "dynamodb:DeleteTable"
+              - "dynamodb:DescribeTable"
+            Resource:
+              - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*"
+          - Effect: "Allow"
+            Action:
+              - "s3:DeleteBucketPolicy"
+            Resource:
+              - !Sub "arn:aws:s3:::*"
+      Roles:
+        - Ref: "CICDHelperRole"
+  # IAM resources [END]
+
+  # Amplify resources [START]
+  AndonAmplifyGroup:
+    Type: AWS::IAM::Group
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: F3
+            reason: amplify needed permissions, https://aws-amplify.github.io/docs/cli-toolchain/usage#iam-policy-for-the-cli
+    Properties:
+      Path: "/"
+      Policies:
+        - PolicyName: AndonAmplifyPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - appsync:*
+                  - apigateway:POST
+                  - apigateway:DELETE
+                  - apigateway:PATCH
+                  - apigateway:PUT
+                  - cloudformation:CreateStack
+                  - cloudformation:CreateStackSet
+                  - cloudformation:DeleteStack
+                  - cloudformation:DeleteStackSet
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:DescribeStackResource
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:DescribeStackSet
+                  - cloudformation:DescribeStackSetOperation
+                  - cloudformation:DescribeStacks
+                  - cloudformation:UpdateStack
+                  - cloudformation:UpdateStackSet
+                  - cloudfront:CreateCloudFrontOriginAccessIdentity
+                  - cloudfront:CreateDistribution
+                  - cloudfront:DeleteCloudFrontOriginAccessIdentity
+                  - cloudfront:DeleteDistribution
+                  - cloudfront:GetCloudFrontOriginAccessIdentity
+                  - cloudfront:GetCloudFrontOriginAccessIdentityConfig
+                  - cloudfront:GetDistribution
+                  - cloudfront:GetDistributionConfig
+                  - cloudfront:TagResource
+                  - cloudfront:UntagResource
+                  - cloudfront:UpdateCloudFrontOriginAccessIdentity
+                  - cloudfront:UpdateDistribution
+                  - cognito-identity:CreateIdentityPool
+                  - cognito-identity:DeleteIdentityPool
+                  - cognito-identity:DescribeIdentity
+                  - cognito-identity:DescribeIdentityPool
+                  - cognito-identity:SetIdentityPoolRoles
+                  - cognito-identity:UpdateIdentityPool
+                  - cognito-idp:CreateUserPool
+                  - cognito-idp:CreateUserPoolClient
+                  - cognito-idp:DeleteUserPool
+                  - cognito-idp:DeleteUserPoolClient
+                  - cognito-idp:DescribeUserPool
+                  - cognito-idp:UpdateUserPool
+                  - cognito-idp:UpdateUserPoolClient
+                  - dynamodb:CreateTable
+                  - dynamodb:DeleteItem
+                  - dynamodb:DeleteTable
+                  - dynamodb:DescribeTable
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:UpdateTable
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:DeleteRolePolicy
+                  - iam:GetRole
+                  - iam:GetUser
+                  - iam:PassRole
+                  - iam:PutRolePolicy
+                  - iam:UpdateRole
+                  - iam:GetRolePolicy
+                  - lambda:AddPermission
+                  - lambda:CreateFunction
+                  - lambda:DeleteFunction
+                  - lambda:GetFunction
+                  - lambda:GetFunctionConfiguration
+                  - lambda:InvokeAsync
+                  - lambda:InvokeFunction
+                  - lambda:RemovePermission
+                  - lambda:UpdateFunctionCode
+                  - lambda:UpdateFunctionConfiguration
+                  - s3:*
+                Resource:
+                  - "*"
+
+  AndonAmplifyUser:
+    Type: AWS::IAM::User
+    Properties:
+      Groups:
+        - !Ref AndonAmplifyGroup
+  # Amplify resources [END]
+
+  # CloudWatch resources [START]
+  AmazonCloudWatchEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source:
+          - aws.codecommit
+        detail-type:
+          - "CodeCommit Repository State Change"
+        resources:
+          - !Join [
+              "",
+              [
+                "arn:aws:codecommit:",
+                !Ref "AWS::Region",
+                ":",
+                !Ref "AWS::AccountId",
+                ":",
+                !Ref CodeCommitRepository,
+              ],
+            ]
+        detail:
+          event:
+            - referenceCreated
+            - referenceUpdated
+          referenceType:
+            - branch
+          referenceName:
+            - master
+      Targets:
+        - Arn:
+            !Join [
+              "",
+              [
+                "arn:aws:codepipeline:",
+                !Ref "AWS::Region",
+                ":",
+                !Ref "AWS::AccountId",
+                ":",
+                !Ref DevCodePipeline,
+              ],
+            ]
+          RoleArn: !GetAtt AmazonCloudWatchEventRole.Arn
+          Id: codepipeline-andon
+
+  AmazonCloudWatchEventRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - events.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: cwe-pipeline-execution
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: codepipeline:StartPipelineExecution
+                Resource:
+                  !Join [
+                    "",
+                    [
+                      "arn:aws:codepipeline:",
+                      !Ref "AWS::Region",
+                      ":",
+                      !Ref "AWS::AccountId",
+                      ":",
+                      !Ref DevCodePipeline,
+                    ],
+                  ]
+  # CloudWatch resources [END]
+
+  AVAHandleIssuesFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: AVA function to handle issues
+      Code:
+        S3Bucket:
+          !Join [
+            "-",
+            [
+              !FindInMap ["SourceCode", "DistSource", "S3Bucket"],
+              Ref: "AWS::Region",
+            ],
+          ]
+        S3Key:
+          !Join [
+            "/",
+            [
+              !FindInMap ["SourceCode", "DistSource", "KeyPrefix"],
+              "ava-issue-handler.zip",
+            ],
+          ]
+      Handler: index.handler
+      Role:
+        Fn::GetAtt: [AVAHandleIssuesFunctionRole, "Arn"]
+      FunctionName: "ava-handle-issues-function"
+      Runtime: "nodejs10.x"
+      Timeout: 60
+      MemorySize: 128
+      Environment:
+        Variables:
+          API_ENDPOINT:
+            !FindInMap ["Amplify", "SSMParameter", "GraphQLEndpoint"]
+          ACCOUNT_ID: !Sub ${AWS::AccountId}
+          SOL_VER: "%%VERSION%%"
+          IOT_POLICY_NAME: !Ref AVAIoTResourcePolicy
+
+  AVAHandleIssuesRule:
+    Type: AWS::IoT::TopicRule
+    Properties:
+      TopicRulePayload:
+        RuleDisabled: false
+        Description: Issues from the AVA Client are submitted to this topic and sent to lambda for processing
+        Sql: >-
+          SELECT * FROM 'ava/issues'
+        Actions:
+          - Lambda:
+              FunctionArn: !GetAtt AVAHandleIssuesFunction.Arn
+
+  LambdaInvokeAVAHandleIssuesPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt AVAHandleIssuesFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: iot.amazonaws.com
+      SourceArn: !Sub "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:rule/${AVAHandleIssuesRule}"
+      SourceAccount: !Sub "${AWS::AccountId}"
+
+  AVAIoTResourcePolicy:
+    Type: AWS::IoT::Policy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "iot:Publish"
+              - "iot:Connect"
+            Resource:
+              - !Sub "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topic/*"
+              - !Sub "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:topicfilter/*"
+              - !Sub "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:client/*"
+
+  AVAHandleIssuesFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: AVAIssueHandlerPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
+              - Effect: Allow
+                Action:
+                  - "appsync:GraphQL"
+                Resource:
+                  - !Sub arn:aws:appsync:${AWS::Region}:${AWS::AccountId}:apis/*
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameters
+                  - ssm:GetParameter
+                Resource:
+                  - !Join [
+                      "",
+                      [
+                        "arn:aws:ssm:",
+                        !Ref "AWS::Region",
+                        ":",
+                        !Ref "AWS::AccountId",
+                        ":",
+                        "parameter",
+                        !FindInMap [
+                          "Amplify",
+                          "SSMParameter",
+                          "GraphQLEndpoint",
+                        ],
+                      ],
+                    ]
+              - Effect: Allow
+                Action:
+                  - "sns:Publish"
+                Resource:
+                  - !Sub arn:aws:sns:${AWS::Region}:${AWS::AccountId}:andon-*
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: "The * resource on its permission policy allows AVAHandleIssuesFunction to trigger appsync API."
+
+Outputs:
+  SolutionPipeline:
+    Description: "Pipeline created for this solution."
+    Value: !Sub ${CodeCommitRepository}
+  PipelineBuildImage:
+    Description: "Image used to build this pipeline"
+    Value: !FindInMap [BuildEnv, Images, Ubuntu]
+  PipelineS3Artifacts:
+    Description: "Bucket for CodePipeline to store build artifacts"
+    Value: !Ref ArtifactS3Bucket
+  SolutionVersion:
+    Description: "Deployment solution version"
+    Value: !FindInMap ["BuildEnv", "Metrics", "SolutionVersion"]
