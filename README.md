@@ -8,7 +8,7 @@ and Amazon Sagemaker for machine learning.
 
 The solution comes with 4 different user personas, Admin, Manager, Engineer and Associate.
 
-For more information and a detailed deployment guide visit the Amazon Virtual Andon solution at https://aws.amazon.com/answers/iot/amazon-virtual-andon/.
+For more information and a detailed deployment guide visit the Amazon Virtual Andon solution at https://aws.amazon.com/solutions/amazon-virtual-andon/.
 
 ## Running unit tests for customization
 * Clone the repository, then make the desired code changes
