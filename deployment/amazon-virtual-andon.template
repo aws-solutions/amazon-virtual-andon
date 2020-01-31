@@ -23,7 +23,10 @@ Parameters:
 Mappings:
   BuildEnv:
     Images:
-      Ubuntu: "aws/codebuild/nodejs:8.11.0"
+      ###
+      # D14934956 - 01/21/2020 - codebuild image update
+      ###
+      Ubuntu: "aws/codebuild/standard:3.0"
       Ruby: "aws/codebuild/ruby:2.5.1"
     Metrics:
       SendAnonymousUsage: "true"
@@ -51,6 +54,11 @@ Resources:
   DevOutputBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W51
+            reason: "bucket policy not needed, public access restricted'"
     Properties:
       VersioningConfiguration:
         Status: Enabled
@@ -73,6 +81,11 @@ Resources:
   ArtifactS3Bucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W51
+            reason: "bucket policy not needed, public access restricted'"
     Properties:
       VersioningConfiguration:
         Status: Enabled
@@ -93,6 +106,8 @@ Resources:
         rules_to_suppress:
           - id: W35
             reason: "This S3 bucket is used as the destination for storing access logs'"
+          - id: W51
+            reason: "bucket policy not needed, public access restricted'"
     Properties:
       BucketName: !Sub andon-access-logs-${AWS::AccountId}-${AWS::Region}
       AccessControl: LogDeliveryWrite
@@ -160,7 +175,7 @@ Resources:
     Type: AWS::CodeBuild::Project
     Properties:
       Name: !Sub ${CodeCommitRepository}
-      Description: "build project for adding andon auth"
+      Description: "build project for adding andon auth, api and hosting components"
       ServiceRole: !Sub ${CodeBuildRole.Arn}
       EncryptionKey: !Sub arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3
       Source:
@@ -169,6 +184,8 @@ Resources:
           version: 0.2
           phases:
             install:
+              runtime-versions:
+                nodejs: 12
               commands:
                 - node -v
                 - apt-get update
@@ -177,7 +194,7 @@ Resources:
                 - expect -version
                 - cd source/console 
                 - npm i
-                - npm install -g @aws-amplify/cli@3.11.0
+                - npm install -g @aws-amplify/cli@4.12.0
                 - amplify --version
                 - pip install awscli --upgrade
                 - aws --version
@@ -315,6 +332,8 @@ Resources:
           version: 0.2
           phases:
             install:
+              runtime-versions:
+                nodejs: 12
               commands:
                 - node -v
                 - pip install awscli --upgrade
@@ -342,8 +361,8 @@ Resources:
                 - echo "############################################"
                 - cd source/console
                 - HostingBucket=`jq -r .hosting.S3AndCloudFront.output.HostingBucketName amplify/#current-cloud-backend/amplify-meta.json`
-                - aws codebuild update-project --name ${CodeCommitRepository} --source "{\"type\":\"CODEPIPELINE\", \"buildspec\":\"version:\n  0.2\nphases:\n  install:\n    runtime-versions:\n      nodejs:\n        10\n    commands:\n      - node -v\n      - cd deployment/manifest-generator\n      - npm i\n      - cd ../../source/console\n      - npm i\n      - pip install awscli --upgrade\n      - aws --version\n  build:\n    commands:\n      - npm run build\n      - node ../../deployment/manifest-generator/app.js --target build/ --output build/site-manifest.json\n      - aws s3 sync build/ s3://$HostingBucket --exclude '*assets/andon_config.js'\nartifacts:\n  files:\n    - deployment/**/*\n    - source/*\n    - LICENSE.txt\n    - NOTICE.txt\n    - README.md\n    - CODE_OF_CONDUCT.md\n    - CONTRIBUTING.md\n    - CHANGELOG.md\n    - .github/PULL_REQUEST_TEMPLATE.md\", \"insecureSsl\":false}" --region $AWS_REGION
-                - aws codebuild update-project --name ${CodeCommitRepository}-Cognito --source "{\"type\":\"CODEPIPELINE\", \"buildspec\":\"version:\n  0.2\nphases:\n  install:\n    runtime-versions:\n      nodejs:\n        10\n    commands:\n      - echo 'do nothing'\nartifacts:\n  files:\n    - deployment/**/*\n    - source/*\n    - LICENSE.txt\n    - NOTICE.txt\n    - README.md\n    - CODE_OF_CONDUCT.md\n    - CONTRIBUTING.md\n    - CHANGELOG.md\n    - .github/PULL_REQUEST_TEMPLATE.md\", \"insecureSsl\":false}" --region $AWS_REGION
+                - aws codebuild update-project --name ${CodeCommitRepository} --source "{\"type\":\"CODEPIPELINE\", \"buildspec\":\"version:\n  0.2\nphases:\n  install:\n    runtime-versions:\n      nodejs:\n        12\n    commands:\n      - node -v\n      - cd deployment/manifest-generator\n      - npm i\n      - cd ../../source/console\n      - npm i\n      - pip install awscli --upgrade\n      - aws --version\n  build:\n    commands:\n      - npm run build\n      - node ../../deployment/manifest-generator/app.js --target build/ --output build/site-manifest.json\n      - aws s3 sync build/ s3://$HostingBucket --exclude '*assets/andon_config.js'\nartifacts:\n  files:\n    - deployment/**/*\n    - source/*\n    - LICENSE.txt\n    - NOTICE.txt\n    - README.md\n    - CODE_OF_CONDUCT.md\n    - CONTRIBUTING.md\n    - CHANGELOG.md\n    - .github/PULL_REQUEST_TEMPLATE.md\", \"insecureSsl\":false}" --region $AWS_REGION
+                - aws codebuild update-project --name ${CodeCommitRepository}-Cognito --source "{\"type\":\"CODEPIPELINE\", \"buildspec\":\"version:\n  0.2\nphases:\n  install:\n    runtime-versions:\n      nodejs:\n        12\n    commands:\n      - echo 'do nothing'\nartifacts:\n  files:\n    - deployment/**/*\n    - source/*\n    - LICENSE.txt\n    - NOTICE.txt\n    - README.md\n    - CODE_OF_CONDUCT.md\n    - CONTRIBUTING.md\n    - CHANGELOG.md\n    - .github/PULL_REQUEST_TEMPLATE.md\", \"insecureSsl\":false}" --region $AWS_REGION
           artifacts:
             files:
               - deployment/**/*
@@ -713,6 +732,7 @@ Resources:
               - "iam:DeleteRolePolicy"
               - "iam:DetachRolePolicy"
               - "iam:DeleteRole"
+              - "iam:GetPolicy"
             Resource:
               - !Sub "arn:aws:iam::${AWS::AccountId}:role/*"
           - Effect: "Allow"
@@ -788,6 +808,7 @@ Resources:
                 Action:
                   - appsync:*
                   - apigateway:POST
+                  - amplify:*
                   - apigateway:DELETE
                   - apigateway:PATCH
                   - apigateway:PUT
@@ -835,9 +856,12 @@ Resources:
                   - dynamodb:PutItem
                   - dynamodb:UpdateItem
                   - dynamodb:UpdateTable
+                  - iam:AttachRolePolicy
+                  - iam:CreatePolicy
                   - iam:CreateRole
                   - iam:DeleteRole
                   - iam:DeleteRolePolicy
+                  - iam:GetPolicy
                   - iam:GetRole
                   - iam:GetUser
                   - iam:PassRole

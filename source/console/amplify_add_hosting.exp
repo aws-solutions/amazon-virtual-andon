@@ -4,8 +4,5 @@ expect "Select the environment setup:"
 send -- "\033\[B\r"
 expect "hosting bucket name"
 send -- "\r"
-expect "index doc for the website"
-send -- "\r"
-expect "error doc for the website"
-send -- "\r"
-interact;
+sleep 1 
+interact; 
