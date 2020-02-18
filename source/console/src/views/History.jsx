@@ -189,7 +189,12 @@ class History extends Component {
   getAreas = async (selectedSite) => {
     try {
       const siteId = selectedSite.id;
-      this.setState({ siteId })
+      //this.setState({ siteId })
+      this.setState({
+        selectedSite: selectedSite,
+        siteSelected: true,
+        siteId: siteId
+      });
       const response = await API.graphql(graphqlOperation(getSite, { id: siteId }))
       let areas = response.data.getSite.area.items;
       // Adds visible key/value for filter
