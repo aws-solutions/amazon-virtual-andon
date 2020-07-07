@@ -1,0 +1,221 @@
+## Check authorization
+#set ($isAllowed = false)
+#set ($userGroups = $util.defaultIfNull($ctx.identity.claims.get("cognito:groups"), []))
+#set ($allowedGroups = ["AdminGroup","ManagerGroup","EngineerGroup"])
+#foreach ($userGroup in $userGroups)
+  #if ($allowedGroups.contains($userGroup))
+    #set ($isAllowed = true)
+    #break
+  #end
+#end
+
+## Throw authorized if the user is not authorized.
+#if ($isAllowed == false)
+  $util.unauthorized()
+#end
+
+## [Start] Set query expression for @key **
+#set( $modelQueryExpression = {} )
+## [Start] Validate key arguments. **
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated) && $util.isNullOrBlank($ctx.args.siteName) )
+  $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated' you must also provide 'siteName'.", "InvalidArgumentsError")
+#end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated) )
+  #set( $sortKeyArgumentOperations = $ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.keySet() )
+  #if( $sortKeyArgumentOperations.size() > 1 )
+    $util.error("Argument areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated must specify at most one key condition operation.", "InvalidArgumentsError")
+  #end
+  #foreach( $operation in $sortKeyArgumentOperations )
+    #if( $operation == "between" )
+      #if( $ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between.size() != 2 )
+        $util.error("Argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between' expects exactly two elements.", "InvalidArgumentsError")
+      #end
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].created) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].deviceName) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].created' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].deviceName'.", "InvalidArgumentsError")
+      #end
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].created) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].deviceName) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].created' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].deviceName'.", "InvalidArgumentsError")
+      #end
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].deviceName) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].stationName) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].deviceName' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].stationName'.", "InvalidArgumentsError")
+      #end
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].deviceName) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].stationName) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].deviceName' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].stationName'.", "InvalidArgumentsError")
+      #end
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].stationName) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].eventDescription) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].stationName' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].eventDescription'.", "InvalidArgumentsError")
+      #end
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].stationName) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].eventDescription) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].stationName' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].eventDescription'.", "InvalidArgumentsError")
+      #end
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].eventDescription) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].processName) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].eventDescription' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].processName'.", "InvalidArgumentsError")
+      #end
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].eventDescription) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].processName) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].eventDescription' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].processName'.", "InvalidArgumentsError")
+      #end
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].processName) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].status) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].processName' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].status'.", "InvalidArgumentsError")
+      #end
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].processName) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].status) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].processName' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].status'.", "InvalidArgumentsError")
+      #end
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].status) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].areaName) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].status' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].areaName'.", "InvalidArgumentsError")
+      #end
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].status) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].areaName) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].status' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].areaName'.", "InvalidArgumentsError")
+      #end
+    #else
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.get("$operation").created) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.get("$operation").deviceName) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.$operation.created' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.$operation.deviceName'.", "InvalidArgumentsError")
+      #end
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.get("$operation").deviceName) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.get("$operation").stationName) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.$operation.deviceName' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.$operation.stationName'.", "InvalidArgumentsError")
+      #end
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.get("$operation").stationName) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.get("$operation").eventDescription) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.$operation.stationName' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.$operation.eventDescription'.", "InvalidArgumentsError")
+      #end
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.get("$operation").eventDescription) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.get("$operation").processName) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.$operation.eventDescription' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.$operation.processName'.", "InvalidArgumentsError")
+      #end
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.get("$operation").processName) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.get("$operation").status) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.$operation.processName' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.$operation.status'.", "InvalidArgumentsError")
+      #end
+      #if( !$util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.get("$operation").status) && $util.isNullOrBlank($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.get("$operation").areaName) )
+        $util.error("When providing argument 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.$operation.status' you must also provide 'areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.$operation.areaName'.", "InvalidArgumentsError")
+      #end
+    #end
+  #end
+#end
+## [End] Validate key arguments. **
+#if( !$util.isNull($ctx.args.siteName) )
+  #set( $modelQueryExpression.expression = "#siteName = :siteName" )
+  #set( $modelQueryExpression.expressionNames = {
+  "#siteName": "siteName"
+} )
+  #set( $modelQueryExpression.expressionValues = {
+  ":siteName": {
+      "S": "$ctx.args.siteName"
+  }
+} )
+#end
+## [Start] Applying Key Condition **
+#set( $sortKeyValue = "" )
+#set( $sortKeyValue2 = "" )
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated) && !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith) )
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.areaName) ) #set( $sortKeyValue = "$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.areaName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.status) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.status" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.processName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.processName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.eventDescription) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.eventDescription" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.stationName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.stationName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.deviceName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.deviceName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.created) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.created" ) #end
+  #set( $modelQueryExpression.expression = "$modelQueryExpression.expression AND begins_with(#sortKey, :sortKey)" )
+  $util.qr($modelQueryExpression.expressionNames.put("#sortKey", "areaName#status#processName#eventDescription#stationName#deviceName#created"))
+  $util.qr($modelQueryExpression.expressionValues.put(":sortKey", { "S": "$sortKeyValue" }))
+#end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated) && !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between) )
+  #if( $ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between.size() != 2 )
+    $util.error("Argument areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between expects exactly 2 elements.")
+  #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].areaName) ) #set( $sortKeyValue = "$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].areaName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].status) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].status" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].processName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].processName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].eventDescription) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].eventDescription" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].stationName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].stationName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].deviceName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].deviceName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].created) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[0].created" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].areaName) ) #set( $sortKeyValue2 = "$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].areaName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].status) ) #set( $sortKeyValue2 = "$sortKeyValue2#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].status" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].processName) ) #set( $sortKeyValue2 = "$sortKeyValue2#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].processName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].eventDescription) ) #set( $sortKeyValue2 = "$sortKeyValue2#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].eventDescription" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].stationName) ) #set( $sortKeyValue2 = "$sortKeyValue2#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].stationName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].deviceName) ) #set( $sortKeyValue2 = "$sortKeyValue2#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].deviceName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].created) ) #set( $sortKeyValue2 = "$sortKeyValue2#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.between[1].created" ) #end
+  #set( $modelQueryExpression.expression = "$modelQueryExpression.expression AND #sortKey BETWEEN :sortKey0 AND :sortKey1" )
+  $util.qr($modelQueryExpression.expressionNames.put("#sortKey", "areaName#status#processName#eventDescription#stationName#deviceName#created"))
+  $util.qr($modelQueryExpression.expressionValues.put(":sortKey0", { "S": "$sortKeyValue" }))
+  $util.qr($modelQueryExpression.expressionValues.put(":sortKey1", { "S": "$sortKeyValue2" }))
+#end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated) && !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.eq) )
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.eq.areaName) ) #set( $sortKeyValue = "$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.eq.areaName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.eq.status) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.eq.status" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.eq.processName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.eq.processName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.eq.eventDescription) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.eq.eventDescription" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.eq.stationName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.eq.stationName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.eq.deviceName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.eq.deviceName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.eq.created) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.eq.created" ) #end
+  #set( $modelQueryExpression.expression = "$modelQueryExpression.expression AND #sortKey = :sortKey" )
+  $util.qr($modelQueryExpression.expressionNames.put("#sortKey", "areaName#status#processName#eventDescription#stationName#deviceName#created"))
+  $util.qr($modelQueryExpression.expressionValues.put(":sortKey", { "S": "$sortKeyValue" }))
+#end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated) && !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.lt) )
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.lt.areaName) ) #set( $sortKeyValue = "$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.lt.areaName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.lt.status) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.lt.status" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.lt.processName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.lt.processName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.lt.eventDescription) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.lt.eventDescription" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.lt.stationName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.lt.stationName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.lt.deviceName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.lt.deviceName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.lt.created) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.lt.created" ) #end
+  #set( $modelQueryExpression.expression = "$modelQueryExpression.expression AND #sortKey < :sortKey" )
+  $util.qr($modelQueryExpression.expressionNames.put("#sortKey", "areaName#status#processName#eventDescription#stationName#deviceName#created"))
+  $util.qr($modelQueryExpression.expressionValues.put(":sortKey", { "S": "$sortKeyValue" }))
+#end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated) && !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.le) )
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.le.areaName) ) #set( $sortKeyValue = "$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.le.areaName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.le.status) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.le.status" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.le.processName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.le.processName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.le.eventDescription) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.le.eventDescription" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.le.stationName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.le.stationName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.le.deviceName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.le.deviceName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.le.created) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.le.created" ) #end
+  #set( $modelQueryExpression.expression = "$modelQueryExpression.expression AND #sortKey <= :sortKey" )
+  $util.qr($modelQueryExpression.expressionNames.put("#sortKey", "areaName#status#processName#eventDescription#stationName#deviceName#created"))
+  $util.qr($modelQueryExpression.expressionValues.put(":sortKey", { "S": "$sortKeyValue" }))
+#end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated) && !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.gt) )
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.gt.areaName) ) #set( $sortKeyValue = "$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.gt.areaName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.gt.status) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.gt.status" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.gt.processName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.gt.processName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.gt.eventDescription) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.gt.eventDescription" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.gt.stationName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.gt.stationName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.gt.deviceName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.gt.deviceName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.gt.created) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.gt.created" ) #end
+  #set( $modelQueryExpression.expression = "$modelQueryExpression.expression AND #sortKey > :sortKey" )
+  $util.qr($modelQueryExpression.expressionNames.put("#sortKey", "areaName#status#processName#eventDescription#stationName#deviceName#created"))
+  $util.qr($modelQueryExpression.expressionValues.put(":sortKey", { "S": "$sortKeyValue" }))
+#end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated) && !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.ge) )
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.ge.areaName) ) #set( $sortKeyValue = "$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.ge.areaName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.ge.status) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.ge.status" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.ge.processName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.ge.processName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.ge.eventDescription) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.ge.eventDescription" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.ge.stationName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.ge.stationName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.ge.deviceName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.ge.deviceName" ) #end
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.ge.created) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.ge.created" ) #end
+  #set( $modelQueryExpression.expression = "$modelQueryExpression.expression AND #sortKey >= :sortKey" )
+  $util.qr($modelQueryExpression.expressionNames.put("#sortKey", "areaName#status#processName#eventDescription#stationName#deviceName#created"))
+  $util.qr($modelQueryExpression.expressionValues.put(":sortKey", { "S": "$sortKeyValue" }))
+#end
+
+
+## [End] Applying Key Condition **
+## [End] Set query expression for @key **
+#set( $limit = $util.defaultIfNull($context.args.limit, 10) )
+#set( $QueryRequest = {
+  "version": "2017-02-28",
+  "operation": "Query",
+  "limit": $limit,
+  "query": $modelQueryExpression,
+  "index": "BySiteAreaStatus-index"
+} )
+#if( !$util.isNull($ctx.args.sortDirection)
+                    && $ctx.args.sortDirection == "DESC" )
+  #set( $QueryRequest.scanIndexForward = false )
+#else
+  #set( $QueryRequest.scanIndexForward = true )
+#end
+#if( $context.args.nextToken ) #set( $QueryRequest.nextToken = "$context.args.nextToken" ) #end
+#if( $context.args.filter ) #set( $QueryRequest.filter = $util.parseJson("$util.transform.toDynamoDBFilterExpression($ctx.args.filter)") ) #end
+$util.toJson($QueryRequest)

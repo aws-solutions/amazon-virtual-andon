@@ -1,290 +1,72 @@
 /* eslint-disable */
 // this is an auto generated file. This will be overwritten
 
-export const createSite = `mutation CreateSite($input: CreateSiteInput!) {
-  createSite(input: $input) {
-    id
-    name
-    area {
-      items {
-        id
-        name
-        description
-        version
-      }
-      nextToken
-    }
-    description
-    version
-  }
-}
-`;
-export const updateSite = `mutation UpdateSite($input: UpdateSiteInput!) {
-  updateSite(input: $input) {
-    id
-    name
-    area {
-      items {
-        id
-        name
-        description
-        version
-      }
-      nextToken
-    }
-    description
-    version
-  }
-}
-`;
-export const deleteSite = `mutation DeleteSite($input: DeleteSiteInput!) {
-  deleteSite(input: $input) {
-    id
-    name
-    area {
-      items {
-        id
-        name
-        description
-        version
-      }
-      nextToken
-    }
-    description
-    version
-  }
-}
-`;
-export const createArea = `mutation CreateArea($input: CreateAreaInput!) {
-  createArea(input: $input) {
-    id
-    site {
-      id
-      name
-      area {
-        nextToken
-      }
-      description
-      version
-    }
-    name
-    process {
-      items {
-        id
-        name
-        description
-        version
-      }
-      nextToken
-    }
-    station {
-      items {
-        id
-        name
-        description
-        version
-      }
-      nextToken
-    }
-    description
-    version
-  }
-}
-`;
-export const updateArea = `mutation UpdateArea($input: UpdateAreaInput!) {
-  updateArea(input: $input) {
-    id
-    site {
-      id
-      name
-      area {
-        nextToken
-      }
-      description
-      version
-    }
-    name
-    process {
-      items {
-        id
-        name
-        description
-        version
-      }
-      nextToken
-    }
-    station {
-      items {
-        id
-        name
-        description
-        version
-      }
-      nextToken
-    }
-    description
-    version
-  }
-}
-`;
-export const deleteArea = `mutation DeleteArea($input: DeleteAreaInput!) {
-  deleteArea(input: $input) {
-    id
-    site {
-      id
-      name
-      area {
-        nextToken
-      }
-      description
-      version
-    }
-    name
-    process {
-      items {
-        id
-        name
-        description
-        version
-      }
-      nextToken
-    }
-    station {
-      items {
-        id
-        name
-        description
-        version
-      }
-      nextToken
-    }
-    description
-    version
-  }
-}
-`;
-export const createProcess = `mutation CreateProcess($input: CreateProcessInput!) {
-  createProcess(input: $input) {
+export const createSite = `mutation CreateSite($id: ID, $name: String!, $description: String!, $__typename: String!) {
+  createSite(id: $id, name: $name, description: $description, __typename: $__typename) {
     id
     name
     description
-    area {
-      id
-      site {
-        id
-        name
-        description
-        version
-      }
-      name
-      process {
-        nextToken
-      }
-      station {
-        nextToken
-      }
-      description
-      version
-    }
-    event {
-      items {
-        id
-        name
-        description
-        type
-        priority
-        sms
-        email
-        version
-      }
-      nextToken
-    }
     version
   }
-}
-`;
-export const updateProcess = `mutation UpdateProcess($input: UpdateProcessInput!) {
-  updateProcess(input: $input) {
+}`;
+export const deleteSite = `mutation DeleteSite($siteId: ID!) {
+  deleteSite(id: $siteId) {
+    id
+  }
+}`;
+export const createArea = `mutation CreateArea($id: ID, $areaSiteId: ID!, $name: String!, $description: String!, $__typename: String!) {
+  createArea(id: $id, areaSiteId: $areaSiteId, name: $name, description: $description, __typename: $__typename) {
     id
     name
     description
-    area {
-      id
-      site {
-        id
-        name
-        description
-        version
-      }
-      name
-      process {
-        nextToken
-      }
-      station {
-        nextToken
-      }
-      description
-      version
-    }
-    event {
-      items {
-        id
-        name
-        description
-        type
-        priority
-        sms
-        email
-        version
-      }
-      nextToken
-    }
     version
   }
-}
-`;
-export const deleteProcess = `mutation DeleteProcess($input: DeleteProcessInput!) {
-  deleteProcess(input: $input) {
+}`;
+export const deleteArea = `mutation DeleteArea($areaId: ID!) {
+  deleteArea(id: $areaId) {
+    id
+  }
+}`;
+export const createProcess = `mutation CreateProcess($id: ID, $processAreaId: ID!, $name: String!, $description: String!, $__typename: String!) {
+  createProcess(id: $id, processAreaId: $processAreaId, name: $name, description: $description, __typename: $__typename) {
     id
     name
     description
-    area {
-      id
-      site {
-        id
-        name
-        description
-        version
-      }
-      name
-      process {
-        nextToken
-      }
-      station {
-        nextToken
-      }
-      description
-      version
-    }
-    event {
-      items {
-        id
-        name
-        description
-        type
-        priority
-        sms
-        email
-        version
-      }
-      nextToken
-    }
     version
+  }
+}`;
+export const deleteProcess = `mutation DeleteProcess($processId: ID!) {
+  deleteProcess(id: $processId) {
+    id
   }
 }
 `;
-export const createEvent = `mutation CreateEvent($input: CreateEventInput!) {
-  createEvent(input: $input) {
+export const createEvent = `mutation CreateEvent(
+    $id: ID,
+    $eventProcessId: ID!,
+    $name: String!,
+    $description: String!,
+    $__typename: String!,
+    $type: String,
+    $priority: Priority!,
+    $sms: String,
+    $email: String,
+    $topicArn: String,
+    $rootCauses: [String]
+  ) {
+  createEvent(
+    id: $id,
+    eventProcessId: $eventProcessId,
+    name: $name,
+    description: $description,
+    __typename: $__typename,
+    type: $type,
+    priority: $priority,
+    sms: $sms,
+    email: $email,
+    topicArn: $topicArn,
+    rootCauses: $rootCauses
+  ) {
     id
     name
     description
@@ -292,27 +74,25 @@ export const createEvent = `mutation CreateEvent($input: CreateEventInput!) {
     priority
     sms
     email
-    process {
-      id
-      name
-      description
-      area {
-        id
-        name
-        description
-        version
-      }
-      event {
-        nextToken
-      }
-      version
-    }
+    topicArn
+    rootCauses
     version
   }
-}
-`;
-export const updateEvent = `mutation UpdateEvent($input: UpdateEventInput!) {
-  updateEvent(input: $input) {
+}`;
+export const updateEvent = `mutation UpdateEvent(
+    $id: ID!,
+    $sms: String,
+    $email: String,
+    $topicArn: String,
+    $rootCauses: [String]
+  ) {
+    updateEvent(
+    id: $id,
+    sms: $sms,
+    email: $email,
+    topicArn: $topicArn,
+    rootCauses: $rootCauses
+  ) {
     id
     name
     description
@@ -320,257 +100,47 @@ export const updateEvent = `mutation UpdateEvent($input: UpdateEventInput!) {
     priority
     sms
     email
-    process {
-      id
-      name
-      description
-      area {
-        id
-        name
-        description
-        version
-      }
-      event {
-        nextToken
-      }
-      version
-    }
+    topicArn
+    rootCauses
     version
   }
-}
-`;
-export const deleteEvent = `mutation DeleteEvent($input: DeleteEventInput!) {
-  deleteEvent(input: $input) {
+}`;
+export const deleteEvent = `mutation DeleteEvent($eventId: ID!) {
+  deleteEvent(id: $eventId) {
+    id
+    topicArn
+  }
+}`;
+export const createStation = `mutation CreateStation($id: ID, $stationAreaId: ID!, $name: String!, $description: String!, $__typename: String!) {
+  createStation(id: $id, stationAreaId: $stationAreaId, name: $name, description: $description, __typename: $__typename) {
     id
     name
     description
-    type
-    priority
-    sms
-    email
-    process {
-      id
-      name
-      description
-      area {
-        id
-        name
-        description
-        version
-      }
-      event {
-        nextToken
-      }
-      version
-    }
     version
   }
-}
-`;
-export const createStation = `mutation CreateStation($input: CreateStationInput!) {
-  createStation(input: $input) {
+}`;
+export const deleteStation = `mutation DeleteStation($stationId: ID!) {
+  deleteStation(id: $stationId) {
+    id
+  }
+}`;
+export const createDevice = `mutation CreateDevice($id: ID, $deviceStationId: ID!, $name: String!, $description: String!, $__typename: String!) {
+  createDevice(id: $id, deviceStationId: $deviceStationId, name: $name, description: $description, __typename: $__typename) {
     id
     name
     description
-    area {
-      id
-      site {
-        id
-        name
-        description
-        version
-      }
-      name
-      process {
-        nextToken
-      }
-      station {
-        nextToken
-      }
-      description
-      version
-    }
-    device {
-      items {
-        id
-        name
-        description
-        version
-      }
-      nextToken
-    }
     version
   }
-}
-`;
-export const updateStation = `mutation UpdateStation($input: UpdateStationInput!) {
-  updateStation(input: $input) {
+}`;
+export const deleteDevice = `mutation DeleteDevice($deviceId: ID!) {
+  deleteDevice(id: $deviceId) {
     id
-    name
-    description
-    area {
-      id
-      site {
-        id
-        name
-        description
-        version
-      }
-      name
-      process {
-        nextToken
-      }
-      station {
-        nextToken
-      }
-      description
-      version
-    }
-    device {
-      items {
-        id
-        name
-        description
-        version
-      }
-      nextToken
-    }
-    version
   }
-}
-`;
-export const deleteStation = `mutation DeleteStation($input: DeleteStationInput!) {
-  deleteStation(input: $input) {
-    id
-    name
-    description
-    area {
-      id
-      site {
-        id
-        name
-        description
-        version
-      }
-      name
-      process {
-        nextToken
-      }
-      station {
-        nextToken
-      }
-      description
-      version
-    }
-    device {
-      items {
-        id
-        name
-        description
-        version
-      }
-      nextToken
-    }
-    version
-  }
-}
-`;
-export const createDevice = `mutation CreateDevice($input: CreateDeviceInput!) {
-  createDevice(input: $input) {
-    id
-    name
-    description
-    station {
-      id
-      name
-      description
-      area {
-        id
-        name
-        description
-        version
-      }
-      device {
-        nextToken
-      }
-      version
-    }
-    version
-  }
-}
-`;
-export const updateDevice = `mutation UpdateDevice($input: UpdateDeviceInput!) {
-  updateDevice(input: $input) {
-    id
-    name
-    description
-    station {
-      id
-      name
-      description
-      area {
-        id
-        name
-        description
-        version
-      }
-      device {
-        nextToken
-      }
-      version
-    }
-    version
-  }
-}
-`;
-export const deleteDevice = `mutation DeleteDevice($input: DeleteDeviceInput!) {
-  deleteDevice(input: $input) {
-    id
-    name
-    description
-    station {
-      id
-      name
-      description
-      area {
-        id
-        name
-        description
-        version
-      }
-      device {
-        nextToken
-      }
-      version
-    }
-    version
-  }
-}
-`;
-export const createIssue = `mutation CreateIssue($input: CreateIssueInput!) {
-  createIssue(input: $input) {
-    id
-    eventDescription
-    type
-    priority
-    siteName
-    processName
-    areaName
-    stationName
-    deviceName
-    created
-    acknowledged
-    closed
-    resolutionTime
-    acknowledgedTime
-    status
-    version
-  }
-}
-`;
+}`;
 export const updateIssue = `mutation UpdateIssue($input: UpdateIssueInput!) {
   updateIssue(input: $input) {
     id
+    eventId
     eventDescription
     type
     priority
@@ -586,27 +156,53 @@ export const updateIssue = `mutation UpdateIssue($input: UpdateIssueInput!) {
     acknowledgedTime
     status
     version
+    rootCause
   }
-}
-`;
-export const deleteIssue = `mutation DeleteIssue($input: DeleteIssueInput!) {
-  deleteIssue(input: $input) {
+}`;
+export const putPermission = `mutation PutPermission($input: PermissionInput!) {
+  putPermission(input: $input) {
+    userId
+    sites {
+      id
+      name
+    }
+    areas  {
+      id
+      name
+      parentId
+    }
+    processes  {
+      id
+      name
+      parentId
+    }
+    stations  {
+      id
+      name
+      parentId
+    }
+    devices  {
+      id
+      name
+      parentId
+    }
+    version
+  }
+}`;
+export const deletePermission = `mutation DeletePermission($userId: ID!) {
+  deletePermission(userId: $userId) {
+    userId
+  }
+}`;
+export const createRootCause = `mutation CreateRootCause($id: ID, $rootCause: String!) {
+  createRootCause(id: $id, rootCause: $rootCause) {
     id
-    eventDescription
-    type
-    priority
-    siteName
-    processName
-    areaName
-    stationName
-    deviceName
-    created
-    acknowledged
-    closed
-    resolutionTime
-    acknowledgedTime
-    status
-    version
+    rootCause
   }
-}
-`;
+}`;
+export const deleteRootCause = `mutation DeleteRootCause($id: ID!) {
+  deleteRootCause(id: $id) {
+    id
+    rootCause
+  }
+}`;

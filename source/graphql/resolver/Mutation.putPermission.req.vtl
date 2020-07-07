@@ -1,0 +1,27 @@
+## Check authorization
+#set ($isAllowed = false)
+#set ($userGroups = $util.defaultIfNull($ctx.identity.claims.get("cognito:groups"), []))
+#set ($allowedGroups = ["AdminGroup"])
+#foreach ($userGroup in $userGroups)
+  #if ($allowedGroups.contains($userGroup))
+    #set ($isAllowed = true)
+    #break
+  #end
+#end
+
+## Throw authorized if the user is not authorized.
+#if ($isAllowed == false)
+  $util.unauthorized()
+#end
+
+## Set updatedAt
+$util.qr($context.args.input.put("updatedAt", $util.defaultIfNull($ctx.args.input.updatedAt, $util.time.nowISO8601())))
+
+{
+  "version": "2017-02-28",
+  "operation": "PutItem",
+  "key": {
+    "userId": $util.dynamodb.toDynamoDBJson($ctx.args.input.userId)
+  },
+  "attributeValues": $util.dynamodb.toMapValuesJson($ctx.args.input)
+}

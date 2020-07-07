@@ -1,8 +1,0 @@
-#!/usr/bin/expect
-spawn ./amplify_add_hosting.sh
-expect "Select the environment setup:"
-send -- "\033\[B\r"
-expect "hosting bucket name"
-send -- "\r"
-sleep 1 
-interact; 

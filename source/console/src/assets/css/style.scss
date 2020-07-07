@@ -1,0 +1,187 @@
+html * {
+  font-family: "Amazon Ember", "Helvetica Neue", Arial, Helvetica, sans-serif !important;
+}
+
+.container {
+  max-width: 95% !important;
+  padding: 15px 0 0 0 ;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+@media (min-width: 576px) {
+  .modal-dialog {
+    max-width: 80% !important;
+  }
+}
+.main-wrapper {
+  padding: 0 0 100px;
+  position: relative;
+}
+
+.text-align-center {
+  text-align: center;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+.table > thead > tr > th {
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.table > tbody > tr > td {
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.table > tfoot > tr > th {
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.table-align-top {
+  vertical-align: top !important;
+}
+
+.fixed-th-50 {
+  width: 50px;
+}
+
+.fixed-th-20 {
+  width: 20px;
+}
+
+
+.view {
+  position: relative;
+}
+
+.notification {
+  position: absolute;
+  top: 0;
+  right: 50px;
+  z-index: 10;
+}
+
+.custom-card {
+  margin-bottom: 20px;
+}
+
+.custom-card-big {
+  padding: 10px 10px 10px 10px;
+}
+
+.custom-card-header-success > .card-header {
+  background: #28a745;
+  color: #FFF;
+}
+
+.custom-card-header-warning > .card-header {
+  background: #FF9900;
+  color: #FFF;
+}
+
+.custom-card-header-danger > .card-header {
+  background: #EF5350;
+  color: #FFF;
+}
+
+.custom-card-event {
+  text-align: center;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  height: 32.5vh;
+  background-color: rgb(233, 233, 233) !important;
+  cursor: pointer;
+}
+
+.custom-card-issue {
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.custom-card-issue > .card-header {
+  background: linear-gradient(#ef5350, #e53935);
+  color: #FFF;
+}
+
+.event-open {
+  background-color: #ff6961 !important;
+}
+
+.event-acknowledged {
+  background-color: #fdfd96 !important;
+}
+
+.event-closed-rejected-transit {
+  background-color: #33cc33 !important;
+}
+
+.event-closed-rejected {
+  background-color: #e9e9e9 !important;
+}
+
+.ct-bar {
+  stroke: red !important;
+}
+
+.ct-point {
+  stroke: red !important;
+}
+
+.ct-area {
+  fill: red !important;
+}
+
+.ct-line {
+  stroke: red !important;
+}
+
+.btn-primary {
+  background-color: #FF9900 !important;
+  border-color: #FF9900 !important;
+}
+
+.btn-link {
+  color: #007EB9 !important;
+}
+
+.btn-secondary {
+  background-color: #828282 !important;
+  border-color: #828282 !important;
+}
+
+.cookie-banner {
+  position: fixed !important;
+  width: 100%;
+  bottom: 57px;
+  z-index: 99999 !important;
+  text-align: center;
+  display: inline-block !important;
+  font-size: 14px;
+}
+
+.cookie-banner-font {
+  color: #FFFFFF !important;
+}
+
+.cookie-banner-font > a {
+  color: #FFFFFF !important;
+  text-decoration: underline;
+}
+
+ul {
+  padding-inline-start: 20px;
+  margin-bottom: 0 !important;
+}
+
+.required-field {
+  color: red;
+}
+
+.form-group-no-margin {
+  margin-bottom: 0 !important;
+}

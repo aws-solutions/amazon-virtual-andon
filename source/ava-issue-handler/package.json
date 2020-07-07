@@ -1,0 +1,24 @@
+{
+  "name": "ava-issue-handler",
+  "version": "2.0.0",
+  "description": "Amazon Virtual Andon issue handler",
+  "main": "index.js",
+  "dependencies": {
+    "aws-appsync": "^3.0.2",
+    "graphql-tag": "^2.10.3",
+    "isomorphic-fetch": "^2.2.1"
+  },
+  "devDependencies": {
+    "aws-sdk": "2.585.0",
+    "jest": "^25.1.0"
+  },
+  "scripts": {
+    "pretest": "npm run build:init && npm install",
+    "test": "CI=true jest --config jestconfig.json --coverage --silent",
+    "build:init": "rm -rf package-lock.json dist node_modules coverage",
+    "build:zip": "zip -rq ava-issue-handler.zip .",
+    "build:dist": "mkdir dist && mv ava-issue-handler.zip dist/",
+    "build": "npm run build:init && npm install --production && npm run build:zip && npm run build:dist"
+  },
+  "license": "Apache-2.0"
+}

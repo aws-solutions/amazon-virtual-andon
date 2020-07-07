@@ -1,0 +1,278 @@
+# Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Amazon Software License (the "License").
+# You may not use this file except in compliance with the License.
+# A copy of the License is located at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# or in the "license" file accompanying this file. This file is distributed
+# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language governing
+# permissions and limitations under the License.
+
+Description: "(SO0071-migration) - The AWS CloudFormation template for deployment of the SOLUTION_NAME_PLACEHOLDER migration. Version VERSION_PLACEHOLDER"
+
+Parameters:
+  MailAddress:
+    Type: String
+    Description: (Required) E-Mail address to get notification after the migration.
+    AllowedPattern: "^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$"
+  SourceSiteTable:
+    Type: String
+    Description: Source Site DynamoDB table name
+  SourceAreaTable:
+    Type: String
+    Description: Source Area DynamoDB table name
+  SourceStationTable:
+    Type: String
+    Description: Source Station DynamoDB table name
+  SourceProcessTable:
+    Type: String
+    Description: Source Process DynamoDB table name
+  SourceDeviceTable:
+    Type: String
+    Description: Source Device DynamoDB table name
+  SourceEventTable:
+    Type: String
+    Description: Source Event DynamoDB table name
+  SourceIssueTable:
+    Type: String
+    Description: Source Issue DynamoDB table name
+  DestinationSiteTable:
+    Type: String
+    Description: Destination Site DynamoDB table name
+  DestinationAreaTable:
+    Type: String
+    Description: Destination Area DynamoDB table name
+  DestinationStationTable:
+    Type: String
+    Description: Destination Station DynamoDB table name
+  DestinationProcessTable:
+    Type: String
+    Description: Destination Process DynamoDB table name
+  DestinationDeviceTable:
+    Type: String
+    Description: Destination Device DynamoDB table name
+  DestinationEventTable:
+    Type: String
+    Description: Destination Event DynamoDB table name
+  DestinationIssueTable:
+    Type: String
+    Description: Destination Issue DynamoDB table name
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Migration Notification
+        Parameters:
+          - MailAddress
+      - Label:
+          default: Source Amazon Virtual Andon Tables
+        Parameters:
+          - SourceSiteTable
+          - SourceAreaTable
+          - SourceStationTable
+          - SourceProcessTable
+          - SourceDeviceTable
+          - SourceEventTable
+          - SourceIssueTable
+      - Label:
+          default: Destination Amazon Virtual Andon Tables
+        Parameters:
+          - DestinationSiteTable
+          - DestinationAreaTable
+          - DestinationStationTable
+          - DestinationProcessTable
+          - DestinationDeviceTable
+          - DestinationEventTable
+          - DestinationIssueTable
+
+Mappings:
+  Send:
+    AnonymousUsage:
+      Data: Yes
+  Solution:
+    Data:
+      Id: SO0071-migration
+      Version: VERSION_PLACEHOLDER
+  SourceCode:
+    General:
+      S3Bucket: BUCKET_NAME_PLACEHOLDER
+      KeyPrefix: SOLUTION_NAME_PLACEHOLDER/VERSION_PLACEHOLDER
+
+Conditions:
+  SendAnonymousUsage: !Equals [!FindInMap ["Send", "AnonymousUsage", "Data"], "Yes"]
+
+Resources:
+  MigraionSns:
+    Type: AWS::SNS::Topic
+    Properties:
+      KmsMasterKeyId: alias/aws/sns
+      Subscription:
+        - Endpoint: !Ref MailAddress
+          Protocol: email
+
+  MigrationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: CloudWatchLogsPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*
+        - PolicyName: SnsPublishPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource:
+                  - !Ref MigraionSns
+        - PolicyName: SourceDynamoDBPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:DescribeTable
+                  - dynamodb:Scan
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SourceSiteTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SourceAreaTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SourceStationTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SourceProcessTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SourceDeviceTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SourceEventTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SourceIssueTable}
+        - PolicyName: DestinationDynamoDBPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:DescribeTable
+                  - dynamodb:BatchWriteItem
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DestinationSiteTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DestinationAreaTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DestinationStationTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DestinationProcessTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DestinationDeviceTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DestinationEventTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DestinationIssueTable}
+
+  MigrationLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Amazon Virtual Andon migration Lambda function
+      Handler: index.handler
+      Role: !GetAtt MigrationRole.Arn
+      Runtime: nodejs12.x
+      Timeout: 900
+      MemorySize: 256
+      Code:
+        S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref "AWS::Region"]]
+        S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "ava-migration.zip"]]
+      Environment:
+        Variables:
+          MigrationSnsTopicArn: !Ref MigraionSns
+
+  SendAnonymousUsage:
+    Type: Custom::SendAnonymousUsage
+    Condition: SendAnonymousUsage
+    Properties:
+      ServiceToken: !GetAtt MigrationLambda.Arn
+      SolutionId: !FindInMap ["Solution", "Data", "Id"]
+      Version: !FindInMap ["Solution", "Data", "Version"]
+
+  SiteTableMigration:
+    Type: Custom::SiteTableMigration
+    Properties:
+      ServiceToken: !GetAtt MigrationLambda.Arn
+      SourceTable: !Ref SourceSiteTable
+      DestinationTable: !Ref DestinationSiteTable
+
+  AreaTableMigration:
+    Type: Custom::AreaTableMigration
+    Properties:
+      ServiceToken: !GetAtt MigrationLambda.Arn
+      SourceTable: !Ref SourceAreaTable
+      DestinationTable: !Ref DestinationAreaTable
+
+  StationTableMigration:
+    Type: Custom::StationTableMigration
+    Properties:
+      ServiceToken: !GetAtt MigrationLambda.Arn
+      SourceTable: !Ref SourceStationTable
+      DestinationTable: !Ref DestinationStationTable
+
+  ProcessTableMigration:
+    Type: Custom::ProcessTableMigration
+    Properties:
+      ServiceToken: !GetAtt MigrationLambda.Arn
+      SourceTable: !Ref SourceProcessTable
+      DestinationTable: !Ref DestinationProcessTable
+
+  DeviceTableMigration:
+    Type: Custom::DeviceTableMigration
+    Properties:
+      ServiceToken: !GetAtt MigrationLambda.Arn
+      SourceTable: !Ref SourceDeviceTable
+      DestinationTable: !Ref DestinationDeviceTable
+
+  EventTableMigration:
+    Type: Custom::EventTableMigration
+    Properties:
+      ServiceToken: !GetAtt MigrationLambda.Arn
+      SourceTable: !Ref SourceEventTable
+      DestinationTable: !Ref DestinationEventTable
+
+  IssueTableMigration:
+    Type: Custom::IssueTableMigration
+    Properties:
+      ServiceToken: !GetAtt MigrationLambda.Arn
+      SourceTable: !Ref SourceIssueTable
+      DestinationTable: !Ref DestinationIssueTable
+
+Outputs:
+  SiteTableMigration:
+    Description: The Result of site table migration
+    Value: !GetAtt SiteTableMigration.Message
+  AreaTableMigration:
+    Description: The Result of area table migration
+    Value: !GetAtt AreaTableMigration.Message
+  ProcessTableMigration:
+    Description: The Result of process table migration
+    Value: !GetAtt ProcessTableMigration.Message
+  StationTableMigration:
+    Description: The Result of station table migration
+    Value: !GetAtt StationTableMigration.Message
+  EventTableMigration:
+    Description: The Result of event table migration
+    Value: !GetAtt EventTableMigration.Message
+  DeviceTableMigration:
+    Description: The Result of device table migration
+    Value: !GetAtt DeviceTableMigration.Message
+  IssueTableMigration:
+    Description: The Result of issue table migration
+    Value: !GetAtt IssueTableMigration.Message

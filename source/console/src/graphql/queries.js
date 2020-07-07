@@ -20,17 +20,13 @@ export const getSite = `query GetSite($id: ID!) {
 }
 `;
 export const listSites = `query ListSites(
-  $filter: ModelSiteFilterInput
   $limit: Int
   $nextToken: String
 ) {
-  listSites(filter: $filter, limit: $limit, nextToken: $nextToken) {
+  listSites(limit: $limit, nextToken: $nextToken) {
     items {
       id
       name
-      area {
-        nextToken
-      }
       description
       version
     }
@@ -75,33 +71,20 @@ export const getArea = `query GetArea($id: ID!) {
 }
 `;
 export const listAreas = `query ListAreas(
-  $filter: ModelAreaFilterInput
+  $areaSiteId: ID!
   $limit: Int
   $nextToken: String
 ) {
-  listAreas(filter: $filter, limit: $limit, nextToken: $nextToken) {
+  listAreas(areaSiteId: $areaSiteId, limit: $limit, nextToken: $nextToken) {
     items {
       id
-      site {
-        id
-        name
-        description
-        version
-      }
       name
-      process {
-        nextToken
-      }
-      station {
-        nextToken
-      }
       description
       version
     }
     nextToken
   }
-}
-`;
+}`;
 export const getProcess = `query GetProcess($id: ID!) {
   getProcess(id: $id) {
     id
@@ -134,6 +117,8 @@ export const getProcess = `query GetProcess($id: ID!) {
         priority
         sms
         email
+        topicArn
+        rootCauses
         version
       }
       nextToken
@@ -142,65 +127,54 @@ export const getProcess = `query GetProcess($id: ID!) {
   }
 }
 `;
-export const listProcesss = `query ListProcesss(
-  $filter: ModelProcessFilterInput
+export const listProcesses = `query ListProcesses(
+  $processAreaId: ID!
   $limit: Int
   $nextToken: String
 ) {
-  listProcesss(filter: $filter, limit: $limit, nextToken: $nextToken) {
+  listProcesses(processAreaId: $processAreaId, limit: $limit, nextToken: $nextToken) {
     items {
       id
       name
       description
-      area {
-        id
-        name
-        description
-        version
-      }
-      event {
-        nextToken
-      }
       version
     }
     nextToken
   }
-}
-`;
-export const getEvents = `query GetEvents($id: ID!) {
-  getEvents(id: $id) {
+}`;
+export const getEvent = `query GetEvent($id: ID!) {
+  getEvent(id: $id) {
     id
     name
     description
-    type
-    priority
-    sms
-    email
     process {
       id
       name
-      description
       area {
         id
         name
-        description
-        version
+        site {
+          id
+          name
+        }
+        process {
+          nextToken
+        }
+        station {
+          nextToken
+        }
       }
-      event {
-        nextToken
-      }
-      version
     }
-    version
+    rootCauses
   }
 }
 `;
 export const listEvents = `query ListEvents(
-  $filter: ModelEventFilterInput
+  $eventProcessId: ID!
   $limit: Int
   $nextToken: String
 ) {
-  listEvents(filter: $filter, limit: $limit, nextToken: $nextToken) {
+  listEvents(eventProcessId: $eventProcessId, limit: $limit, nextToken: $nextToken) {
     items {
       id
       name
@@ -209,18 +183,13 @@ export const listEvents = `query ListEvents(
       priority
       sms
       email
-      process {
-        id
-        name
-        description
-        version
-      }
+      topicArn
+      rootCauses
       version
     }
     nextToken
   }
-}
-`;
+}`;
 export const getStation = `query GetStation($id: ID!) {
   getStation(id: $id) {
     id
@@ -258,132 +227,52 @@ export const getStation = `query GetStation($id: ID!) {
 }
 `;
 export const listStations = `query ListStations(
-  $filter: ModelStationFilterInput
+  $stationAreaId: ID!
   $limit: Int
   $nextToken: String
 ) {
-  listStations(filter: $filter, limit: $limit, nextToken: $nextToken) {
+  listStations(stationAreaId: $stationAreaId, limit: $limit, nextToken: $nextToken) {
     items {
       id
       name
       description
-      area {
-        id
-        name
-        description
-        version
-      }
-      device {
-        nextToken
-      }
       version
     }
     nextToken
   }
-}
-`;
-export const getDevice = `query GetDevice($id: ID!) {
-  getDevice(id: $id) {
-    id
-    name
-    description
-    station {
-      id
-      name
-      description
-      area {
-        id
-        name
-        description
-        version
-      }
-      device {
-        nextToken
-      }
-      version
-    }
-    version
-  }
-}
-`;
+}`
 export const listDevices = `query ListDevices(
-  $filter: ModelDeviceFilterInput
+  $deviceStationId: ID!
   $limit: Int
   $nextToken: String
 ) {
-  listDevices(filter: $filter, limit: $limit, nextToken: $nextToken) {
+  listDevices(deviceStationId: $deviceStationId, limit: $limit, nextToken: $nextToken) {
     items {
       id
       name
       description
-      station {
-        id
-        name
-        description
-        version
-      }
       version
     }
     nextToken
   }
-}
-`;
-export const issuesByStatusOnly = `query IssuesByStatusOnly(
-  $status: Status
-  $created: ModelStringKeyConditionInput
-  $sortDirection: ModelSortDirection
-  $filter: ModelIssueFilterInput
-  $limit: Int
-  $nextToken: String
-) {
-  issuesByStatusOnly(
-    status: $status
-    created: $created
-    sortDirection: $sortDirection
-    filter: $filter
-    limit: $limit
-    nextToken: $nextToken
-  ) {
-    items {
-      id
-      eventDescription
-      type
-      priority
-      siteName
-      processName
-      areaName
-      stationName
-      deviceName
-      created
-      acknowledged
-      closed
-      resolutionTime
-      acknowledgedTime
-      status
-      version
-    }
-    nextToken
-  }
-}
-`;
+}`
 export const issuesBySiteAreaStatus = `query IssuesBySiteAreaStatus(
   $siteName: String
-  $areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated: ModelIssueBySiteAreaStatusCompositeKeyConditionInput
-  $sortDirection: ModelSortDirection
-  $filter: ModelIssueFilterInput
+  $areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated: IssueBySiteAreaStatusCompositeKeyConditionInput
+  $filter: IssueFilterInput
   $limit: Int
   $nextToken: String
 ) {
   issuesBySiteAreaStatus(
     siteName: $siteName
     areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated: $areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated
-    sortDirection: $sortDirection
     filter: $filter
     limit: $limit
     nextToken: $nextToken
   ) {
     items {
       id
+      eventId
       eventDescription
       type
       priority
@@ -399,6 +288,7 @@ export const issuesBySiteAreaStatus = `query IssuesBySiteAreaStatus(
       acknowledgedTime
       status
       version
+      rootCause
     }
     nextToken
   }
@@ -406,22 +296,19 @@ export const issuesBySiteAreaStatus = `query IssuesBySiteAreaStatus(
 `;
 export const issuesByDevice = `query IssuesByDevice(
   $siteName: String
-  $areaNameStatusProcessNameStationNameDeviceNameCreated: ModelIssueByDeviceCompositeKeyConditionInput
-  $sortDirection: ModelSortDirection
-  $filter: ModelIssueFilterInput
+  $areaNameStatusProcessNameStationNameDeviceNameCreated: IssueByDeviceCompositeKeyConditionInput
   $limit: Int
   $nextToken: String
 ) {
   issuesByDevice(
     siteName: $siteName
     areaNameStatusProcessNameStationNameDeviceNameCreated: $areaNameStatusProcessNameStationNameDeviceNameCreated
-    sortDirection: $sortDirection
-    filter: $filter
     limit: $limit
     nextToken: $nextToken
   ) {
     items {
       id
+      eventId
       eventDescription
       type
       priority
@@ -442,58 +329,82 @@ export const issuesByDevice = `query IssuesByDevice(
   }
 }
 `;
-export const getIssue = `query GetIssue($id: ID!) {
-  getIssue(id: $id) {
-    id
-    eventDescription
-    type
-    priority
-    siteName
-    processName
-    areaName
-    stationName
-    deviceName
-    created
-    acknowledged
-    closed
-    resolutionTime
-    acknowledgedTime
-    status
+export const getPermission = `query GetPermission($userId: ID!) {
+  getPermission(userId: $userId) {
+    userId
+    sites {
+      id
+      name
+    }
+    areas  {
+      id
+      name
+      parentId
+    }
+    processes  {
+      id
+      name
+      parentId
+    }
+    stations  {
+      id
+      name
+      parentId
+    }
+    devices  {
+      id
+      name
+      parentId
+    }
     version
   }
 }
 `;
-export const listIssue = `query ListIssue(
-  $id: ID
-  $filter: ModelIssueFilterInput
+export const listPermissions = `query ListPermissions(
   $limit: Int
   $nextToken: String
-  $sortDirection: ModelSortDirection
 ) {
-  listIssue(
-    id: $id
-    filter: $filter
-    limit: $limit
-    nextToken: $nextToken
-    sortDirection: $sortDirection
-  ) {
+  listPermissions(limit: $limit, nextToken: $nextToken) {
+    items {
+      userId
+      sites {
+        id
+        name
+      }
+      areas  {
+        id
+        name
+        parentId
+      }
+      processes  {
+        id
+        name
+        parentId
+      }
+      stations  {
+        id
+        name
+        parentId
+      }
+      devices  {
+        id
+        name
+        parentId
+      }
+      version
+    }
+    nextToken
+  }
+}
+`;
+export const listRootCauses = `query ListRootCauses(
+  $limit: Int
+  $nextToken: String
+) {
+  listRootCauses(limit: $limit, nextToken: $nextToken) {
     items {
       id
-      eventDescription
-      type
-      priority
-      siteName
-      processName
-      areaName
-      stationName
-      deviceName
-      created
-      acknowledged
-      closed
-      resolutionTime
-      acknowledgedTime
-      status
-      version
+      rootCause
     }
     nextToken
   }

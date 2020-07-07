@@ -1,0 +1,71 @@
+## Check authorization
+#set ($isAllowed = false)
+#set ($userGroups = $util.defaultIfNull($ctx.identity.claims.get("cognito:groups"), []))
+#set ($allowedGroups = ["AdminGroup"])
+#foreach ($userGroup in $userGroups)
+  #if ($allowedGroups.contains($userGroup))
+    #set ($isAllowed = true)
+    #break
+  #end
+#end
+
+## Throw authorized if the user is not authorized.
+#if ($isAllowed == false)
+  $util.unauthorized()
+#end
+
+## Check duplication
+#set ($duplicated = $ctx.prev.result.items)
+#if ($duplicated.size() > 0)
+  #if ($ctx.args.rootCause)
+    $util.error("Same root cause already exists.", "DataDuplicatedError")
+  #else
+    $util.error("Same name already exists.", "DataDuplicatedError")
+  #end
+#end
+
+## Check validation
+#if ($ctx.args.name)
+  #if (!$util.matches("^[a-zA-Z0-9- _/#]{4,40}$", $ctx.args.name))
+    $util.error("Name must contain only alphanumeric characters and/or the following: - _/# with length 4 to 40.")
+  #end
+#end
+#if ($ctx.args.description)
+  #if (!$util.matches("^[a-zA-Z0-9- _/#]{4,40}$", $ctx.args.description))
+    $util.error("Description must contain only alphanumeric characters and/or the following: - _/# with length 4 to 40.")
+  #end
+#end
+#if ($ctx.args.type)
+  #if (!$util.matches("^[a-zA-Z0-9- _/#]{4,40}$", $ctx.args.type))
+    $util.error("Type must contain only alphanumeric characters and/or the following: - _/# with length 4 to 40.")
+  #end
+#end
+#if ($ctx.args.sms)
+  #if (!$util.matches("^(\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$", $ctx.args.sms))
+    $util.error("SMS No. must be a valid phone number.")
+  #end
+#end
+#if ($ctx.args.email)
+  #if (!$util.matches("^[_a-z0-9-]+(\.[_a-z0-9-]+)*(\+[a-z0-9-]+)?@\w+([\.-]?\w+)*(\.\w{2,3})+$", $ctx.args.email))
+    $util.error("E-Mail must be a valid E-Mail address.")
+  #end
+#end
+#if ($ctx.args.rootCause)
+  #if (!$util.matches("[a-zA-Z0-9- _/#()]+$", $ctx.args.rootCause))
+    $util.error("Root cause must contain only alphanumeric characters and/or the following: - _/#()")
+  #end
+#end
+
+## Set default values
+$util.qr($ctx.args.put("version", $util.defaultIfNull($ctx.args.version, 1)))
+$util.qr($ctx.args.put("createdAt", $util.defaultIfNull($ctx.args.createdAt, $util.time.nowISO8601())))
+$util.qr($ctx.args.put("updatedAt", $util.defaultIfNull($ctx.args.updatedAt, $util.time.nowISO8601())))
+
+{
+  "version": "2017-02-28",
+  "operation": "PutItem",
+  "key": {
+    "id": $util.dynamodb.toDynamoDBJson($util.defaultIfNullOrBlank($ctx.args.id, $util.autoId()))
+  },
+  "attributeValues": $util.dynamodb.toMapValuesJson($context.args)
+}

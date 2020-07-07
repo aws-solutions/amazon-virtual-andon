@@ -1,0 +1,109 @@
+## Raise a GraphQL field error in case of a datasource invocation error
+#if ($ctx.error)
+  $util.error($ctx.error.message, $ctx.error.type)
+#end
+## Pass back the result from DynamoDB. **
+
+## If permission exists, remove unauthorized ones.
+#if ($ctx.stash.permissionCheck && !$ctx.prev.result.isEmpty())
+  #set ($currentResult = $ctx.result.items)
+  #set ($permissions = $ctx.prev.result)
+  #set ($result = {})
+  #set ($items = [])
+  #set ($allowedValues = [])
+
+  ## Check if this is for issue or others.
+  #if ($ctx.stash.type == "issue")
+    ## Check site name
+    #foreach ($value in $currentResult)
+      #foreach ($allowedValue in $permissions.sites)
+        #if ($allowedValue.name == $value.siteName)
+          $util.qr($items.add($value))
+        #end
+      #end
+    #end
+
+    ## Check area name
+    #set ($currentResult = $items)
+    #set ($items = [])
+    #foreach ($value in $currentResult)
+      #foreach ($allowedValue in $permissions.areas)
+        #if ($allowedValue.name == $value.areaName)
+          $util.qr($items.add($value))
+        #end
+      #end
+    #end
+
+    ## Check process name
+    #set ($currentResult = $items)
+    #set ($items = [])
+    #foreach ($value in $currentResult)
+      #foreach ($allowedValue in $permissions.processes)
+        #if ($allowedValue.name == $value.processName)
+          $util.qr($items.add($value))
+        #end
+      #end
+    #end
+
+    ## Check station name
+    #set ($currentResult = $items)
+    #set ($items = [])
+    #foreach ($value in $currentResult)
+      #foreach ($allowedValue in $permissions.stations)
+        #if ($allowedValue.name == $value.stationName)
+          $util.qr($items.add($value))
+        #end
+      #end
+    #end
+
+    ## Check device name
+    #set ($currentResult = $items)
+    #set ($items = [])
+    #foreach ($value in $currentResult)
+      #foreach ($allowedValue in $permissions.devices)
+        #if ($allowedValue.name == $value.deviceName)
+          $util.qr($items.add($value))
+        #end
+      #end
+    #end
+  #else
+    #if ($ctx.stash.type == "site")
+      #set ($allowedValues = $permissions.sites)
+    #elseif ($ctx.stash.type == "area")
+      #set ($allowedValues = $permissions.areas)
+    #elseif ($ctx.stash.type == "process")
+      #set ($allowedValues = $permissions.processes)
+    #elseif ($ctx.stash.type == "station")
+      #set ($allowedValues = $permissions.stations)
+    #elseif ($ctx.stash.type == "device")
+      #set ($allowedValues = $permissions.devices)
+    #elseif ($ctx.stash.type == "event")
+      #set ($allowedValues = $permissions.processes)
+    #end
+
+    ## For event, it checks permission with process ID because there's no such permission for event.
+    #foreach ($value in $currentResult)
+      #foreach ($allowedValue in $allowedValues)
+        #if ($ctx.stash.type == "event")
+          #if ($allowedValue.id == $value.eventProcessId)
+            $util.qr($items.add($value))
+          #end
+        #else
+          #if ($allowedValue.id == $value.id)
+            $util.qr($items.add($value))
+          #end
+        #end
+      #end
+    #end
+  #end
+
+  ## Check if nextToken is available.
+  #if ($ctx.result.nextToken)
+    $util.qr($result.put("nextToken", $ctx.result.nextToken))
+  #end
+
+  $util.qr($result.put("items", $items))
+  $util.toJson($result)
+#else
+  $util.toJson($ctx.result)
+#end

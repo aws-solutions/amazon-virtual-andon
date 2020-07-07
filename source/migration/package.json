@@ -1,0 +1,24 @@
+{
+  "name": "ava-custom-resource",
+  "version": "2.0.0",
+  "description": "Amazon Virtual Andon custom resource",
+  "main": "index.js",
+  "dependencies": {
+    "uuid": "8.0.0",
+    "axios": "0.19.2"
+  },
+  "devDependencies": {
+    "aws-sdk": "2.677.0",
+    "axios-mock-adapter": "1.18.1",
+    "jest": "26.0.1"
+  },
+  "scripts": {
+    "pretest": "npm run build:init && npm install",
+    "test": "CI=true jest --config jestconfig.json --coverage --silent",
+    "build:init": "rm -rf package-lock.json dist node_modules coverage",
+    "build:zip": "zip -rq ava-migration.zip .",
+    "build:dist": "mkdir dist && mv ava-migration.zip dist/",
+    "build": "npm run build:init && npm install --production && npm run build:zip && npm run build:dist"
+  },
+  "license": "Apache-2.0"
+}

@@ -1,0 +1,1454 @@
+# Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Amazon Software License (the "License").
+# You may not use this file except in compliance with the License.
+# A copy of the License is located at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# or in the "license" file accompanying this file. This file is distributed
+# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language governing
+# permissions and limitations under the License.
+
+Description: "(SO0071g) - The AWS CloudFormation template for deployment of the SOLUTION_NAME_PLACEHOLDER GraphQL resources. Version VERSION_PLACEHOLDER"
+
+Parameters:
+  SiteTable:
+    Type: String
+    Description: DynamoDB Site Table name
+  AreaTable:
+    Type: String
+    Description: DynamoDB Area Table name
+  StationTable:
+    Type: String
+    Description: DynamoDB Station table name
+  ProcessTable:
+    Type: String
+    Description: DynamoDB Process table name
+  DeviceTable:
+    Type: String
+    Description: DynamoDB Device table name
+  EventTable:
+    Type: String
+    Description: DynamoDB Event table name
+  IssueTable:
+    Type: String
+    Description: DynamoDB Issue table name
+  PermissionTable:
+    Type: String
+    Description: DynamoDB Permission table name
+  RootCauseTable:
+    Type: String
+    Description: DynamoDB Root Cause table name
+  UserPoolId:
+    Type: String
+    Description: Cognito User Pool ID
+  SourceCodeS3Bucket:
+    Type: String
+    Description: Source code S3 bucket name
+  SourceCodeKeyPrefix:
+    Type: String
+    Description: Source code S3 key prefix
+
+Resources:
+  # GraphQL API
+  Api:
+    Type: AWS::AppSync::GraphQLApi
+    Properties:
+      Name: ava-api
+      AuthenticationType: AMAZON_COGNITO_USER_POOLS
+      UserPoolConfig:
+        UserPoolId: !Ref UserPoolId
+        AwsRegion: !Ref "AWS::Region"
+        DefaultAction: ALLOW
+      AdditionalAuthenticationProviders:
+        - AuthenticationType: AWS_IAM
+      LogConfig:
+        CloudWatchLogsRoleArn: !GetAtt LogRole.Arn
+        ExcludeVerboseContent: False
+        FieldLogLevel: NONE
+
+  LogRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - appsync.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: appsync-graphqlapi-logs
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*
+
+  # GraphQL Schema
+  Schema:
+    Type: AWS::AppSync::GraphQLSchema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DefinitionS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/schema.graphql
+
+  # GraphQL DataSource
+  NoneDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Type: NONE
+      Name: NONE
+
+  SiteDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Type: AMAZON_DYNAMODB
+      Name: SiteTable
+      ServiceRoleArn: !GetAtt SiteRole.Arn
+      DynamoDBConfig:
+        TableName: !Ref SiteTable
+        AwsRegion: !Ref "AWS::Region"
+        UseCallerCredentials: FALSE
+
+  AreaDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Type: AMAZON_DYNAMODB
+      Name: AreaTable
+      ServiceRoleArn: !GetAtt AreaRole.Arn
+      DynamoDBConfig:
+        TableName: !Ref AreaTable
+        AwsRegion: !Ref "AWS::Region"
+        UseCallerCredentials: FALSE
+
+  StationDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Type: AMAZON_DYNAMODB
+      Name: StationTable
+      ServiceRoleArn: !GetAtt StationRole.Arn
+      DynamoDBConfig:
+        TableName: !Ref StationTable
+        AwsRegion: !Ref "AWS::Region"
+        UseCallerCredentials: FALSE
+
+  ProcessDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Type: AMAZON_DYNAMODB
+      Name: ProcessTable
+      ServiceRoleArn: !GetAtt ProcessRole.Arn
+      DynamoDBConfig:
+        TableName: !Ref ProcessTable
+        AwsRegion: !Ref "AWS::Region"
+        UseCallerCredentials: FALSE
+
+  DeviceDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Type: AMAZON_DYNAMODB
+      Name: DeviceTable
+      ServiceRoleArn: !GetAtt DeviceRole.Arn
+      DynamoDBConfig:
+        TableName: !Ref DeviceTable
+        AwsRegion: !Ref "AWS::Region"
+        UseCallerCredentials: FALSE
+
+  EventDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Type: AMAZON_DYNAMODB
+      Name: EventTable
+      ServiceRoleArn: !GetAtt EventRole.Arn
+      DynamoDBConfig:
+        TableName: !Ref EventTable
+        AwsRegion: !Ref "AWS::Region"
+        UseCallerCredentials: FALSE
+
+  IssueDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Type: AMAZON_DYNAMODB
+      Name: IssueTable
+      ServiceRoleArn: !GetAtt IssueRole.Arn
+      DynamoDBConfig:
+        TableName: !Ref IssueTable
+        AwsRegion: !Ref "AWS::Region"
+        UseCallerCredentials: FALSE
+
+  PermissionDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Type: AMAZON_DYNAMODB
+      Name: PermissionTable
+      ServiceRoleArn: !GetAtt PermissionRole.Arn
+      DynamoDBConfig:
+        TableName: !Ref PermissionTable
+        AwsRegion: !Ref "AWS::Region"
+        UseCallerCredentials: FALSE
+
+  RootCauseDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Type: AMAZON_DYNAMODB
+      Name: RootCauseTable
+      ServiceRoleArn: !GetAtt RootCauseRole.Arn
+      DynamoDBConfig:
+        TableName: !Ref RootCauseTable
+        AwsRegion: !Ref "AWS::Region"
+        UseCallerCredentials: FALSE
+
+  # GraphQL Service Role
+  SiteRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SiteTableAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:GetItem
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SiteTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SiteTable}/index/name-index
+
+  AreaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AreaTableAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:GetItem
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${AreaTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${AreaTable}/index/areaSiteId-name-index
+
+  StationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: StationTableAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:GetItem
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${StationTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${StationTable}/index/stationAreaId-name-index
+
+  ProcessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ProcessTableAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:GetItem
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ProcessTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ProcessTable}/index/processAreaId-name-index
+
+  DeviceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: DeviceTableAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DeviceTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DeviceTable}/index/deviceStationId-name-index
+
+  EventRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: EventTableAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:GetItem
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EventTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EventTable}/index/eventProcessId-name-index
+
+  IssueRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: IssueTableAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                  - dynamodb:UpdateItem
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${IssueTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${IssueTable}/index/ByDevice-index
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${IssueTable}/index/BySiteAreaStatus-index
+
+  PermissionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: PermissionTableAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Scan
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${PermissionTable}
+
+  RootCauseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: RootCauseTableAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${RootCauseTable}
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${RootCauseTable}/index/rootCause-index
+
+  # GraphQL Resolver
+  SiteAreaResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt AreaDataSource.Name
+      TypeName: Site
+      FieldName: area
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Site.area.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  AreaSiteResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt SiteDataSource.Name
+      TypeName: Area
+      FieldName: site
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Area.site.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  AreaProcessResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt ProcessDataSource.Name
+      TypeName: Area
+      FieldName: process
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Area.process.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  AreaStationResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt StationDataSource.Name
+      TypeName: Area
+      FieldName: station
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Area.station.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  ProcessAreaResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt AreaDataSource.Name
+      TypeName: Process
+      FieldName: area
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Process.area.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  ProcessEventResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt EventDataSource.Name
+      TypeName: Process
+      FieldName: event
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Process.event.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  EventProcessResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt ProcessDataSource.Name
+      TypeName: Event
+      FieldName: process
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Event.process.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  StationAreaResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt AreaDataSource.Name
+      TypeName: Station
+      FieldName: area
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Station.area.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  StationDeviceResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt DeviceDataSource.Name
+      TypeName: Station
+      FieldName: device
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Station.device.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  DeviceStationResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt StationDataSource.Name
+      TypeName: Device
+      FieldName: station
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Device.station.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  GetSiteResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt SiteDataSource.Name
+      TypeName: Query
+      FieldName: getSite
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.get.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  ListSitesResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      TypeName: Query
+      FieldName: listSites
+      RequestMappingTemplate: |
+        $util.qr($ctx.stash.put("permissionCheck", true))
+        $util.qr($ctx.stash.put("type", "site"))
+        {}
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.prev.vtl
+      Kind: PIPELINE
+      PipelineConfig:
+        Functions:
+          - !GetAtt GetPermissionsForAssociateGroupUserFunction.FunctionId
+          - !GetAtt ListSitesFunction.FunctionId
+
+  ListSitesFunction:
+    Type: AWS::AppSync::FunctionConfiguration
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Name: ListSitesFunction
+      Description: Get sites
+      DataSourceName: !GetAtt SiteDataSource.Name
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.listSites.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+      FunctionVersion: 2018-05-29
+
+  CreateSiteResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      TypeName: Mutation
+      FieldName: createSite
+      RequestMappingTemplate: |
+        {}
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.prev.vtl
+      Kind: PIPELINE
+      PipelineConfig:
+        Functions:
+          - !GetAtt ListSitesByNameFunction.FunctionId
+          - !GetAtt CreateSiteFunction.FunctionId
+
+  ListSitesByNameFunction:
+    Type: AWS::AppSync::FunctionConfiguration
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Name: ListSitesByNameFunction
+      Description: Get sites by name
+      DataSourceName: !GetAtt SiteDataSource.Name
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.listSitesByName.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+      FunctionVersion: 2018-05-29
+
+  CreateSiteFunction:
+    Type: AWS::AppSync::FunctionConfiguration
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Name: CreateSiteFunction
+      Description: Create a site
+      DataSourceName: !GetAtt SiteDataSource.Name
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.create.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+      FunctionVersion: 2018-05-29
+
+  DeleteSiteResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt SiteDataSource.Name
+      TypeName: Mutation
+      FieldName: deleteSite
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.delete.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  GetAreaResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt AreaDataSource.Name
+      TypeName: Query
+      FieldName: getArea
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.get.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  ListAreasResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      TypeName: Query
+      FieldName: listAreas
+      RequestMappingTemplate: |
+        $util.qr($ctx.stash.put("permissionCheck", true))
+        $util.qr($ctx.stash.put("type", "area"))
+        {}
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.prev.vtl
+      Kind: PIPELINE
+      PipelineConfig:
+        Functions:
+          - !GetAtt GetPermissionsForAssociateGroupUserFunction.FunctionId
+          - !GetAtt ListAreasFunction.FunctionId
+
+  ListAreasFunction:
+    Type: AWS::AppSync::FunctionConfiguration
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Name: ListAreasFunction
+      Description: Get areas
+      DataSourceName: !GetAtt AreaDataSource.Name
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.listAreas.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+      FunctionVersion: 2018-05-29
+
+  CreateAreaResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      TypeName: Mutation
+      FieldName: createArea
+      RequestMappingTemplate: |
+        {}
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.prev.vtl
+      Kind: PIPELINE
+      PipelineConfig:
+        Functions:
+          - !GetAtt ListAreasFunction.FunctionId
+          - !GetAtt CreateAreaFunction.FunctionId
+
+  CreateAreaFunction:
+    Type: AWS::AppSync::FunctionConfiguration
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Name: CreateAreaFunction
+      Description: Create an arean
+      DataSourceName: !GetAtt AreaDataSource.Name
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.create.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+      FunctionVersion: 2018-05-29
+
+  DeleteAreaResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt AreaDataSource.Name
+      TypeName: Mutation
+      FieldName: deleteArea
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.delete.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  GetStationResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt StationDataSource.Name
+      TypeName: Query
+      FieldName: getStation
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.get.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  ListStationsResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      TypeName: Query
+      FieldName: listStations
+      RequestMappingTemplate: |
+        $util.qr($ctx.stash.put("permissionCheck", true))
+        $util.qr($ctx.stash.put("type", "station"))
+        {}
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.prev.vtl
+      Kind: PIPELINE
+      PipelineConfig:
+        Functions:
+          - !GetAtt GetPermissionsForAssociateGroupUserFunction.FunctionId
+          - !GetAtt ListStationsFunction.FunctionId
+
+  ListStationsFunction:
+    Type: AWS::AppSync::FunctionConfiguration
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Name: ListStationsFunction
+      Description: Get stations
+      DataSourceName: !GetAtt StationDataSource.Name
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.listStations.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+      FunctionVersion: 2018-05-29
+
+  CreateStationResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      TypeName: Mutation
+      FieldName: createStation
+      RequestMappingTemplate: |
+        {}
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.prev.vtl
+      Kind: PIPELINE
+      PipelineConfig:
+        Functions:
+          - !GetAtt ListStationsFunction.FunctionId
+          - !GetAtt CreateStationFunction.FunctionId
+
+  CreateStationFunction:
+    Type: AWS::AppSync::FunctionConfiguration
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Name: CreateStationFunction
+      Description: Create a station
+      DataSourceName: !GetAtt StationDataSource.Name
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.create.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+      FunctionVersion: 2018-05-29
+
+  DeleteStationResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt StationDataSource.Name
+      TypeName: Mutation
+      FieldName: deleteStation
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.delete.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  GetProcessResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt ProcessDataSource.Name
+      TypeName: Query
+      FieldName: getProcess
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.get.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  ListProcessesResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      TypeName: Query
+      FieldName: listProcesses
+      RequestMappingTemplate: |
+        $util.qr($ctx.stash.put("permissionCheck", true))
+        $util.qr($ctx.stash.put("type", "process"))
+        {}
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.prev.vtl
+      Kind: PIPELINE
+      PipelineConfig:
+        Functions:
+          - !GetAtt GetPermissionsForAssociateGroupUserFunction.FunctionId
+          - !GetAtt ListProcessesFunction.FunctionId
+
+  ListProcessesFunction:
+    Type: AWS::AppSync::FunctionConfiguration
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Name: ListProcessesFunction
+      Description: Get processes
+      DataSourceName: !GetAtt ProcessDataSource.Name
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.listProcesses.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+      FunctionVersion: 2018-05-29
+
+  CreateProcessResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      TypeName: Mutation
+      FieldName: createProcess
+      RequestMappingTemplate: |
+        {}
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.prev.vtl
+      Kind: PIPELINE
+      PipelineConfig:
+        Functions:
+          - !GetAtt ListProcessesFunction.FunctionId
+          - !GetAtt CreateProcessFunction.FunctionId
+
+  CreateProcessFunction:
+    Type: AWS::AppSync::FunctionConfiguration
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Name: CreateProcessFunction
+      Description: Create a process
+      DataSourceName: !GetAtt ProcessDataSource.Name
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.create.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+      FunctionVersion: 2018-05-29
+
+  DeleteProcessResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt ProcessDataSource.Name
+      TypeName: Mutation
+      FieldName: deleteProcess
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.delete.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  ListDevicesResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      TypeName: Query
+      FieldName: listDevices
+      RequestMappingTemplate: |
+        $util.qr($ctx.stash.put("permissionCheck", true))
+        $util.qr($ctx.stash.put("type", "device"))
+        {}
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.prev.vtl
+      Kind: PIPELINE
+      PipelineConfig:
+        Functions:
+          - !GetAtt GetPermissionsForAssociateGroupUserFunction.FunctionId
+          - !GetAtt ListDevicesFunction.FunctionId
+
+  ListDevicesFunction:
+    Type: AWS::AppSync::FunctionConfiguration
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Name: ListDevicesFunction
+      Description: Get devices
+      DataSourceName: !GetAtt DeviceDataSource.Name
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.listDevices.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+      FunctionVersion: 2018-05-29
+
+  CreateDeviceResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      TypeName: Mutation
+      FieldName: createDevice
+      RequestMappingTemplate: |
+        {}
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.prev.vtl
+      Kind: PIPELINE
+      PipelineConfig:
+        Functions:
+          - !GetAtt ListDevicesFunction.FunctionId
+          - !GetAtt CreateDeviceFunction.FunctionId
+
+  CreateDeviceFunction:
+    Type: AWS::AppSync::FunctionConfiguration
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Name: CreateDeviceFunction
+      Description: Create a device
+      DataSourceName: !GetAtt DeviceDataSource.Name
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.create.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+      FunctionVersion: 2018-05-29
+
+  DeleteDeviceResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt DeviceDataSource.Name
+      TypeName: Mutation
+      FieldName: deleteDevice
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.delete.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  GetEventResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt EventDataSource.Name
+      TypeName: Query
+      FieldName: getEvent
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.get.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  ListEventsResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      TypeName: Query
+      FieldName: listEvents
+      RequestMappingTemplate: |
+        $util.qr($ctx.stash.put("permissionCheck", true))
+        $util.qr($ctx.stash.put("type", "event"))
+        {}
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.prev.vtl
+      Kind: PIPELINE
+      PipelineConfig:
+        Functions:
+          - !GetAtt GetPermissionsForAssociateGroupUserFunction.FunctionId
+          - !GetAtt ListEventsFunction.FunctionId
+
+  ListEventsFunction:
+    Type: AWS::AppSync::FunctionConfiguration
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Name: ListEventsFunction
+      Description: Get events
+      DataSourceName: !GetAtt EventDataSource.Name
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.listEvents.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+      FunctionVersion: 2018-05-29
+
+  CreateEventResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      TypeName: Mutation
+      FieldName: createEvent
+      RequestMappingTemplate: |
+        {}
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.prev.vtl
+      Kind: PIPELINE
+      PipelineConfig:
+        Functions:
+          - !GetAtt ListEventsFunction.FunctionId
+          - !GetAtt CreateEventFunction.FunctionId
+
+  CreateEventFunction:
+    Type: AWS::AppSync::FunctionConfiguration
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Name: CreateEventFunction
+      Description: Create an event
+      DataSourceName: !GetAtt EventDataSource.Name
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.create.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+      FunctionVersion: 2018-05-29
+
+  UpdateEventResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt EventDataSource.Name
+      TypeName: Mutation
+      FieldName: updateEvent
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.updateEvent.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  DeleteEventResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt EventDataSource.Name
+      TypeName: Mutation
+      FieldName: deleteEvent
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.delete.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  CreateIssueResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt IssueDataSource.Name
+      TypeName: Mutation
+      FieldName: createIssue
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.createIssue.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  UpdateIssueResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt IssueDataSource.Name
+      TypeName: Mutation
+      FieldName: updateIssue
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.updateIssue.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  QueryissuesBySiteAreaStatusResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt IssueDataSource.Name
+      TypeName: Query
+      FieldName: issuesBySiteAreaStatus
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.issuesBySiteAreaStatus.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  QueryissuesByDeviceResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      TypeName: Query
+      FieldName: issuesByDevice
+      RequestMappingTemplate: |
+        $util.qr($ctx.stash.put("permissionCheck", true))
+        $util.qr($ctx.stash.put("type", "issue"))
+        {}
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.prev.vtl
+      Kind: PIPELINE
+      PipelineConfig:
+        Functions:
+          - !GetAtt GetPermissionsForAssociateGroupUserFunction.FunctionId
+          - !GetAtt ListIssuesByDeviceFunction.FunctionId
+
+  ListIssuesByDeviceFunction:
+    Type: AWS::AppSync::FunctionConfiguration
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Name: ListIssuesByDeviceFunction
+      Description: Get issues by device
+      DataSourceName: !GetAtt IssueDataSource.Name
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.issuesByDevice.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+      FunctionVersion: 2018-05-29
+
+  SubscriptiononCreateIssueResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt NoneDataSource.Name
+      TypeName: Subscription
+      FieldName: onCreateIssue
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "payload": {}
+        }
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Subscription.res.vtl
+
+  SubscriptiononUpdateIssueResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt NoneDataSource.Name
+      TypeName: Subscription
+      FieldName: onUpdateIssue
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "payload": {}
+        }
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Subscription.res.vtl
+
+  PutPermissionResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt PermissionDataSource.Name
+      TypeName: Mutation
+      FieldName: putPermission
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.putPermission.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  DeletePermissionResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt PermissionDataSource.Name
+      TypeName: Mutation
+      FieldName: deletePermission
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.delete.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  GetPermissionResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt PermissionDataSource.Name
+      TypeName: Query
+      FieldName: getPermission
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.get.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  ListPermissionsResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt PermissionDataSource.Name
+      TypeName: Query
+      FieldName: listPermissions
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.listPermissions.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  SubscriptiononPutPermissionResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt NoneDataSource.Name
+      TypeName: Subscription
+      FieldName: onPutPermission
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "payload": {}
+        }
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Subscription.res.vtl
+
+  SubscriptiononDeletePermissionResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt NoneDataSource.Name
+      TypeName: Subscription
+      FieldName: onDeletePermission
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "payload": {}
+        }
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Subscription.res.vtl
+
+  GetPermissionsForAssociateGroupUserFunction:
+    Type: AWS::AppSync::FunctionConfiguration
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Name: GetPermissionsForAssociateGroupUserFunction
+      Description: Get permissions for an associate group user
+      DataSourceName: !GetAtt PermissionDataSource.Name
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.get.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+      FunctionVersion: 2018-05-29
+
+  ListRootCausesResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt RootCauseDataSource.Name
+      TypeName: Query
+      FieldName: listRootCauses
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.listRootCauses.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  ListRootCausesByNameFunction:
+    Type: AWS::AppSync::FunctionConfiguration
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Name: ListRootCausesByNameFunction
+      Description: Get root causes
+      DataSourceName: !GetAtt RootCauseDataSource.Name
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Query.listRootCausesByName.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+      FunctionVersion: 2018-05-29
+
+  CreateRootCauseResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      TypeName: Mutation
+      FieldName: createRootCause
+      RequestMappingTemplate: |
+        {}
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.prev.vtl
+      Kind: PIPELINE
+      PipelineConfig:
+        Functions:
+          - !GetAtt ListRootCausesByNameFunction.FunctionId
+          - !GetAtt CreateRootCauseFunction.FunctionId
+
+  CreateRootCauseFunction:
+    Type: AWS::AppSync::FunctionConfiguration
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      Name: CreateRootCauseFunction
+      Description: Create a root cause
+      DataSourceName: !GetAtt RootCauseDataSource.Name
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.create.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+      FunctionVersion: 2018-05-29
+
+  DeleteRootCauseResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt RootCauseDataSource.Name
+      TypeName: Mutation
+      FieldName: deleteRootCause
+      RequestMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Mutation.delete.req.vtl
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Response.vtl
+
+  SubscriptiononCreateRootCauseResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt NoneDataSource.Name
+      TypeName: Subscription
+      FieldName: onCreateRootCause
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "payload": {}
+        }
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Subscription.res.vtl
+
+  SubscriptiononDeleteRootCauseResolver:
+    Type: AWS::AppSync::Resolver
+    DependsOn: Schema
+    Properties:
+      ApiId: !GetAtt Api.ApiId
+      DataSourceName: !GetAtt NoneDataSource.Name
+      TypeName: Subscription
+      FieldName: onDeleteRootCause
+      RequestMappingTemplate: |
+        {
+          "version": "2018-05-29",
+          "payload": {}
+        }
+      ResponseMappingTemplateS3Location:
+        !Sub s3://${SourceCodeS3Bucket}-${AWS::Region}/${SourceCodeKeyPrefix}/graphql/resolver/Subscription.res.vtl
+
+Outputs:
+  GraphQLApiId:
+    Description: Amazon Virtual Andon GraphQL API Id
+    Value: !GetAtt Api.ApiId
+  GraphQLArn:
+    Description: Amazon Virtual Andon GraphQL ARN
+    Value: !GetAtt Api.Arn
+  GraphQLEndpoint:
+    Description: Amazon Virtual Andon GraphQL Endpoint
+    Value: !GetAtt Api.GraphQLUrl

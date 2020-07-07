@@ -44,46 +44,58 @@ mkdir -p $build_dist_dir
 echo "------------------------------------------------------------------------------"
 echo "[Packing] Templates"
 echo "------------------------------------------------------------------------------"
-echo "cp $template_dir/amazon-virtual-andon.yaml $template_dist_dir/amazon-virtual-andon.template"
-cp $template_dir/amazon-virtual-andon.yaml $template_dist_dir/amazon-virtual-andon.template
+SUB_BUCKET_NAME="s/BUCKET_NAME_PLACEHOLDER/$1/g"
+SUB_SOLUTION_NAME="s/SOLUTION_NAME_PLACEHOLDER/$2/g"
+SUB_VERSION="s/VERSION_PLACEHOLDER/$3/g"
 
-echo "Updating code source bucket in template with $1"
-replace="s/%%BUCKET_NAME%%/$1/g"
-echo "sed -i '' -e $replace $template_dist_dir/amazon-virtual-andon.template"
-sed -i '' -e $replace $template_dist_dir/amazon-virtual-andon.template
-replace="s/%%GITHUB_BUCKET_NAME%%/$2/g"
-echo "sed -i '' -e $replace $template_dist_dir/amazon-virtual-andon.template"
-sed -i '' -e $replace $template_dist_dir/amazon-virtual-andon.template
-replace="s/%%SOLUTION_NAME%%/$3/g"
-echo "sed -i '' -e $replace $template_dist_dir/amazon-virtual-andon.template"
-sed -i '' -e $replace $template_dist_dir/amazon-virtual-andon.template
-replace="s/%%VERSION%%/$4/g"
-echo "sed -i '' -e $replace $template_dist_dir/amazon-virtual-andon.template"
-sed -i '' -e $replace $template_dist_dir/amazon-virtual-andon.template
+for FULLNAME in ./*.yaml
+do
+  TEMPLATE=`basename $FULLNAME .yaml`
+  echo "Template: $TEMPLATE"
+  sed -e $SUB_BUCKET_NAME -e $SUB_SOLUTION_NAME -e $SUB_VERSION $template_dir/$TEMPLATE.yaml > $template_dist_dir/$TEMPLATE.template
+  cp $template_dist_dir/$TEMPLATE.template $build_dist_dir/
+done
 
 echo "------------------------------------------------------------------------------"
-echo "[Rebuild] Resources - Logger"
+echo "[Build] Amazon Virtual Andon Custom Resource"
 echo "------------------------------------------------------------------------------"
-cd $source_dir/resources/logger
+cd $source_dir/custom-resource
 npm run build
+cp ./dist/ava-custom-resource.zip $build_dist_dir/ava-custom-resource.zip
 
 echo "------------------------------------------------------------------------------"
-echo "[Rebuild] Resources - Metrics"
+echo "[Build] Amazon Virtual Andon Issue Handler"
 echo "------------------------------------------------------------------------------"
-cd $source_dir/resources/usage-metrics
-npm run build
-
-echo "------------------------------------------------------------------------------"
-echo "[Rebuild] Resources - CICD Helper"
-echo "------------------------------------------------------------------------------"
-cd $source_dir/resources/cicd
-npm run build
-cp ./dist/ava-cicd.zip $build_dist_dir/ava-cicd.zip
-
-echo "------------------------------------------------------------------------------"
-echo "[Rebuild] Services - AVA Issue Handler"
-echo "------------------------------------------------------------------------------"
-cd $source_dir/services/ava-issue-handler
+cd $source_dir/ava-issue-handler
 npm run build
 cp ./dist/ava-issue-handler.zip $build_dist_dir/ava-issue-handler.zip
 
+echo "------------------------------------------------------------------------------"
+echo "[Build] Amazon Virtual Andon Migration"
+echo "------------------------------------------------------------------------------"
+cd $source_dir/migration
+npm run build
+cp ./dist/ava-migration.zip $build_dist_dir/ava-migration.zip
+
+echo "------------------------------------------------------------------------------"
+echo "[Build] Amazon Virtual Andon Console"
+echo "------------------------------------------------------------------------------"
+cd $source_dir/console
+INLINE_RUNTIME_CHUNK=false npm run build
+mkdir $build_dist_dir/console
+cp -r ./build/* $build_dist_dir/console
+
+echo "------------------------------------------------------------------------------"
+echo "[Create] Console manifest"
+echo "------------------------------------------------------------------------------"
+cd $source_dir/console/build
+manifest=(`find * -type f ! -iname "andon_config.js" ! -iname ".DS_Store"`)
+manifest_json=$(IFS=,;printf "%s" "${manifest[*]}")
+echo "{\"files\":[\"$manifest_json\"]}" | sed 's/,/","/g' >> $build_dist_dir/console/site-manifest.json
+
+echo "------------------------------------------------------------------------------"
+echo "[Copy] GraphQL resources"
+echo "------------------------------------------------------------------------------"
+cd $source_dir/graphql
+mkdir $build_dist_dir/graphql
+cp -r ./* $build_dist_dir/graphql

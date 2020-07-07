@@ -1,0 +1,30 @@
+## Check authorization
+#set ($isAllowed = false)
+#set ($userGroups = $util.defaultIfNull($ctx.identity.claims.get("cognito:groups"), []))
+#set ($allowedGroups = ["AdminGroup"])
+#foreach ($userGroup in $userGroups)
+  #if ($allowedGroups.contains($userGroup))
+    #set ($isAllowed = true)
+    #break
+  #end
+#end
+
+## Throw authorized if the user is not authorized.
+#if ($isAllowed == false)
+  $util.unauthorized()
+#end
+
+{
+  "version": "2017-02-28",
+  "operation": "Query",
+  "index": "name-index",
+  "query": {
+    "expression": "#name = :name",
+    "expressionNames": {
+      "#name": "name"
+    },
+    "expressionValues": {
+      ":name": $util.dynamodb.toDynamoDBJson($ctx.args.name)
+    }
+  }
+}
