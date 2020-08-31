@@ -14,7 +14,7 @@
 // Import React and Amplify packages
 import React from 'react';
 import { CSVLink } from 'react-csv';
-import { Auth, PubSub } from 'aws-amplify';
+import { Auth, PubSub, I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -32,7 +32,7 @@ import Alert from 'react-bootstrap/Alert';
 import Modal from 'react-bootstrap/Modal';
 
 // Import custom setting
-import { LOGGING_LEVEL, FILE_SIZE_LIMIT, CustomError, sendMetrics, validateEmailAddress, sortByName, getLocaleString, getInputFormValidationClassName, makeVisibleBySearchKeyword } from '../util/CustomUtil';
+import { LOGGING_LEVEL, FILE_SIZE_LIMIT, CustomError, sendMetrics, validateEmailAddress, sortByName, getInputFormValidationClassName, makeVisibleBySearchKeyword } from '../util/CustomUtil';
 import CognitoController from '../util/CognitoController';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IUser, ICSVUser, IUploadResult } from '../components/Interfaces';
@@ -92,12 +92,12 @@ class User extends React.Component<IProps, IState> {
     super(props);
 
     this.state = {
-      title: getLocaleString('Users'),
+      title: I18n.get('text.users'),
       users: [],
       csvUsers: [
         {
-          username: getLocaleString('User E-Mail'),
-          groups: getLocaleString('Enter a group name for each user. If a user belongs to more than one group, use a comma to separate each group name: AdminGroup, ManagerGroup, EngineerGroup, and AssociateGroup')
+          username: I18n.get('text.user.email'),
+          groups: I18n.get('input.csv.groupname')
         }
       ],
       isLoading: false,
@@ -113,7 +113,7 @@ class User extends React.Component<IProps, IState> {
       isModalProcessing: false,
       isEmailValid: false,
       csvFile: new File([''], ''),
-      csvFileName: getLocaleString('Select a CSV file with the downloaded format.'),
+      csvFileName: I18n.get('text.select.csv.file'),
       isFileValid: false,
       uploadResult: []
     };
@@ -168,7 +168,7 @@ class User extends React.Component<IProps, IState> {
       // Adds visible key/value for filter
       for (let user of users) {
         user.visible = searchKeyword === '' || user.username.includes(searchKeyword);
-        user.groups = [ getLocaleString('Loading') ];
+        user.groups = [ I18n.get('text.loading') ];
       }
 
       // Get user groups asynchronously for performance purpose
@@ -176,7 +176,7 @@ class User extends React.Component<IProps, IState> {
 
       this.setState({
         users: sortByName(users, sort, 'username'),
-        title: `${getLocaleString('Users')} (${users.length})`
+        title: `${I18n.get('text.users')} (${users.length})`
       });
     } catch (error) {
       if (error instanceof CustomError) {
@@ -185,7 +185,7 @@ class User extends React.Component<IProps, IState> {
         LOGGER.error('Error occurred while getting users.');
         LOGGER.debug(error);
 
-        this.setState({ error: getLocaleString('Error occurred while getting users.') });
+        this.setState({ error: I18n.get('error.get.users') });
       }
     }
 
@@ -234,7 +234,7 @@ class User extends React.Component<IProps, IState> {
       const newUsers = [...users, newUser];
       this.setState({
         users: sortByName(newUsers, sort, 'username'),
-        title: `${getLocaleString('Users')} (${newUsers.length})`,
+        title: `${I18n.get('text.users')} (${newUsers.length})`,
         email: '',
         groups: [],
         isModalProcessing: false,
@@ -244,10 +244,10 @@ class User extends React.Component<IProps, IState> {
         modalType: ModalType.None
       });
 
-      this.props.handleNotification(getLocaleString('User was added successfully.'), 'info', 5);
+      this.props.handleNotification(I18n.get('info.add.user'), 'info', 5);
       await sendMetrics({ 'user': 1 });
     } catch (error) {
-      let message = getLocaleString('Error occurred while adding a user.');
+      let message = I18n.get('error.add.user');
 
       if (error instanceof CustomError) {
         message = error.message;
@@ -291,7 +291,7 @@ class User extends React.Component<IProps, IState> {
 
       if (currentHighestGroup !== newHighestGroup) {
         try {
-          await PubSub.publish(`ava/groups/${userId}`, getLocaleString('User group has been changed. Please sign in again.'));
+          await PubSub.publish(`ava/groups/${userId}`, I18n.get('info.change.user.group'));
         } catch (error) {
           LOGGER.error('Error occurred to publish a message to group topic.');
         }
@@ -302,7 +302,7 @@ class User extends React.Component<IProps, IState> {
         await this.graphQlCommon.deletePermission(userId as string);
       }
 
-      this.props.handleNotification(getLocaleString('User was edited successfully.'), 'info', 5);
+      this.props.handleNotification(I18n.get('info.edit.user'), 'info', 5);
 
       this.setState({
         users: [
@@ -318,7 +318,7 @@ class User extends React.Component<IProps, IState> {
         modalType: ModalType.None
       });
     } catch (error) {
-      let message = getLocaleString('Error occurred while editing the user.');
+      let message = I18n.get('error.edit.user');
 
       if (error instanceof CustomError) {
         message = error.message;
@@ -369,10 +369,10 @@ class User extends React.Component<IProps, IState> {
 
       const updatedUsers = this.state.users.filter(user => user.userId !== userId);
 
-      this.props.handleNotification(getLocaleString('User was deleted successfully.'), 'success', 5);
+      this.props.handleNotification(I18n.get('info.delete.user'), 'success', 5);
       this.setState({
         users: updatedUsers,
-        title: `${getLocaleString('Users')} (${updatedUsers.length})`,
+        title: `${I18n.get('text.users')} (${updatedUsers.length})`,
         email: '',
         isModalProcessing: false,
         showModal: false,
@@ -380,7 +380,7 @@ class User extends React.Component<IProps, IState> {
         modalType: ModalType.None
       });
     } catch (error) {
-      let message = getLocaleString('Error occurred while deleting the user.');
+      let message = I18n.get('error.delete.user');
 
       if (error instanceof CustomError) {
         message = error.message;
@@ -407,7 +407,7 @@ class User extends React.Component<IProps, IState> {
     reader.onerror = () => {
       this.setState({ isModalProcessing: false });
       reader.abort();
-      this.props.handleNotification(getLocaleString('Error occurred while processing the CSV file.'), 'error', 5);
+      this.props.handleNotification(I18n.get('error.process.csv'), 'error', 5);
     }
 
     // Handle file load.
@@ -425,7 +425,7 @@ class User extends React.Component<IProps, IState> {
 
         // Do nothing if there's no data.
         if (lines.length === 0) {
-          this.props.handleNotification(getLocaleString('There is no data in the CSV.'), 'error', 5);
+          this.props.handleNotification(I18n.get('error.no.csv.data'), 'error', 5);
         } else {
           const cognitoController = await this.getCognitoController();
           let uploadResult: IUploadResult[] = [];
@@ -450,18 +450,18 @@ class User extends React.Component<IProps, IState> {
 
                 uploadResult.push({
                   name: username,
-                  result: getLocaleString('Success')
+                  result: I18n.get('text.success')
                 });
               } catch (error) {
                 uploadResult.push({
                   name: username,
-                  result: getLocaleString('Failure')
+                  result: I18n.get('text.failure')
                 });
               }
             } else {
               uploadResult.push({
                 name: username,
-                result: getLocaleString('Username (E-Mail address) is not valid.')
+                result: I18n.get('Username (E-Mail address) is not valid.')
               });
             }
           }
@@ -471,7 +471,7 @@ class User extends React.Component<IProps, IState> {
         }
       } catch (error) {
         LOGGER.error(error);
-        this.props.handleNotification(getLocaleString('An error occurred while processing CSV file.'), 'error', 5);
+        this.props.handleNotification(I18n.get('An error occurred while processing CSV file.'), 'error', 5);
       } finally {
         this.setState({ isModalProcessing: false });
       }
@@ -490,15 +490,15 @@ class User extends React.Component<IProps, IState> {
     let modalTitle = '';
 
     if (modalType === ModalType.Add) {
-      modalTitle = getLocaleString('Add User');
+      modalTitle = I18n.get('button.add.user');
     } else if (modalType === ModalType.Edit) {
-      modalTitle = getLocaleString('Edit User');
+      modalTitle = I18n.get('text.edit.user');
     } else if (modalType === ModalType.Delete) {
-      modalTitle = getLocaleString('Delete User');
+      modalTitle = I18n.get('text.delete.user');
     } else if (modalType === ModalType.Upload) {
-      modalTitle = getLocaleString('Upload CSV');
+      modalTitle = I18n.get('text.upload.csv');
     } else {
-      this.props.handleNotification(`${getLocaleString('Unsupported modal type')}: ${modalType}`, 'warning', 5);
+      this.props.handleNotification(`${I18n.get('error.unsupported.modal.type')}: ${modalType}`, 'warning', 5);
       return;
     }
 
@@ -552,7 +552,7 @@ class User extends React.Component<IProps, IState> {
       groups: [],
       isEmailValid: false,
       csvFile: new File([''], ''),
-      csvFileName: getLocaleString('Select a CSV file with the downloaded format.'),
+      csvFileName: I18n.get('text.select.csv.file'),
       isFileValid: false,
       showModal: false,
       uploadResult: []
@@ -605,10 +605,10 @@ class User extends React.Component<IProps, IState> {
 
       // Limit upload file size
       if (size > FILE_SIZE_LIMIT) {
-        this.props.handleNotification(getLocaleString('CSV file size cannot be greater than 10KB.'), 'error', 5);
+        this.props.handleNotification(I18n.get('error.limit.csv.size'), 'error', 5);
         this.setState({
           csvFile: new File([''], ''),
-          csvFileName: getLocaleString('Select a CSV file with the downloaded format.'),
+          csvFileName: I18n.get('text.select.csv.file'),
           isFileValid: false
         });
       } else if (type === 'text/csv' || extension === 'csv') {
@@ -618,10 +618,10 @@ class User extends React.Component<IProps, IState> {
           isFileValid: true
         });
       } else {
-        this.props.handleNotification(getLocaleString('Choose CSV file with the downloaded format.'), 'error', 5);
+        this.props.handleNotification(I18n.get('error.choose.csv'), 'error', 5);
         this.setState({
           csvFile: new File([''], ''),
-          csvFileName: getLocaleString('Select a CSV file with the downloaded format.'),
+          csvFileName: I18n.get('text.select.csv.file'),
           isFileValid: false
         });
       }
@@ -638,7 +638,7 @@ class User extends React.Component<IProps, IState> {
           <Row>
             <Col>
               <Breadcrumb>
-                <Breadcrumb.Item active>{ getLocaleString('Users') }</Breadcrumb.Item>
+                <Breadcrumb.Item active>{ I18n.get('text.users') }</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -650,11 +650,11 @@ class User extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={4} controlId="searchKeyword">
-                        <Form.Label>{ getLocaleString('Search Keyword') }</Form.Label>
-                        <Form.Control type="text" placeholder={ getLocaleString('Search by User Name (E-Mail)') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
+                        <Form.Label>{ I18n.get('text.search.keyword') }</Form.Label>
+                        <Form.Control type="text" placeholder={ I18n.get('text.search.user.name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
                       </Form.Group>
                       <Form.Group as={Col} md={4} controlId="sortBy">
-                        <Form.Label>{ getLocaleString('Sort By') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.sort.by') }</Form.Label>
                         <Form.Control as="select" defaultValue={this.state.sort} onChange={this.handleSort}>
                           <option value={SortBy.Asc}>A-Z</option>
                           <option value={SortBy.Desc}>Z-A</option>
@@ -671,11 +671,11 @@ class User extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <CSVLink data={this.state.csvUsers} filename={'user-upload-template.csv'} className="btn btn-primary btn-sm">{ getLocaleString('Download CSV Format') }</CSVLink>
+                  <CSVLink data={this.state.csvUsers} filename={'user-upload-template.csv'} className="btn btn-primary btn-sm">{ I18n.get('button.download.csv.format') }</CSVLink>
                   <EmptyCol />
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Upload)}>{ getLocaleString('Upload CSV') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Upload)}>{ I18n.get('button.upload.csv') }</Button>
                   <EmptyCol />
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ getLocaleString('Add User') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ I18n.get('button.add.user') }</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -686,7 +686,7 @@ class User extends React.Component<IProps, IState> {
             {
               this.state.users.length === 0 && !this.state.isLoading &&
               <Jumbotron>
-                <p>{ getLocaleString('No user found.') }</p>
+                <p>{ I18n.get('text.no.user') }</p>
               </Jumbotron>
             }
             {
@@ -696,10 +696,10 @@ class User extends React.Component<IProps, IState> {
                   <Table striped bordered>
                     <thead>
                       <tr>
-                        <th>{ getLocaleString('E-Mail') }</th>
-                        <th>{ getLocaleString('Status') }</th>
-                        <th>{ getLocaleString('Groups') }</th>
-                        <th colSpan={2}>{ getLocaleString('Actions') }</th>
+                        <th>{ I18n.get('text.email') }</th>
+                        <th>{ I18n.get('text.status') }</th>
+                        <th>{ I18n.get('text.groups') }</th>
+                        <th colSpan={2}>{ I18n.get('text.actions') }</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -713,11 +713,11 @@ class User extends React.Component<IProps, IState> {
                               <td>{user.groups.join(', ')}</td>
                               <td>
                                 <Button variant="primary" size="sm" disabled={this.userId === user.username}
-                                  onClick={() => this.openModal(ModalType.Edit, { email: user.username, groups: user.groups })}>{ getLocaleString('Edit') }</Button>
+                                  onClick={() => this.openModal(ModalType.Edit, { email: user.username, groups: user.groups })}>{ I18n.get('button.edit') }</Button>
                               </td>
                               <td>
                                 <Button variant="danger" size="sm" disabled={this.userId === user.username}
-                                  onClick={() => this.openModal(ModalType.Delete, { email: user.username, userId: user.userId })}>{ getLocaleString('Delete') }</Button>
+                                  onClick={() => this.openModal(ModalType.Delete, { email: user.username, userId: user.userId })}>{ I18n.get('button.delete') }</Button>
                               </td>
                             </tr>
                           );
@@ -743,7 +743,7 @@ class User extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ getLocaleString('Error') }:</strong><br />
+                  <strong>{ I18n.get('error') }:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -760,13 +760,13 @@ class User extends React.Component<IProps, IState> {
               <Modal.Body>
                 <Form>
                   <Form.Group controlId="userName">
-                    <Form.Label>{ getLocaleString('E-Mail') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ getLocaleString('Enter the E-Mail address of user') }
+                    <Form.Label>{ I18n.get('text.email') } <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={ I18n.get('input.user.email') }
                       defaultValue="" onChange={this.handleEmailChange} className={ getInputFormValidationClassName(this.state.email, this.state.isEmailValid) } />
-                    <Form.Text className="text-muted">{ `(${getLocaleString('Required')}) ${getLocaleString('Must be a valid email address')}` }</Form.Text>
+                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.email')}` }</Form.Text>
                   </Form.Group>
                   <Form.Group controlId="userGroup">
-                    <Form.Label>{ getLocaleString('Groups') }</Form.Label>
+                    <Form.Label>{ I18n.get('text.groups') }</Form.Label>
                     <div>
                       <Form.Check inline id="AdminGroup" type="checkbox" label="Admin Group" onChange={this.handleGroupChange} />
                       <Form.Check inline id="ManagerGroup" type="checkbox" label="Manager Group" onChange={this.handleGroupChange} />
@@ -777,8 +777,8 @@ class User extends React.Component<IProps, IState> {
                 </Form>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-                <Button variant="primary" onClick={this.addUser} disabled={this.state.isModalProcessing || !this.state.isEmailValid}>{ getLocaleString('Add') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="primary" onClick={this.addUser} disabled={this.state.isModalProcessing || !this.state.isEmailValid}>{ I18n.get('button.add') }</Button>
               </Modal.Footer>
             </div>
           }
@@ -788,11 +788,11 @@ class User extends React.Component<IProps, IState> {
               <Modal.Body>
                 <Form>
                   <Form.Group controlId="userName">
-                    <Form.Label>{ getLocaleString('E-Mail') }</Form.Label>
+                    <Form.Label>{ I18n.get('text.email') }</Form.Label>
                     <Form.Control type="text" defaultValue={this.state.email} disabled />
                   </Form.Group>
                   <Form.Group controlId="userGroup">
-                    <Form.Label>{ getLocaleString('Groups') }</Form.Label>
+                    <Form.Label>{ I18n.get('text.groups') }</Form.Label>
                     <div>
                       <Form.Check inline id="AdminGroup" type="checkbox" label="Admin Group" onChange={this.handleGroupChange} checked={this.state.groups.includes('AdminGroup')} />
                       <Form.Check inline id="ManagerGroup" type="checkbox" label="Manager Group" onChange={this.handleGroupChange} checked={this.state.groups.includes('ManagerGroup')} />
@@ -803,8 +803,8 @@ class User extends React.Component<IProps, IState> {
                 </Form>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-                <Button variant="primary" onClick={this.editUser} disabled={this.state.isModalProcessing}>{ getLocaleString('Save') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="primary" onClick={this.editUser} disabled={this.state.isModalProcessing}>{ I18n.get('button.save') }</Button>
               </Modal.Footer>
             </div>
           }
@@ -812,11 +812,11 @@ class User extends React.Component<IProps, IState> {
             this.state.modalType === ModalType.Delete &&
             <div>
               <Modal.Body>
-                { getLocaleString('Are you sure you want to delete this user') }: <strong>{this.state.email}</strong>?
+                { I18n.get('text.confirm.delete.user') }: <strong>{this.state.email}</strong>?
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-                <Button variant="danger" onClick={this.deleteUser} disabled={this.state.isModalProcessing}>{ getLocaleString('Delete') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="danger" onClick={this.deleteUser} disabled={this.state.isModalProcessing}>{ I18n.get('button.delete') }</Button>
               </Modal.Footer>
             </div>
           }
@@ -827,8 +827,8 @@ class User extends React.Component<IProps, IState> {
                 {
                   this.state.uploadResult.length === 0 &&
                   <Form.File>
-                    <Form.File.Label>{ getLocaleString('Make sure you are using downloaded CSV format.') }</Form.File.Label>
-                    <Form.File label={this.state.csvFileName} lang="en" accept=".csv" custom onChange={this.handleFileChange} disabled={this.state.isModalProcessing} />
+                    <Form.File.Label>{ I18n.get('info.upload.csv') }</Form.File.Label>
+                    <Form.File label={this.state.csvFileName} data-browse={I18n.get('button.browse')} accept=".csv" custom onChange={this.handleFileChange} disabled={this.state.isModalProcessing} />
                   </Form.File>
                 }
                 {
@@ -836,8 +836,8 @@ class User extends React.Component<IProps, IState> {
                   <Table striped bordered>
                     <thead>
                       <tr>
-                        <th>{ getLocaleString('Username') }</th>
-                        <th>{ getLocaleString('Result') }</th>
+                        <th>{ I18n.get('text.username') }</th>
+                        <th>{ I18n.get('text.result') }</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -857,10 +857,10 @@ class User extends React.Component<IProps, IState> {
                 }
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
                 {
                   this.state.uploadResult.length === 0 &&
-                  <Button variant="primary" onClick={this.uploadCsv} disabled={this.state.isModalProcessing || !this.state.isFileValid}>{ getLocaleString('Upload') }</Button>
+                  <Button variant="primary" onClick={this.uploadCsv} disabled={this.state.isModalProcessing || !this.state.isFileValid}>{ I18n.get('button.upload') }</Button>
                 }
               </Modal.Footer>
             </div>

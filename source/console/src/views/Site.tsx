@@ -13,7 +13,7 @@
 
 // Import React and Amplify packages
 import React from 'react';
-import { API, graphqlOperation } from 'aws-amplify';
+import { API, graphqlOperation, I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -34,7 +34,7 @@ import Modal from 'react-bootstrap/Modal';
 import { createSite } from '../graphql/mutations';
 
 // Import custom setting
-import { LOGGING_LEVEL, sendMetrics, validateGeneralInput, sortByName, getLocaleString, getInputFormValidationClassName, makeAllVisible, makeVisibleBySearchKeyword } from '../util/CustomUtil';
+import { LOGGING_LEVEL, sendMetrics, validateGeneralInput, sortByName, getInputFormValidationClassName, makeAllVisible, makeVisibleBySearchKeyword } from '../util/CustomUtil';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IGeneralQueryData } from '../components/Interfaces';
 import { ModalType, SortBy } from '../components/Enums';
@@ -86,7 +86,7 @@ class Site extends React.Component<IProps, IState> {
     super(props);
 
     this.state = {
-      title: getLocaleString('Sites'),
+      title: I18n.get('text.sites'),
       sites: [],
       isLoading: false,
       searchKeyword: '',
@@ -141,11 +141,11 @@ class Site extends React.Component<IProps, IState> {
       sites.sort((a, b) => a.name.localeCompare(b.name));
       this.setState({
         sites,
-        title: `${getLocaleString('Sites')} (${sites.length})`
+        title: `${I18n.get('text.sites')} (${sites.length})`
       });
     } catch (error) {
       LOGGER.error('Error while getting sites', error);
-      this.setState({ error: getLocaleString('Error occurred while getting sites.') });
+      this.setState({ error: I18n.get('error.get.sites') });
     }
 
     this.setState({ isLoading: false });
@@ -164,10 +164,10 @@ class Site extends React.Component<IProps, IState> {
 
       const updatedSites = this.state.sites.filter(site => site.id !== siteId);
 
-      this.props.handleNotification(getLocaleString('Site was deleted successfully.'), 'success', 5);
+      this.props.handleNotification(I18n.get('info.delete.site'), 'success', 5);
       this.setState({
         sites: updatedSites,
-        title: `${getLocaleString('Sites')} (${updatedSites.length})`,
+        title: `${I18n.get('text.sites')} (${updatedSites.length})`,
         siteId: '',
         siteName: '',
         isModalProcessing: false,
@@ -176,13 +176,13 @@ class Site extends React.Component<IProps, IState> {
         modalType: ModalType.None
       });
     } catch (error) {
-      let message = getLocaleString('Error occurred while deleting the site.');
+      let message = I18n.get('error.delete.site');
 
       if (error.errors) {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         }
       }
 
@@ -214,7 +214,7 @@ class Site extends React.Component<IProps, IState> {
       const newSites = [...sites, newSite];
       this.setState({
         sites: sortByName(newSites, sort, 'name'),
-        title: `${getLocaleString('Sites')} (${newSites.length})`,
+        title: `${I18n.get('text.sites')} (${newSites.length})`,
         siteName: '',
         siteDescription: '',
         isModalProcessing: false,
@@ -225,18 +225,18 @@ class Site extends React.Component<IProps, IState> {
         modalType: ModalType.None
       });
 
-      this.props.handleNotification(getLocaleString('Site was added successfully.'), 'info', 5);
+      this.props.handleNotification(I18n.get('info.add.site'), 'info', 5);
       await sendMetrics({ 'site': 1 });
     } catch (error) {
-      let message = getLocaleString('Error occurred while creating a site.');
+      let message = I18n.get('error.create.site');
 
       if (error.errors) {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         } else if (errorType === 'DataDuplicatedError') {
-          message = getLocaleString('Site name already exists.');
+          message = I18n.get('error.duplicate.site.name');
         }
       }
 
@@ -256,11 +256,11 @@ class Site extends React.Component<IProps, IState> {
     let modalTitle = '';
 
     if (modalType === ModalType.Add) {
-      modalTitle = getLocaleString('Site Registration');
+      modalTitle = I18n.get('text.site.registration');
     } else if (modalType === ModalType.Delete) {
-      modalTitle = getLocaleString('Delete Site');
+      modalTitle = I18n.get('text.delete.site');
     } else {
-      this.props.handleNotification(`${getLocaleString('Unsupported modal type')}: ${modalType}`, 'warning', 5);
+      this.props.handleNotification(`${I18n.get('error.unsupported.modal.type')}: ${modalType}`, 'warning', 5);
       return;
     }
 
@@ -316,7 +316,7 @@ class Site extends React.Component<IProps, IState> {
    */
   handleSiteNameChange(event: any) {
     const siteName = event.target.value;
-    const isSiteNameValid = validateGeneralInput(siteName);
+    const isSiteNameValid = validateGeneralInput(siteName, 1, 40, '- _/#');
 
     this.setState({
       siteName,
@@ -330,7 +330,7 @@ class Site extends React.Component<IProps, IState> {
    */
   handleSiteDescriptionChange(event: any) {
     const siteDescription = event.target.value;
-    const isSiteDescriptionValid = validateGeneralInput(siteDescription);
+    const isSiteDescriptionValid = validateGeneralInput(siteDescription, 1, 40, '- _/#');
 
     this.setState({
       siteDescription,
@@ -348,7 +348,7 @@ class Site extends React.Component<IProps, IState> {
           <Row>
             <Col>
               <Breadcrumb>
-                <Breadcrumb.Item active>{ getLocaleString('Sites') }</Breadcrumb.Item>
+                <Breadcrumb.Item active>{ I18n.get('text.sites') }</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -356,7 +356,7 @@ class Site extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ getLocaleString('Add Site') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ I18n.get('button.add.site') }</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -370,11 +370,11 @@ class Site extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={4} controlId="searchKeyword">
-                        <Form.Label>{ getLocaleString('Search Keyword') }</Form.Label>
-                        <Form.Control type="text" placeholder={ getLocaleString('Search by Site Name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
+                        <Form.Label>{ I18n.get('text.search.keyword') }</Form.Label>
+                        <Form.Control type="text" placeholder={ I18n.get('text.search.site.name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
                       </Form.Group>
                       <Form.Group as={Col} md={4} controlId="sortBy">
-                        <Form.Label>{ getLocaleString('Sort By') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.sort.by') }</Form.Label>
                         <Form.Control as="select" defaultValue={this.state.sort} onChange={this.handleSort}>
                           <option value={SortBy.Asc}>A-Z</option>
                           <option value={SortBy.Desc}>Z-A</option>
@@ -392,7 +392,7 @@ class Site extends React.Component<IProps, IState> {
               this.state.sites.length === 0 && !this.state.isLoading &&
               <Col>
                 <Jumbotron>
-                  <p>{ getLocaleString('No site found.') }</p>
+                  <p>{ I18n.get('text.no.site') }</p>
                 </Jumbotron>
               </Col>
             }
@@ -407,7 +407,7 @@ class Site extends React.Component<IProps, IState> {
                           <Table striped bordered>
                             <tbody>
                               <tr>
-                                <td>{ getLocaleString('Description') }</td>
+                                <td>{ I18n.get('text.description') }</td>
                                 <td>{site.description}</td>
                               </tr>
                             </tbody>
@@ -415,8 +415,8 @@ class Site extends React.Component<IProps, IState> {
                           <Form>
                             <Form.Row className="justify-content-between">
                               <Button size="sm" variant="danger"
-                                onClick={() => this.openModal(ModalType.Delete, site.id, site.name)}>{ getLocaleString('Delete') }</Button>
-                              <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/sites/${site.id}`)}>{ getLocaleString('Detail') }</Button>
+                                onClick={() => this.openModal(ModalType.Delete, site.id, site.name)}>{ I18n.get('button.delete') }</Button>
+                              <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/sites/${site.id}`)}>{ I18n.get('button.detail') }</Button>
                             </Form.Row>
                           </Form>
                         </Card.Body>
@@ -439,7 +439,7 @@ class Site extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ getLocaleString('Error') }:</strong><br />
+                  <strong>{ I18n.get('error') }:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -456,22 +456,22 @@ class Site extends React.Component<IProps, IState> {
               <Modal.Body>
                 <Form>
                   <Form.Group controlId="siteName">
-                    <Form.Label>{ getLocaleString('Site Name') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ getLocaleString('Enter the site name') }
+                    <Form.Label>{ I18n.get('text.site.name') } <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={ I18n.get('input.site.nae') }
                       defaultValue="" onChange={this.handleSiteNameChange} className={ getInputFormValidationClassName(this.state.siteName, this.state.isSiteNameValid) } />
-                    <Form.Text className="text-muted">{ `(${getLocaleString('Required')}) ${getLocaleString('Must contain only alphanumeric characters and/or the following: - _/# with length 4 to 40')}` }</Form.Text>
+                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
                   </Form.Group>
                   <Form.Group controlId="siteDescription">
-                    <Form.Label>{ getLocaleString('Site Description') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ getLocaleString('Enter the site description') }
+                    <Form.Label>{ I18n.get('text.site.description') } <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={ I18n.get('input.site.description') }
                       defaultValue="" onChange={this.handleSiteDescriptionChange} className={ getInputFormValidationClassName(this.state.siteDescription, this.state.isSiteDescriptionValid) } />
-                    <Form.Text className="text-muted">{ `(${getLocaleString('Required')}) ${getLocaleString('Must contain only alphanumeric characters and/or the following: - _/# with length 4 to 40')}` }</Form.Text>
+                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
                   </Form.Group>
                 </Form>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-                <Button variant="primary" onClick={this.addSite} disabled={this.state.isModalProcessing || !this.state.isSiteNameValid || !this.state.isSiteDescriptionValid}>{ getLocaleString('Register') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="primary" onClick={this.addSite} disabled={this.state.isModalProcessing || !this.state.isSiteNameValid || !this.state.isSiteDescriptionValid}>{ I18n.get('button.register') }</Button>
               </Modal.Footer>
             </div>
           }
@@ -479,15 +479,15 @@ class Site extends React.Component<IProps, IState> {
             this.state.modalType === ModalType.Delete &&
             <div>
               <Modal.Body>
-                { getLocaleString('Are you sure you want to delete this site') }: <strong>{this.state.siteName}</strong>?
+                { I18n.get('text.confirm.delete.site') }: <strong>{this.state.siteName}</strong>?
                 <EmptyRow />
                 <Alert variant="danger">
-                  { getLocaleString('Every area, station, device, process, and event belonged to the site will be deleted as well.') }
+                  { I18n.get('warning.delete.site') }
                 </Alert>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-                <Button variant="danger" onClick={this.deleteSite} disabled={this.state.isModalProcessing}>{ getLocaleString('Delete') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="danger" onClick={this.deleteSite} disabled={this.state.isModalProcessing}>{ I18n.get('button.delete') }</Button>
               </Modal.Footer>
             </div>
           }

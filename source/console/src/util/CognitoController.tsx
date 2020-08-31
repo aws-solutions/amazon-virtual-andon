@@ -11,12 +11,14 @@
  *  and limitations under the License.                                                                                *
  *********************************************************************************************************************/
 
+ // Import Amplify and AWS SDK
+ import { I18n } from 'aws-amplify';
 import { Logger, ICredentials } from '@aws-amplify/core';
 import Auth from '@aws-amplify/auth';
 import AWS from 'aws-sdk';
 
 // Import custom setting including customized Amplify, footer, and util
-import { LOGGING_LEVEL, CustomError, validateEmailAddress, getLocaleString } from './CustomUtil';
+import { LOGGING_LEVEL, CustomError, validateEmailAddress } from './CustomUtil';
 import { IUser } from '../components/Interfaces';
 
 // Logging
@@ -25,7 +27,7 @@ const LOGGER = new Logger('CognitoController', LOGGING_LEVEL);
 // Unauthorized error
 const UNAUTHORIZED_ERROR = {
   errorType: 'Unauthorized',
-  message: getLocaleString('The user is unauthorized to perform the action.')
+  message: I18n.get('error.unauthorized.user')
 };
 
 // Declare Amazon Virtual Andon console configuration
@@ -146,7 +148,7 @@ class CognitoController {
 
         throw new CustomError({
           errorType: 'ListUsersError',
-          message: getLocaleString('Error occurred while getting users.')
+          message: I18n.get('error.get.users')
         });
       }
     } else {
@@ -196,7 +198,7 @@ class CognitoController {
 
         throw new CustomError({
           errorType: 'ListAssociateGroupUsersError',
-          message: getLocaleString('Error occurred while getting associate group users.')
+          message: I18n.get('error.get.associate.group.users')
         });
       }
     } else {
@@ -215,7 +217,7 @@ class CognitoController {
       if (!validateEmailAddress(username)) {
         throw new CustomError({
           errorType: 'InvalidFormatError',
-          message: getLocaleString('Invalid username. Username should be valid E-Mail format.')
+          message: I18n.get('error.invalid.username')
         });
       }
 
@@ -239,7 +241,7 @@ class CognitoController {
 
         throw new CustomError({
           errorType: 'GetUserError',
-          message: getLocaleString('Error occurred while getting a user.')
+          message: I18n.get('error.get.user')
         });
       }
     } else {
@@ -257,7 +259,7 @@ class CognitoController {
       if (!validateEmailAddress(user.username)) {
         throw new CustomError({
           errorType: 'InvalidFormatError',
-          message: getLocaleString('Invalid username. Username should be valid E-Mail format.')
+          message: I18n.get('error.invalid.username')
         });
       }
 
@@ -287,7 +289,7 @@ class CognitoController {
 
         throw new CustomError({
           errorType: 'AddUserError',
-          message: getLocaleString('Error occurred while adding a user.')
+          message: I18n.get('error.add.user')
         });
       }
     } else {
@@ -305,7 +307,7 @@ class CognitoController {
       if (!validateEmailAddress(user.username)) {
         throw new CustomError({
           errorType: 'InvalidFormatError',
-          message: getLocaleString('Invalid username. Username should be valid E-Mail format.')
+          message: I18n.get('error.invalid.username')
         });
       }
 
@@ -327,7 +329,7 @@ class CognitoController {
 
         throw new CustomError({
           errorType: 'EditUserError',
-          message: getLocaleString('Error occurred while editing the user.')
+          message: I18n.get('error.edit.user')
         });
       }
     } else {
@@ -345,7 +347,7 @@ class CognitoController {
       if (!validateEmailAddress(username)) {
         throw new CustomError({
           errorType: 'InvalidFormatError',
-          message: getLocaleString('Invalid username. Username should be valid E-Mail format.')
+          message: I18n.get('error.invalid.username')
         });
       }
 
@@ -362,7 +364,7 @@ class CognitoController {
 
         throw new CustomError({
           errorType: 'DeleteUserError',
-          message: getLocaleString('Error occurred while deleting the user.')
+          message: I18n.get('error.delete.user')
         });
       }
     } else {
@@ -379,7 +381,7 @@ class CognitoController {
     if (!validateEmailAddress(username)) {
       throw new CustomError({
         errorType: 'InvalidFormatError',
-        message: getLocaleString('Invalid username. Username should be valid E-Mail format.')
+        message: I18n.get('error.invalid.username')
       });
     }
 
@@ -402,7 +404,7 @@ class CognitoController {
 
       throw new CustomError({
         errorType: 'SetUserGroupError',
-        message: getLocaleString('Error occurred while setting user group.')
+        message: I18n.get('error.set.user.group')
       });
     }
   }
@@ -416,7 +418,7 @@ class CognitoController {
     if (!validateEmailAddress(username)) {
       throw new CustomError({
         errorType: 'InvalidFormatError',
-        message: getLocaleString('Invalid username. Username should be valid E-Mail format.')
+        message: I18n.get('error.invalid.username')
       });
     }
 
@@ -440,7 +442,7 @@ class CognitoController {
 
         throw new CustomError({
           errorType: 'RemoveUserGroupError',
-          message: getLocaleString('Error occurred while removing user group.')
+          message: I18n.get('error.remove.user.group')
         });
       }
     }

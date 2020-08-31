@@ -14,7 +14,7 @@
 // Import React and Amplify packages
 import React from 'react';
 import { LinkContainer } from 'react-router-bootstrap';
-import { API, graphqlOperation } from 'aws-amplify';
+import { API, graphqlOperation, I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
 
 // MobX packages
@@ -41,7 +41,7 @@ import Spinner from 'react-bootstrap/Spinner';
 import { putPermission } from '../graphql/mutations';
 
 // Import custom setting
-import { LOGGING_LEVEL, sendMetrics, sortByName, getLocaleString } from '../util/CustomUtil';
+import { LOGGING_LEVEL, sendMetrics, sortByName } from '../util/CustomUtil';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IPermission, IUser, ISelectedData, IGeneralQueryData } from '../components/Interfaces';
 import { SortBy } from '../components/Enums';
@@ -178,7 +178,7 @@ class PermissionSetting extends React.Component<IProps, IState> {
       this.setState({ querySites });
     } catch (error) {
       LOGGER.error('Error while getting sites, areas, stations, processes and devices', error);
-      this.setState({ error: getLocaleString('Error occurred while getting sites.') });
+      this.setState({ error: I18n.get('error.get.sites') });
     }
 
     this.setState({ isLoading: false });
@@ -232,7 +232,7 @@ class PermissionSetting extends React.Component<IProps, IState> {
       };
     } catch (error) {
       LOGGER.error('Error while getting site data', error);
-      this.props.handleNotification(getLocaleString('Error occurred while getting site data.'), 'error', 5);
+      this.props.handleNotification(I18n.get('error.get.site.data'), 'error', 5);
     }
 
     this.loadingSites = this.loadingSites.filter(site => site !== siteId);
@@ -262,22 +262,22 @@ class PermissionSetting extends React.Component<IProps, IState> {
       // Graphql operation to get permissions
       await API.graphql(graphqlOperation(putPermission, { input }));
       if (this.mode === 'add') {
-        this.props.handleNotification(getLocaleString('Permission was added successfully.'), 'info', 5);
+        this.props.handleNotification(I18n.get('info.add.permission'), 'info', 5);
         await sendMetrics({ 'permission': 1 });
       } else {
-        this.props.handleNotification(getLocaleString('Permission was edited successfully.'), 'info', 5);
+        this.props.handleNotification(I18n.get('info.edit.permission'), 'info', 5);
       }
 
       this.setState({ isLoading: false });
       this.props.history.push('/permissions');
     } catch (error) {
-      let message = getLocaleString('Error occurred while saving the permission.');
+      let message = I18n.get('error.save.permission');
 
       if (error.errors) {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         }
       }
 
@@ -318,7 +318,7 @@ class PermissionSetting extends React.Component<IProps, IState> {
     const site = this.loadedSites[checkedSite.id];
 
     if (!this.loadedSites[checkedSite.id]) {
-      this.props.handleNotification(getLocaleString('Site data have not been fully loaded. Please try again when the site data is loaded.'), 'warning', 5);
+      this.props.handleNotification(I18n.get('error.site.not.loaded'), 'warning', 5);
       return;
     }
 
@@ -329,7 +329,7 @@ class PermissionSetting extends React.Component<IProps, IState> {
       this.stations = [...this.stations, ...site.stations];
       this.devices = [...this.devices, ...site.devices];
     } else {
-      this.sites = this.sites.filter(site => site.id !== checkedSite.id);
+      this.sites = this.sites.filter(filterSite => filterSite.id !== checkedSite.id);
       this.areas = this.areas.filter(area => area.parentId !== checkedSite.id);
       this.processes = this.processes.filter(process =>
         !site.processes.map(siteProcess => { return siteProcess.id }).includes(process.id)
@@ -355,18 +355,18 @@ class PermissionSetting extends React.Component<IProps, IState> {
     if (checked) {
       this.areas.push({ id: checkedArea.id, name: checkedArea.name, parentId: checkedArea.siteId });
       this.sites = this.getUniqueArray([...this.sites, { id: checkedArea.siteId, name: site.siteName }]);
-      this.processes = [...this.processes, ...site.processes.filter(process => process.parentId === checkedArea.id)];
-      this.stations = [...this.stations, ...site.stations.filter(station => station.parentId === checkedArea.id)];
-      this.devices = [
+      this.processes = this.getUniqueArray([...this.processes, ...site.processes.filter(process => process.parentId === checkedArea.id)]);
+      this.stations = this.getUniqueArray([...this.stations, ...site.stations.filter(station => station.parentId === checkedArea.id)]);
+      this.devices = this.getUniqueArray([
         ...this.devices,
         ...site.devices.filter(device =>
           this.stations.map(station => { return station.id }).includes(device.parentId)
         )
-      ];
+      ]);
     } else {
       this.areas = this.areas.filter(area => area.id !== checkedArea.id);
-      this.sites = this.sites.filter(site =>
-        this.areas.map(area => { return area.parentId }).includes(site.id)
+      this.sites = this.sites.filter(filterSite =>
+        this.areas.map(area => { return area.parentId }).includes(filterSite.id)
       );
       this.processes = this.processes.filter(process => process.parentId !== checkedArea.id);
       this.stations = this.stations.filter(station => station.parentId !== checkedArea.id);
@@ -395,8 +395,8 @@ class PermissionSetting extends React.Component<IProps, IState> {
         this.processes.map(process => { return process.parentId }).includes(area.id) ||
         this.stations.map(station => { return station.parentId }).includes(area.id)
       );
-      this.sites = this.sites.filter(site =>
-        this.areas.map(area => { return area.parentId }).includes(site.id)
+      this.sites = this.sites.filter(filterSite =>
+        this.areas.map(area => { return area.parentId }).includes(filterSite.id)
       );
     }
   }
@@ -424,8 +424,8 @@ class PermissionSetting extends React.Component<IProps, IState> {
         this.processes.map(process => { return process.parentId }).includes(area.id) ||
         this.stations.map(station => { return station.parentId }).includes(area.id)
       );
-      this.sites = this.sites.filter(site =>
-        this.areas.map(area => { return area.parentId }).includes(site.id)
+      this.sites = this.sites.filter(filterSite =>
+        this.areas.map(area => { return area.parentId }).includes(filterSite.id)
       );
       this.devices = this.devices.filter(device => device.parentId !== checkedStation.id);
     }
@@ -454,8 +454,8 @@ class PermissionSetting extends React.Component<IProps, IState> {
         this.processes.map(process => { return process.parentId }).includes(area.id) ||
         this.stations.map(station => { return station.parentId }).includes(area.id)
       );
-      this.sites = this.sites.filter(site =>
-        this.areas.map(area => { return area.parentId }).includes(site.id)
+      this.sites = this.sites.filter(filterSite =>
+        this.areas.map(area => { return area.parentId }).includes(filterSite.id)
       );
     }
   }
@@ -471,9 +471,9 @@ class PermissionSetting extends React.Component<IProps, IState> {
             <Col>
               <Breadcrumb>
                 <LinkContainer to="/permissions" exact>
-                  <Breadcrumb.Item>{ getLocaleString('Permissions') }</Breadcrumb.Item>
+                  <Breadcrumb.Item>{ I18n.get('text.permissions') }</Breadcrumb.Item>
                 </LinkContainer>
-                <Breadcrumb.Item active>{ getLocaleString('Permissions Setting') }</Breadcrumb.Item>
+                <Breadcrumb.Item active>{ I18n.get('text.permissions.setting') }</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -481,9 +481,9 @@ class PermissionSetting extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <Button size="sm" variant="secondary" onClick={() => this.props.history.push('/permissions')}>{ getLocaleString('Cancel') }</Button>
+                  <Button size="sm" variant="secondary" onClick={() => this.props.history.push('/permissions')}>{ I18n.get('button.cancel') }</Button>
                   <EmptyCol />
-                  <Button size="sm" variant="primary" onClick={this.savePermission} disabled={this.state.isLoading || !this.state.isEmailValid}>{ getLocaleString('Save') }</Button>
+                  <Button size="sm" variant="primary" onClick={this.savePermission} disabled={this.state.isLoading || !this.state.isEmailValid}>{ I18n.get('button.save') }</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -495,12 +495,12 @@ class PermissionSetting extends React.Component<IProps, IState> {
                 <Card.Body>
                   <Form>
                     <Form.Group controlId="username" as={Row}>
-                      <Form.Label column md={2}>{ getLocaleString('E-Mail') } <span className="required-field">*</span></Form.Label>
+                      <Form.Label column md={2}>{ I18n.get('text.email') } <span className="required-field">*</span></Form.Label>
                       <Col md={10}>
                       {
                         this.mode === 'add' &&
                         <Form.Control as="select" defaultValue="" onChange={this.handleEmailChange}>
-                          <option key="chooseUser" value="">{ getLocaleString('Choose User') }</option>
+                          <option key="chooseUser" value="">{ I18n.get('text.choose.user') }</option>
                           {
                             this.users.filter((user: IUser) => user.visible)
                               .map((user: IUser) => {
@@ -528,7 +528,7 @@ class PermissionSetting extends React.Component<IProps, IState> {
             {
               this.state.querySites.length === 0 && !this.state.isLoading &&
               <Jumbotron>
-                <p>{ getLocaleString('No permission found.') }</p>
+                <p>{ I18n.get('text.no.permission') }</p>
               </Jumbotron>
             }
             {
@@ -541,7 +541,7 @@ class PermissionSetting extends React.Component<IProps, IState> {
                         <ListGroup as="ul">
                         {
                           this.state.querySites.map((site: ISelectedData) => {
-                            const isSiteChecked: boolean = this.sites.map(site => { return site.id }).includes(site.id as string);
+                            const isSiteChecked: boolean = this.sites.map(mapSite => { return mapSite.id }).includes(site.id as string);
                             const siteId = JSON.stringify({ id: site.id, name: site.name });
 
                             return (
@@ -569,22 +569,22 @@ class PermissionSetting extends React.Component<IProps, IState> {
                               {
                                 isSiteLoaded && loadedSite.areas.length === 0 &&
                                 <Jumbotron>
-                                  <p>{ getLocaleString('No area found.') }</p>
+                                  <p>{ I18n.get('text.no.area') }</p>
                                 </Jumbotron>
                               }
                               {
                                 isSiteLoaded && loadedSite.areas.map((area: ISelectedData) => {
-                                  const isAreaChecked = this.areas.map(area => { return area.id }).includes(area.id as string);
+                                  const isAreaChecked = this.areas.map(mapArea => { return mapArea.id }).includes(area.id as string);
                                   const areaId = JSON.stringify({ id: area.id, name: area.name, siteId: site.id });
 
                                   return (
                                     <div key={area.id}>
-                                      <Form.Check key={area.id} id={areaId} type="checkbox" label={ `${getLocaleString('Area')}: ${area.name}`} onChange={this.handleAreaChange} checked={isAreaChecked} />
+                                      <Form.Check key={area.id} id={areaId} type="checkbox" label={ `${I18n.get('text.area')}: ${area.name}`} onChange={this.handleAreaChange} checked={isAreaChecked} />
                                       <Table>
                                         <thead>
                                           <tr>
-                                            <th>{ getLocaleString('Processes') }</th>
-                                            <th>{ getLocaleString('Stations') }</th>
+                                            <th>{ I18n.get('info.processes') }</th>
+                                            <th>{ I18n.get('text.stations') }</th>
                                           </tr>
                                         </thead>
                                         <tbody>
@@ -593,7 +593,7 @@ class PermissionSetting extends React.Component<IProps, IState> {
                                             {
                                               loadedSite.processes.filter((process: ISelectedData) => process.parentId === area.id)
                                                 .map((process: ISelectedData) => {
-                                                  const isProcessChecked = this.processes.map(process => { return process.id }).includes(process.id as string);
+                                                  const isProcessChecked = this.processes.map(mapProcess => { return mapProcess.id }).includes(process.id as string);
                                                   const processId = JSON.stringify({ id: process.id, name: process.name, siteId: site.id, areaId: area.id });
 
                                                   return (
@@ -606,7 +606,7 @@ class PermissionSetting extends React.Component<IProps, IState> {
                                             {
                                               loadedSite.stations.filter((station: ISelectedData) => station.parentId === area.id)
                                                 .map((station: ISelectedData) => {
-                                                  const isStationChecked = this.stations.map(station => { return station.id }).includes(station.id as string);
+                                                  const isStationChecked = this.stations.map(mapStation => { return mapStation.id }).includes(station.id as string);
                                                   const stationId = JSON.stringify({ id: station.id, name: station.name, siteId: site.id, areaId: area.id });
 
                                                   return (
@@ -619,7 +619,7 @@ class PermissionSetting extends React.Component<IProps, IState> {
                                                             {
                                                               loadedSite.devices.filter((device: ISelectedData) => device.parentId === station.id)
                                                                 .map((device: ISelectedData) => {
-                                                                  const isDeviceChecked = this.devices.map(device => { return device.id }).includes(device.id as string);
+                                                                  const isDeviceChecked = this.devices.map(mapDevice => { return mapDevice.id }).includes(device.id as string);
                                                                   const deviceId = JSON.stringify({ id: device.id, name: device.name, siteId: site.id, areaId: area.id, stationId: station.id });
 
                                                                   return (
@@ -669,7 +669,7 @@ class PermissionSetting extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ getLocaleString('Error') }:</strong><br />
+                  <strong>{ I18n.get('error') }:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>

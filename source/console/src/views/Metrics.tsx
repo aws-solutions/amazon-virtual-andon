@@ -15,6 +15,7 @@
 // Import React and Amplify packages
 import React from 'react';
 import ChartistGraph from 'react-chartist';
+import { I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -28,7 +29,7 @@ import Alert from 'react-bootstrap/Alert';
 import ProgressBar from 'react-bootstrap/ProgressBar';
 
 // Import custom setting
-import { LOGGING_LEVEL, addISOTimeOffset, getPreviousDays, convertSecondsToHms, getLocaleString } from '../util/CustomUtil';
+import { LOGGING_LEVEL, addISOTimeOffset, getPreviousDays, convertSecondsToHms } from '../util/CustomUtil';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IGeneralQueryData, IIssue, ITopIssue, ISelectedData } from '../components/Interfaces';
 import { SortBy } from '../components/Enums';
@@ -131,7 +132,7 @@ class Metrics extends React.Component<IProps, IState> {
       this.setState({ sites });
     } catch (error) {
       LOGGER.error('Error while getting sites', error);
-      this.setState({ error: getLocaleString('Error occurred while getting sites.') });
+      this.setState({ error: I18n.get('error.get.sites') });
     }
   }
 
@@ -158,7 +159,7 @@ class Metrics extends React.Component<IProps, IState> {
       this.setState({ areas });
     } catch (error) {
       LOGGER.error('Error while getting areas', error);
-      this.setState({ error: getLocaleString('Error occurred while getting areas.') });
+      this.setState({ error: I18n.get('error.get.areas') });
     }
   }
 
@@ -198,7 +199,7 @@ class Metrics extends React.Component<IProps, IState> {
       this.getMetrics(issues);
     } catch (error) {
       LOGGER.error('Error while getting issues', error);
-      this.setState({ error: getLocaleString('Error occurred while getting issues.') });
+      this.setState({ error: I18n.get('error.get.issues') });
     }
 
     this.setState({ isLoading: false });
@@ -345,7 +346,7 @@ class Metrics extends React.Component<IProps, IState> {
       });
     } catch (error) {
       LOGGER.error('Error while getting metric', error);
-      this.setState({ error: getLocaleString('Error occurred while getting metric.') });
+      this.setState({ error: I18n.get('error.get.metric') });
     }
   }
 
@@ -394,10 +395,10 @@ class Metrics extends React.Component<IProps, IState> {
    */
   render() {
     const headers = [
-      { name: getLocaleString('Event Description'), key: 'eventDescription' },
-      { name: getLocaleString('Process Name'), key: 'processName' },
-      { name: getLocaleString('Number of Issues'), key: 'count', keyType: 'number' },
-      { name: getLocaleString('Average Resolution Time'), key: 'averageResolutionTime', callFunction: convertSecondsToHms, keyType: 'number' }
+      { name: I18n.get('text.event.description'), key: 'eventDescription' },
+      { name: I18n.get('text.process.name'), key: 'processName' },
+      { name: I18n.get('text.number.of.issues'), key: 'count', keyType: 'number' },
+      { name: I18n.get('text.average.resolution.time'), key: 'averageResolutionTime', callFunction: convertSecondsToHms, keyType: 'number' }
     ];
 
     return (
@@ -406,7 +407,7 @@ class Metrics extends React.Component<IProps, IState> {
           <Row>
             <Col>
               <Breadcrumb>
-                <Breadcrumb.Item active>{ getLocaleString('Metrics') }</Breadcrumb.Item>
+                <Breadcrumb.Item active>{ I18n.get('text.metrics') }</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -417,9 +418,9 @@ class Metrics extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={6} controlId="siteSelect">
-                        <Form.Label>{ getLocaleString('Select the site where you want to view the issues') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.select.site.issues') }</Form.Label>
                         <Form.Control as="select" value={this.state.selectedSite.name} onChange={this.handleSiteChange}>
-                          <option data-key="" key="none-site" value="">{ getLocaleString('Select Site') }</option>
+                          <option data-key="" key="none-site" value="">{ I18n.get('text.select.site') }</option>
                           {
                             this.state.sites.map((site: IGeneralQueryData) => {
                               return (
@@ -430,9 +431,9 @@ class Metrics extends React.Component<IProps, IState> {
                         </Form.Control>
                       </Form.Group>
                       <Form.Group as={Col} md={6} controlId="areaSelect">
-                        <Form.Label>{ getLocaleString('Select the work area where you want to view the issues') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.select.area.issues') }</Form.Label>
                         <Form.Control as="select" value={this.state.selectedArea.name} onChange={this.handleAreaChange}>
-                          <option data-key="" key="none-area" value="">{ getLocaleString('Select Area') }</option>
+                          <option data-key="" key="none-area" value="">{ I18n.get('text.select.area') }</option>
                           {
                             this.state.areas.map((area: IGeneralQueryData) => {
                               return (
@@ -459,7 +460,7 @@ class Metrics extends React.Component<IProps, IState> {
                       <ChartistGraph data={this.state.last7Days} type="Bar" options={this.state.last7DaysOptions} />
                     </Card.Header>
                     <Card.Body>
-                      <h6>{ getLocaleString('Number of issues per day (last 7 days)') }</h6>
+                      <h6>{ I18n.get('text.number.of.issues.seven.days') }</h6>
                     </Card.Body>
                   </Card>
                 </Col>
@@ -469,7 +470,7 @@ class Metrics extends React.Component<IProps, IState> {
                       <ChartistGraph data={this.state.last24Hours} type="Line" options={this.state.last24HoursOptions} />
                     </Card.Header>
                     <Card.Body>
-                      <h6>{ getLocaleString('Number of issues per 3 hours (last 24 hours)') }</h6>
+                      <h6>{ I18n.get('text.number.of.issues.three.hours') }</h6>
                     </Card.Body>
                   </Card>
                 </Col>
@@ -483,7 +484,7 @@ class Metrics extends React.Component<IProps, IState> {
               <Row>
                 <Col>
                   <Card className="custom-card-big custom-card-header-danger">
-                    <Card.Header><strong>{ `${getLocaleString('Total downtime due to issue (last 7 days)')}: ${this.state.sumOfResolutionTimeIssues}` }</strong></Card.Header>
+                    <Card.Header><strong>{ `${I18n.get('text.total.downtime')}: ${this.state.sumOfResolutionTimeIssues}` }</strong></Card.Header>
                   </Card>
                 </Col>
               </Row>
@@ -496,7 +497,7 @@ class Metrics extends React.Component<IProps, IState> {
               <Row>
                 <Col>
                   <Card className="custom-card-big custom-card-header-warning">
-                    <Card.Header><strong>{ getLocaleString('Top occurring issues (last 7 days)') }</strong></Card.Header>
+                    <Card.Header><strong>{ I18n.get('text.top.issues') }</strong></Card.Header>
                     <Card.Body>
                       <DataTable headers={headers} data={this.state.topIssues} initialSort={{ key: 'count', order: SortBy.Desc, keyType: 'number' }} />
                     </Card.Body>
@@ -518,7 +519,7 @@ class Metrics extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ getLocaleString('Error') }:</strong><br />
+                  <strong>{ I18n.get('error') }:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>

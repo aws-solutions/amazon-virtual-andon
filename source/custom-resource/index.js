@@ -11,8 +11,6 @@
  *  and limitations under the License.                                                                                *
  *********************************************************************************************************************/
 
-'use strict';
-
 // Import packages
 const uuid = require('uuid');
 const axios = require('axios');
@@ -39,7 +37,8 @@ const WEB_CONFIG = `const andon_config = {
   "solutions_metrics_endpoint": "METRICS_ENDPOINT",
   "solutions_solutionId": "SOLUTION_ID",
   "solutions_solutionUuId": "SOLUTION_UUID",
-  "solutions_version": "SOLUTION_VERION"
+  "solutions_version": "SOLUTION_VERION",
+  "default_language": "DEFAULT_LANGUAGE"
 };`;
 
 // Metrics endpoint
@@ -99,7 +98,8 @@ exports.handler = async (event, context) => {
             .replace('METRICS_ENDPOINT', METRICS_ENDPOINT_PAGE)
             .replace('SOLUTION_ID', ConfigItem.SolutionId)
             .replace('SOLUTION_UUID', ConfigItem.SolutionUuid)
-            .replace('SOLUTION_VERION', ConfigItem.SolutionVersion);
+            .replace('SOLUTION_VERION', ConfigItem.SolutionVersion)
+            .replace('DEFAULT_LANGUAGE', ConfigItem.DefaultLanguage);
 
           try {
             response.data = await putObject(S3Bucket, configFile, S3Key);
@@ -230,7 +230,8 @@ async function sendAnonymousUsage(properties) {
     Version: properties.Version,
     Data: {
       Region: process.env.AWS_REGION,
-      Type: properties.Type
+      Type: properties.Type,
+      DefaultLanguage: properties.DefaultLanguage
     }
   };
 

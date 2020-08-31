@@ -14,7 +14,7 @@
 // Import React and Amplify packages
 import React from 'react';
 import { LinkContainer } from 'react-router-bootstrap';
-import { API, graphqlOperation } from 'aws-amplify';
+import { API, graphqlOperation, I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -36,7 +36,7 @@ import { getArea } from '../graphql/queries';
 import { createProcess } from '../graphql/mutations';
 
 // Import custom setting
-import { LOGGING_LEVEL, sendMetrics, validateGeneralInput, sortByName, getLocaleString, getInputFormValidationClassName, makeAllVisible, makeVisibleBySearchKeyword } from '../util/CustomUtil';
+import { LOGGING_LEVEL, sendMetrics, validateGeneralInput, sortByName, getInputFormValidationClassName, makeAllVisible, makeVisibleBySearchKeyword } from '../util/CustomUtil';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IGeneralQueryData } from '../components/Interfaces';
 import { ModalType, SortBy } from '../components/Enums';
@@ -93,7 +93,7 @@ class Process extends React.Component<IProps, IState> {
     super(props);
 
     this.state = {
-      title: getLocaleString('Processes'),
+      title: I18n.get('info.processes'),
       processes: [],
       isLoading: false,
       searchKeyword: '',
@@ -163,11 +163,11 @@ class Process extends React.Component<IProps, IState> {
         areaId,
         areaName,
         processes,
-        title: `${getLocaleString('Processes')} (${processes.length})`
+        title: `${I18n.get('info.processes')} (${processes.length})`
       });
     } catch (error) {
       LOGGER.error('Error while getting area', error);
-      this.setState({ error: getLocaleString('Error occurred while getting an area.') });
+      this.setState({ error: I18n.get('error.get.area') });
     }
 
     this.setState({ isLoading: false });
@@ -186,10 +186,10 @@ class Process extends React.Component<IProps, IState> {
 
       const updatedProcesses = this.state.processes.filter(process => process.id !== processId);
 
-      this.props.handleNotification(getLocaleString('Process was deleted successfully.'), 'success', 5);
+      this.props.handleNotification(I18n.get('info.delete.process'), 'success', 5);
       this.setState({
         processes: updatedProcesses,
-        title: `${getLocaleString('Processes')} (${updatedProcesses.length})`,
+        title: `${I18n.get('info.processes')} (${updatedProcesses.length})`,
         processId: '',
         processName: '',
         isModalProcessing: false,
@@ -198,13 +198,13 @@ class Process extends React.Component<IProps, IState> {
         modalType: ModalType.None
       });
     } catch (error) {
-      let message = getLocaleString('Error occurred while deleting the process.');
+      let message = I18n.get('error.delete.process');
 
       if (error.errors) {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         }
       }
 
@@ -246,18 +246,18 @@ class Process extends React.Component<IProps, IState> {
         modalType: ModalType.None
       });
 
-      this.props.handleNotification(getLocaleString('Process was added successfully.'), 'info', 5);
+      this.props.handleNotification(I18n.get('info.add.process'), 'info', 5);
       await sendMetrics({ 'process': 1 });
     } catch (error) {
-      let message = getLocaleString('Error occurred while creating a process.');
+      let message = I18n.get('error.create.process');
 
       if (error.errors) {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         } else if (errorType === 'DataDuplicatedError') {
-          message = getLocaleString('Process name already exists.');
+          message = I18n.get('error.duplicate.process.name');
         }
       }
 
@@ -277,11 +277,11 @@ class Process extends React.Component<IProps, IState> {
     let modalTitle = '';
 
     if (modalType === ModalType.Add) {
-      modalTitle = getLocaleString('Process Registration');
+      modalTitle = I18n.get('text.process.registration');
     } else if (modalType === ModalType.Delete) {
-      modalTitle = getLocaleString('Delete Process');
+      modalTitle = I18n.get('text.delete.process');
     } else {
-      this.props.handleNotification(`${getLocaleString('Unsupported modal type')}: ${modalType}`, 'warning', 5);
+      this.props.handleNotification(`${I18n.get('error.unsupported.modal.type')}: ${modalType}`, 'warning', 5);
       return;
     }
 
@@ -337,7 +337,7 @@ class Process extends React.Component<IProps, IState> {
    */
   handleProcessNameChange(event: any) {
     const processName = event.target.value;
-    const isProcessNameValid = validateGeneralInput(processName);
+    const isProcessNameValid = validateGeneralInput(processName, 1, 40, '- _/#');
 
     this.setState({
       processName,
@@ -351,7 +351,7 @@ class Process extends React.Component<IProps, IState> {
    */
   handleProcessDescriptionChange(event: any) {
     const processDescription = event.target.value;
-    const isProcessDescriptionValid = validateGeneralInput(processDescription);
+    const isProcessDescriptionValid = validateGeneralInput(processDescription, 1, 40, '- _/#');
 
     this.setState({
       processDescription,
@@ -370,12 +370,12 @@ class Process extends React.Component<IProps, IState> {
             <Col>
               <Breadcrumb>
                 <LinkContainer to="/sites" exact>
-                  <Breadcrumb.Item>{ getLocaleString('Sites') }</Breadcrumb.Item>
+                  <Breadcrumb.Item>{ I18n.get('text.sites') }</Breadcrumb.Item>
                 </LinkContainer>
                 <LinkContainer to={`/sites/${this.state.siteId}`} exact>
-                  <Breadcrumb.Item>{ getLocaleString('Areas') }{this.state.siteName}</Breadcrumb.Item>
+                  <Breadcrumb.Item>{ I18n.get('text.areas') }{this.state.siteName}</Breadcrumb.Item>
                 </LinkContainer>
-                <Breadcrumb.Item active>{ getLocaleString('Processes') }{this.state.areaName}</Breadcrumb.Item>
+                <Breadcrumb.Item active>{ I18n.get('info.processes') }{this.state.areaName}</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -383,7 +383,7 @@ class Process extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ getLocaleString('Add Process') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ I18n.get('button.add.process') }</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -397,11 +397,11 @@ class Process extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={4} controlId="searchKeyword">
-                        <Form.Label>{ getLocaleString('Search Keyword') }</Form.Label>
-                        <Form.Control type="text" placeholder={ getLocaleString('Search by Process Name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
+                        <Form.Label>{ I18n.get('text.search.keyword') }</Form.Label>
+                        <Form.Control type="text" placeholder={ I18n.get('text.search.process.name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
                       </Form.Group>
                       <Form.Group as={Col} md={4} controlId="sortBy">
-                        <Form.Label>{ getLocaleString('Sort By') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.sort.by') }</Form.Label>
                         <Form.Control as="select" defaultValue={this.state.sort} onChange={this.handleSort}>
                           <option value={SortBy.Asc}>A-Z</option>
                           <option value={SortBy.Desc}>Z-A</option>
@@ -419,7 +419,7 @@ class Process extends React.Component<IProps, IState> {
               this.state.processes.length === 0 && !this.state.isLoading &&
               <Col>
                 <Jumbotron>
-                  <p>{ getLocaleString('No process found.') }</p>
+                  <p>{ I18n.get('text.no.process') }</p>
                 </Jumbotron>
               </Col>
             }
@@ -434,7 +434,7 @@ class Process extends React.Component<IProps, IState> {
                           <Table striped bordered>
                             <tbody>
                               <tr>
-                                <td>{ getLocaleString('Description') }</td>
+                                <td>{ I18n.get('text.description') }</td>
                                 <td>{process.description}</td>
                               </tr>
                             </tbody>
@@ -442,8 +442,8 @@ class Process extends React.Component<IProps, IState> {
                           <Form>
                             <Form.Row className="justify-content-between">
                               <Button size="sm" variant="danger"
-                                onClick={() => this.openModal(ModalType.Delete, process.id, process.name)}>{ getLocaleString('Delete') }</Button>
-                              <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/processes/${process.id}`)}>{ getLocaleString('Detail') }</Button>
+                                onClick={() => this.openModal(ModalType.Delete, process.id, process.name)}>{ I18n.get('button.delete') }</Button>
+                              <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/processes/${process.id}`)}>{ I18n.get('button.detail') }</Button>
                             </Form.Row>
                           </Form>
                         </Card.Body>
@@ -466,7 +466,7 @@ class Process extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ getLocaleString('Error') }:</strong><br />
+                  <strong>{ I18n.get('error') }:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -483,22 +483,22 @@ class Process extends React.Component<IProps, IState> {
               <Modal.Body>
                 <Form>
                   <Form.Group controlId="processName">
-                    <Form.Label>{ getLocaleString('Process Name') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ getLocaleString('Enter the process name') }
+                    <Form.Label>{ I18n.get('text.process.name') } <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={ I18n.get('input.process.name') }
                       defaultValue="" onChange={this.handleProcessNameChange} className={ getInputFormValidationClassName(this.state.processName, this.state.isProcessNameValid) } />
-                    <Form.Text className="text-muted">{ `(${getLocaleString('Required')}) ${getLocaleString('Must contain only alphanumeric characters and/or the following: - _/# with length 4 to 40')}` }</Form.Text>
+                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
                   </Form.Group>
                   <Form.Group controlId="processDescription">
-                    <Form.Label>{ getLocaleString('Process Description') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ getLocaleString('Enter the process description') }
+                    <Form.Label>{ I18n.get('text.process.description') } <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={ I18n.get('input.process.description') }
                       defaultValue="" onChange={this.handleProcessDescriptionChange} className={ getInputFormValidationClassName(this.state.processDescription, this.state.isProcessDescriptionValid) } />
-                    <Form.Text className="text-muted">{ `(${getLocaleString('Required')}) ${getLocaleString('Must contain only alphanumeric characters and/or the following: - _/# with length 4 to 40')}` }</Form.Text>
+                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
                   </Form.Group>
                 </Form>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-                <Button variant="primary" onClick={this.addProcess} disabled={this.state.isModalProcessing || !this.state.isProcessNameValid || !this.state.isProcessDescriptionValid}>{ getLocaleString('Register') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="primary" onClick={this.addProcess} disabled={this.state.isModalProcessing || !this.state.isProcessNameValid || !this.state.isProcessDescriptionValid}>{ I18n.get('button.register') }</Button>
               </Modal.Footer>
             </div>
           }
@@ -506,15 +506,15 @@ class Process extends React.Component<IProps, IState> {
             this.state.modalType === ModalType.Delete &&
             <div>
               <Modal.Body>
-                { getLocaleString('Are you sure you want to delete this process') }: <strong>{this.state.processName}</strong>?
+                { I18n.get('text.confirm.delete.process') }: <strong>{this.state.processName}</strong>?
                 <EmptyRow />
                 <Alert variant="danger">
-                  { getLocaleString('Every event belonged to the proces will be deleted as well.') }
+                  { I18n.get('warning.delete.process') }
                 </Alert>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-                <Button variant="danger" onClick={this.deleteProcess} disabled={this.state.isModalProcessing}>{ getLocaleString('Delete') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="danger" onClick={this.deleteProcess} disabled={this.state.isModalProcessing}>{ I18n.get('button.delete') }</Button>
               </Modal.Footer>
             </div>
           }

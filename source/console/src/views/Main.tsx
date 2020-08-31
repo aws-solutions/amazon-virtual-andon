@@ -16,6 +16,7 @@ import React from 'react';
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
 import { LinkContainer } from 'react-router-bootstrap';
 import { GoSignOut } from 'react-icons/go';
+import { I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
 import Auth from '@aws-amplify/auth';
 
@@ -25,7 +26,7 @@ import Nav from 'react-bootstrap/Nav';
 import Button from 'react-bootstrap/Button';
 
 // Import custom setting
-import { LOGGING_LEVEL, getLocaleString } from '../util/CustomUtil';
+import { LOGGING_LEVEL } from '../util/CustomUtil';
 import { IRoute } from '../components/Interfaces';
 import NoMatch from '../components/NoMatch';
 import EmptyCol from '../components/EmptyCol';
@@ -99,7 +100,7 @@ class Main extends React.Component<IProps, IState> {
                               <route.icon />
                             }
                             <EmptyCol />
-                            {route.name}
+                            { I18n.get(route.nameCode) }
                           </Nav.Link>
                         </LinkContainer>
                       );
@@ -109,7 +110,7 @@ class Main extends React.Component<IProps, IState> {
                 <Button variant="link" onClick={ this.signOut }>
                   <GoSignOut />
                   <EmptyCol />
-                  { getLocaleString('Sign Out') }
+                  { I18n.get('button.sign.out') }
                 </Button>
               </Navbar.Collapse>
             </Navbar>

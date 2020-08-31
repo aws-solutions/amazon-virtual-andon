@@ -13,6 +13,7 @@
 
 // Import React and Amplify packages
 import React from 'react';
+import { I18n } from 'aws-amplify';
 import { ForgotPassword } from 'aws-amplify-react';
 
 // Import React Bootstrap components
@@ -22,9 +23,6 @@ import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
-
-// Import custom setting
-import { getLocaleString } from '../../util/CustomUtil';
 
 /**
  * Customized Amplify forgot password
@@ -76,7 +74,7 @@ class CustomForgotPassword extends ForgotPassword {
    */
   checkCode() {
     if (this.code.trim() === '') {
-      this.error(getLocaleString('Confirmation code cannot be empty.'));
+      this.error(I18n.get('error.empty.confirmation.code'));
     } else {
       this.checkPassword();
     }
@@ -87,9 +85,9 @@ class CustomForgotPassword extends ForgotPassword {
    */
   checkPassword() {
     if (this.password.trim() === '') {
-      this.error(getLocaleString('Password cannot be empty.'));
+      this.error(I18n.get('error.empty.password'));
     } else if (this.password !== this.confirmPassword) {
-      this.error(getLocaleString('Password and confirm password are different.'));
+      this.error(I18n.get('error.check.password.confirm.password'));
     } else {
       this.submit();
     }
@@ -100,7 +98,7 @@ class CustomForgotPassword extends ForgotPassword {
    */
   checkUsername() {
     if (this.username.trim() === '') {
-      this.error(getLocaleString('Username cannot be empty.'));
+      this.error(I18n.get('error.empty.username'));
     } else {
       this.send();
     }
@@ -115,31 +113,31 @@ class CustomForgotPassword extends ForgotPassword {
       <div>
         <Form.Group as={Row} controlId="formCode" key="formCode">
           <Form.Label column md={3}>
-            { getLocaleString('Code') }
+            { I18n.get('text.code') }
           </Form.Label>
           <Col md={9}>
-            <Form.Control key="code" name="code" type="text" autoComplete="off" placeholder={ getLocaleString('Code') } onChange={(event: any) => { this.handleInputChange(event); this.code = event.target.value }} />
+            <Form.Control key="code" name="code" type="text" autoComplete="off" placeholder={ I18n.get('text.code') } onChange={(event: any) => { this.handleInputChange(event); this.code = event.target.value }} />
           </Col>
         </Form.Group>
         <Form.Group as={Row} controlId="formPassword" key="formPassword">
           <Form.Label column md={3}>
-            { getLocaleString('New Password') }
+            { I18n.get('text.new.password') }
           </Form.Label>
           <Col md={9}>
-            <Form.Control key="password" name="password" type="password" placeholder={ getLocaleString('New Password') } onKeyDown={(event: any) => { this.handleKeyDown(event, 'password')}} onChange={(event: any) => { this.handleInputChange(event); this.password = event.target.value }} />
+            <Form.Control key="password" name="password" type="password" placeholder={ I18n.get('text.new.password') } onKeyDown={(event: any) => { this.handleKeyDown(event, 'password')}} onChange={(event: any) => { this.handleInputChange(event); this.password = event.target.value }} />
           </Col>
         </Form.Group>
         <Form.Group as={Row} controlId="formConfirmPassword" key="formConfirmPassword">
           <Form.Label column md={3}>
-            { getLocaleString('Confirm Password') }
+            { I18n.get('text.confirm.passwrod') }
           </Form.Label>
           <Col md={9}>
-            <Form.Control key="confirmPassword" name="confirmPassword" type="password" placeholder={ getLocaleString('Confirm Password') } onKeyDown={(event: any) => { this.handleKeyDown(event, 'password') }} onChange={(event: any) => { this.confirmPassword = event.target.value }} />
+            <Form.Control key="confirmPassword" name="confirmPassword" type="password" placeholder={ I18n.get('text.confirm.passwrod') } onKeyDown={(event: any) => { this.handleKeyDown(event, 'password') }} onChange={(event: any) => { this.confirmPassword = event.target.value }} />
           </Col>
         </Form.Group>
         <Form.Group as={Row} className="justify-content-between" key="sendButtonGroup">
-          <Button key="buttonResendCode" variant="link" onClick={this.send}>{ getLocaleString('Resend Code') }</Button>
-          <Button key="buttonSubmit" variant="primary" onClick={this.checkCode}>{ getLocaleString('Submit') }</Button>
+          <Button key="buttonResendCode" variant="link" onClick={this.send}>{ I18n.get('button.resend.code') }</Button>
+          <Button key="buttonSubmit" variant="primary" onClick={this.checkCode}>{ I18n.get('button.submit') }</Button>
         </Form.Group>
       </div>
     );
@@ -154,15 +152,15 @@ class CustomForgotPassword extends ForgotPassword {
       <div>
         <Form.Group as={Row} controlId="formUsername" key="formUsername">
           <Form.Label column md={3}>
-            { getLocaleString('E-Mail') }
+            { I18n.get('text.email') }
           </Form.Label>
           <Col md={9}>
-            <Form.Control key="username" name="username" type="text" placeholder={ getLocaleString('Enter your E-Mail') } onKeyDown={(event: any) => { this.handleKeyDown(event, 'username') }} onChange={(event: any) => { this.handleInputChange(event); this.username = event.target.value }} />
+            <Form.Control key="username" name="username" type="text" placeholder={ I18n.get('input.email') } onKeyDown={(event: any) => { this.handleKeyDown(event, 'username') }} onChange={(event: any) => { this.handleInputChange(event); this.username = event.target.value }} />
           </Col>
         </Form.Group>
         <Form.Group as={Row} className="justify-content-between" key="initialButtonGroup">
-          <Button key="buttonBackToSignIn" variant="link" onClick={() => this.changeState('signIn')}>{ getLocaleString('Back to Sign In') }</Button>
-          <Button key="buttonSend" variant="primary" onClick={this.checkUsername}>{ getLocaleString('Send') }</Button>
+          <Button key="buttonBackToSignIn" variant="link" onClick={() => this.changeState('signIn')}>{ I18n.get('text.back.to.sign.in') }</Button>
+          <Button key="buttonSend" variant="primary" onClick={this.checkUsername}>{ I18n.get('button.send') }</Button>
         </Form.Group>
       </div>
     );
@@ -183,7 +181,7 @@ class CustomForgotPassword extends ForgotPassword {
         <Container>
           <Row className="justify-content-md-center">
             <Col lg={6} md={8} xs={12}>
-              <h4>{ getLocaleString('Reset your password') }</h4>
+              <h4>{ I18n.get('text.reset.password') }</h4>
             </Col>
           </Row>
           <Row className="justify-content-md-center">

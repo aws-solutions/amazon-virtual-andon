@@ -12,14 +12,12 @@
  *********************************************************************************************************************/
 
 /* eslint-disable */
-// Import React and Amplify packages
+// Import Amplify packages
+import { I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
 
 // Import packages
 import axios from 'axios';
-
-// Import locale JSON file
-import localeJson from './locale.json';
 
 // Import custom setting
 import { SortBy } from '../components/Enums';
@@ -32,7 +30,6 @@ export const LOGGING_LEVEL = 'DEBUG';
 
 // Local constant variables
 const LOGGER = new Logger('CustomUtil', LOGGING_LEVEL);
-const LOCALE = 'en';
 
 // File upload size limit - 10KB
 export const FILE_SIZE_LIMIT = 10 * 1024;
@@ -47,31 +44,6 @@ export class CustomError extends Error {
   constructor(error: {errorType: string, message: string}) {
     super(error.message);
     this.errorType = error.errorType;
-  }
-}
-
-/**
- * Get the locale string for the source string.
- * If there's no locale string, it will return the provided source string.
- * @param {string} sourceString - Source string to get locale string
- * @return {string} The locale string of the source string
- */
-export function getLocaleString(sourceString: string): string {
-  try {
-    const localeDictionary: any = localeJson;
-    if (!localeDictionary[LOCALE]) {
-      return sourceString;
-    }
-
-    let localeString: string = localeDictionary[LOCALE][sourceString];
-    if (!localeString) {
-      localeString = sourceString;
-    }
-
-    return localeString;
-  } catch (error) {
-    LOGGER.error('error: ', error);
-    return sourceString;
   }
 }
 
@@ -105,11 +77,39 @@ export async function sendMetrics(data: object) {
 /**
  * Validate the general input string.
  * @param {string} input - String to validate
+ * @param {number} minLength - Minimum input length
+ * @param {number} maxLength - Maximum input length
+ * @param {string} allowedSpecialCharacters - Allowed special characters
  * @return {boolean} Validated result
  */
-export function validateGeneralInput(input: string): boolean {
-  const regex = /^[a-zA-Z0-9- _/#]{4,40}$/;
-  return regex.test(input);
+export function validateGeneralInput(input: string, minLength: number, maxLength: number, allowedSpecialCharacters: string): boolean {
+  // Due to supporting multi-languages since v2.1, removed alphanumeric validation.
+  if (input.length > maxLength || input.length < minLength || input.trimLeft().trimRight() === '') {
+    return false;
+  }
+
+  let allowedSpecialCharactersCode: number[] = [];
+  for (let i = 0, length = allowedSpecialCharacters.length; i < length; i++) {
+    allowedSpecialCharactersCode.push(allowedSpecialCharacters.charCodeAt(i));
+  }
+
+  if (allowedSpecialCharactersCode.length > 0) {
+    for (let i = 0, length = input.length; i < length; i++) {
+      let ch = input.charCodeAt(i);
+      if (
+        (ch >= 32 && ch <= 47) || // [space] to "/"
+        (ch >= 58 && ch <= 64) || // ":" to "@"
+        (ch >= 91 && ch <= 96) || // "[" to "`"
+        (ch >= 123 && ch <= 127) // "{" to the end of ASCII
+      ) {
+        if (!allowedSpecialCharactersCode.includes(ch)) {
+          return false;
+        }
+      }
+    }
+  }
+
+  return true;
 }
 
 /**
@@ -163,7 +163,7 @@ export function getPreviousDays(date: Date, day: number, hours: number, minutes:
 }
 
 /**
- * Convert seconds to HH hours MM minutes SS seconds format.
+ * Convert seconds to HH hours MM minutes SS seconds format in selected language.
  * @param {number} seconds - Seconds to convert to hours, minutes, and seconds
  * @return {string} Converted format string
  */
@@ -172,9 +172,9 @@ export function convertSecondsToHms(seconds: number): string {
   const minute = Math.floor(seconds % 3600 / 60);
   const second = Math.floor(seconds % 3600 % 60);
 
-  const hourString = hour > 0 ? `${hour} hour(s) ` : '';
-  const minuteString = minute > 0 ? `${minute} minute(s) ` : '';
-  const secondString = second > 0 ? `${second} second(s)` : '';
+  const hourString = hour > 0 ? `${hour} ${I18n.get('text.time.hours')} ` : '';
+  const minuteString = minute > 0 ? `${minute} ${I18n.get('text.time.minutes')} ` : '';
+  const secondString = second > 0 ? `${second} ${I18n.get('text.time.seconds')}` : '';
 
   return hourString.concat(minuteString, secondString);
 }
@@ -214,15 +214,15 @@ export function getAmplifyCustomErrorMessage(message: string): string {
     || /validation.*error.*password.*constraint/i.test(message) // 1 validation error detected: Value at 'password' failed to satisfy constraint: Member must have length greater than or equal to 6
     || /Password.*policy/i.test(message) // Password does not conform to policy: Password not long enough
   ) {
-    message = 'Password policy - minimum length 8, uppercase letters, lowercase letters, special characters, numbers';
+    message = 'error.cognito.password.policy';
   } else if (
     /Only.*radix.*supported/i.test(message) // Only radix 2, 4, 8, 16, 32 are supported
     || /validation.*error.*userName.*constraint/i.test(message) // 2 validation errors detected: Value '' at 'userName' failed to satisfy constraint: Member must satisfy regular expression pattern: [\p{L}\p{M}\p{S}\p{N}\p{P}]+; Value '' at 'userAlias' failed to satisfy constraint: Member must satisfy regular expression pattern: [\p{L}\p{M}\p{S}\p{N}\p{P}]+
   ) {
-    message = 'Incorrect username or password.';
+    message = 'error.cognito.incorrect.username.password';
   }
 
-  return getLocaleString(message);
+  return I18n.get(message);
 }
 
 /**

@@ -21,7 +21,8 @@ import { IconType } from 'react-icons/lib/cjs';
  */
 export interface IRoute {
   path: string;
-  name: string;
+  nameCode?: string;
+  description: string;
   component: typeof React.Component;
   icon?: IconType;
   visible: boolean;

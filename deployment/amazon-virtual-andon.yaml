@@ -18,12 +18,27 @@ Parameters:
     Type: String
     Description: (Required) Email address for Amazon Virtual Andon administrator.
     AllowedPattern: "^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$"
+  DefaultLanguage:
+    Type: String
+    Description: Amazon Virtual Andon web interface default language. Choose "Browser Default" if you want to use your browser language as a default language.
+    Default: Browser Default
+    AllowedValues:
+      - Browser Default
+      - Chinese (Simplified)
+      - English
+      - French (France)
+      - German
+      - Japanese
+      - Korean
+      - Spanish (Spain)
 
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterLabels:
       AdministratorEmail:
         default: Administrator Email
+      DefaultLanguage:
+        default: UI Default Language
 
 Mappings:
   Send:
@@ -821,6 +836,7 @@ Resources:
       SolutionId: !FindInMap ["Solution", "Data", "Id"]
       UUID: !GetAtt CreateUuid.UUID
       Version: !FindInMap ["Solution", "Data", "Version"]
+      DefaultLanguage: !Ref DefaultLanguage
 
   CopyWebsite:
     Type: Custom::CopyWebsite
@@ -847,6 +863,7 @@ Resources:
         SolutionId: !FindInMap ["Solution", "Data", "Id"]
         SolutionUuid: !GetAtt CreateUuid.UUID
         SolutionVersion: !FindInMap ["Solution", "Data", "Version"]
+        DefaultLanguage: !Ref DefaultLanguage
 
   DeleteStack:
     Type: Custom::DeleteStack

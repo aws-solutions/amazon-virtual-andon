@@ -64,6 +64,7 @@ The Amzon Virtual Andon solution consists of a management and owner console, IoT
       |- graphql                          [ Console GraphQL resources ]
       |- types                            [ Console TypeScript types ]
       |- util                             [ Console common util ]
+        |- lang                           [ Console language JSON files ]
       |- views                            [ Console views ]
   |- custom-resource                      [ Solution custom resource ]
   |- graphql/                             [ GraphQL resources ]

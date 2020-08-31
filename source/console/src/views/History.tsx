@@ -14,7 +14,7 @@
 // Import React and Amplify packages
 import React from 'react';
 import { CSVLink } from 'react-csv';
-import { API, graphqlOperation } from 'aws-amplify';
+import { API, graphqlOperation, I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -32,7 +32,7 @@ import ProgressBar from 'react-bootstrap/ProgressBar';
 import { onCreateIssue, onUpdateIssue } from '../graphql/subscriptions';
 
 // Import custom setting
-import { LOGGING_LEVEL, addISOTimeOffset, convertSecondsToHms, getLocaleString } from '../util/CustomUtil';
+import { LOGGING_LEVEL, addISOTimeOffset, convertSecondsToHms } from '../util/CustomUtil';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IGeneralQueryData, IIssue, ISelectedData } from '../components/Interfaces';
 import EmptyRow from '../components/EmptyRow';
@@ -177,7 +177,7 @@ class History extends React.Component<IProps, IState> {
       this.setState({ sites });
     } catch (error) {
       LOGGER.error('Error while getting sites.', error);
-      this.setState({ error: getLocaleString('Error occurred while getting sites.') });
+      this.setState({ error: I18n.get('error.get.sites') });
     }
   }
 
@@ -204,7 +204,7 @@ class History extends React.Component<IProps, IState> {
       this.setState({ areas });
     } catch (error) {
       LOGGER.error('Error while getting areas.', error);
-      this.setState({ error: getLocaleString('Error occurred while getting areas.') });
+      this.setState({ error: I18n.get('error.get.areas') });
     }
   }
 
@@ -240,7 +240,7 @@ class History extends React.Component<IProps, IState> {
       this.setState({ issues });
     } catch (error) {
       LOGGER.error('Error while getting issues', error);
-      this.setState({ error: getLocaleString('Error occurred while getting issues.') });
+      this.setState({ error: I18n.get('error.get.issues') });
     }
 
     this.setState({
@@ -293,14 +293,14 @@ class History extends React.Component<IProps, IState> {
    */
   render() {
     const headers = [
-      { name: getLocaleString('Event Description'), key: 'eventDescription' },
-      { name: getLocaleString('Process Name'), key: 'processName' },
-      { name: getLocaleString('Device Name'), key: 'deviceName' },
-      { name: getLocaleString('Status'), key: 'status' },
-      { name: getLocaleString('Root Cause'), key: 'rootCause' },
-      { name: getLocaleString('Created At'), key: 'created' },
-      { name: getLocaleString('Closed At'), key: 'closed' },
-      { name: getLocaleString('Resolution Time'), key: 'resolutionTime', callFunction: convertSecondsToHms, keyType: 'number' }
+      { name: I18n.get('text.event.description'), key: 'eventDescription' },
+      { name: I18n.get('text.process.name'), key: 'processName' },
+      { name: I18n.get('text.device.name'), key: 'deviceName' },
+      { name: I18n.get('text.status'), key: 'status' },
+      { name: I18n.get('text.rootcause'), key: 'rootCause' },
+      { name: I18n.get('text.created.at'), key: 'created' },
+      { name: I18n.get('text.closed.at'), key: 'closed' },
+      { name: I18n.get('text.resolution.time'), key: 'resolutionTime', callFunction: convertSecondsToHms, keyType: 'number' }
     ];
 
     return (
@@ -309,7 +309,7 @@ class History extends React.Component<IProps, IState> {
           <Row>
             <Col>
               <Breadcrumb>
-                <Breadcrumb.Item active>{ getLocaleString('History') }</Breadcrumb.Item>
+                <Breadcrumb.Item active>{ I18n.get('text.history') }</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -320,9 +320,9 @@ class History extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={6} controlId="siteSelect">
-                        <Form.Label>{ getLocaleString('Select the site where you want to view the issues') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.select.site.issues') }</Form.Label>
                         <Form.Control as="select" value={this.state.selectedSite.name} onChange={this.handleSiteChange}>
-                          <option data-key="" key="none-site" value="">{ getLocaleString('Select Site') }</option>
+                          <option data-key="" key="none-site" value="">{ I18n.get('text.select.site') }</option>
                           {
                             this.state.sites.map((site: IGeneralQueryData) => {
                               return (
@@ -333,9 +333,9 @@ class History extends React.Component<IProps, IState> {
                         </Form.Control>
                       </Form.Group>
                       <Form.Group as={Col} md={6} controlId="areaSelect">
-                        <Form.Label>{ getLocaleString('Select the work area where you want to view the issues') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.select.area.issues') }</Form.Label>
                         <Form.Control as="select" value={this.state.selectedArea.name} onChange={this.handleAreaChange}>
-                          <option data-key="" key="none-area" value="">{ getLocaleString('Select Area') }</option>
+                          <option data-key="" key="none-area" value="">{ I18n.get('text.select.area') }</option>
                           {
                             this.state.areas.map((area: IGeneralQueryData) => {
                               return (
@@ -359,7 +359,7 @@ class History extends React.Component<IProps, IState> {
                 <Col>
                   <Form>
                     <Form.Row className="justify-content-end">
-                      <CSVLink data={this.state.issues} className="btn btn-primary btn-sm">{ getLocaleString('Download CSV Data') }</CSVLink>
+                      <CSVLink data={this.state.issues} className="btn btn-primary btn-sm">{ I18n.get('button.download.csv.data') }</CSVLink>
                     </Form.Row>
                   </Form>
                 </Col>
@@ -372,13 +372,13 @@ class History extends React.Component<IProps, IState> {
             {
               this.state.showIssue && this.state.issues.length === 0 && !this.state.isLoading &&
               <Jumbotron>
-                <p>{ getLocaleString('No issues found in the last 7 days. Please select a site / area if you have multiple to display relevant history.') }</p>
+                <p>{ I18n.get('text.no.issues.seven.days') }</p>
               </Jumbotron>
             }
             {
               this.state.issues.length > 0 && !this.state.isLoading &&
               <Card className="custom-card-big custom-card-header-warning">
-                <Card.Header><strong>{ getLocaleString('History (last 7 days)') }</strong></Card.Header>
+                <Card.Header><strong>{ I18n.get('text.history.last.seven.days') }</strong></Card.Header>
                 <Card.Body>
                   <DataTable headers={headers} data={this.state.issues} initialSort={{ key: 'created', order: SortBy.Asc }} dataVersion={this.state.dataVersion} />
                 </Card.Body>
@@ -399,7 +399,7 @@ class History extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ getLocaleString('Error') }:</strong><br />
+                  <strong>{ I18n.get('error') }:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>

@@ -13,15 +13,13 @@
 
 // Import React and Amplify packages
 import React from 'react';
+import { I18n } from 'aws-amplify';
 
 // Import React Bootstrap components
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Jumbotron from 'react-bootstrap/Jumbotron';
-
-// Import custom setting
-import { getLocaleString } from '../util/CustomUtil';
 
 /**
  * The class returns an error when path matches nothing.
@@ -38,7 +36,7 @@ class NoMatch extends React.Component {
           <Row>
             <Col>
               <Jumbotron>
-                <h3>{ getLocaleString('Not found') }: <code>{window.location.pathname}</code></h3>
+                <h3>{ I18n.get('text.not.found') }: <code>{window.location.pathname}</code></h3>
               </Jumbotron>
             </Col>
           </Row>

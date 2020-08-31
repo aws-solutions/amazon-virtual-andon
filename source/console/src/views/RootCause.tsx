@@ -14,7 +14,7 @@
 // Import React and Amplify packages
 import React from 'react';
 import { CSVLink } from 'react-csv';
-import { API, graphqlOperation } from 'aws-amplify';
+import { API, graphqlOperation, I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -35,7 +35,7 @@ import Modal from 'react-bootstrap/Modal';
 import { createRootCause } from '../graphql/mutations';
 
 // Import custom setting
-import { LOGGING_LEVEL, FILE_SIZE_LIMIT, sendMetrics, sortByName, getLocaleString, getInputFormValidationClassName, makeVisibleBySearchKeyword } from '../util/CustomUtil';
+import { LOGGING_LEVEL, FILE_SIZE_LIMIT, sendMetrics, sortByName, getInputFormValidationClassName, makeVisibleBySearchKeyword, validateGeneralInput } from '../util/CustomUtil';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IRootCause, IUploadResult } from '../components/Interfaces';
 import { ModalType, SortBy } from '../components/Enums';
@@ -91,11 +91,11 @@ class RootCause extends React.Component<IProps, IState> {
     super(props);
 
     this.state = {
-      title: getLocaleString('Root Causes'),
+      title: I18n.get('text.rootcauses'),
       rootCauses: [],
       rootCause: '',
       id: '',
-      csvRootCauses: [{ rootCause: getLocaleString('Enter only one root cause in each row. Save the CSV file and upload to the web interface.') }],
+      csvRootCauses: [{ rootCause: I18n.get('input.csv.rootcause') }],
       isLoading: false,
       searchKeyword: '',
       sort: SortBy.Asc,
@@ -106,7 +106,7 @@ class RootCause extends React.Component<IProps, IState> {
       isModalProcessing: false,
       isRootCauseValid: false,
       csvFile: new File([''], ''),
-      csvFileName: getLocaleString('Select a CSV file with the downloaded format.'),
+      csvFileName: I18n.get('text.select.csv.file'),
       isFileValid: false,
       uploadResult: []
     };
@@ -152,11 +152,11 @@ class RootCause extends React.Component<IProps, IState> {
 
       this.setState({
         rootCauses: sortByName(rootCauses, sort, 'rootCause'),
-        title: `${getLocaleString('Root Causes')} (${rootCauses.length})`
+        title: `${I18n.get('text.rootcauses')} (${rootCauses.length})`
       });
     } catch (error) {
       LOGGER.error('Error occurred while getting root causes.');
-      this.setState({ error: getLocaleString('Error occurred while getting root causes.') });
+      this.setState({ error: I18n.get('error.get.rootcauses') });
     }
 
     this.setState({ isLoading: false });
@@ -179,7 +179,7 @@ class RootCause extends React.Component<IProps, IState> {
       const newRootCauses = [...rootCauses, newRootCause];
       this.setState({
         rootCauses: sortByName(newRootCauses, sort, 'rootCause'),
-        title: `${getLocaleString('Root Causes')} (${newRootCauses.length})`,
+        title: `${I18n.get('text.rootcauses')} (${newRootCauses.length})`,
         rootCause: '',
         isModalProcessing: false,
         isRootCauseValid: false,
@@ -188,18 +188,18 @@ class RootCause extends React.Component<IProps, IState> {
         modalType: ModalType.None
       });
 
-      this.props.handleNotification(getLocaleString('Root cause was added successfully.'), 'info', 5);
+      this.props.handleNotification(I18n.get('info.add.rootcause'), 'info', 5);
       await sendMetrics({ 'rootCause': 1 });
     } catch (error) {
-      let message = getLocaleString('Error occurred while adding a root cause.');
+      let message = I18n.get('error.add.rootcause');
 
       if (error.errors) {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         } else if (errorType === 'DataDuplicatedError') {
-          message = getLocaleString('Root cause already exists.');
+          message = I18n.get('error.duplicate.rootcause');
         }
       }
 
@@ -221,10 +221,10 @@ class RootCause extends React.Component<IProps, IState> {
 
       const updatedRootCauses = this.state.rootCauses.filter(rootCause => rootCause.id !== id);
 
-      this.props.handleNotification(getLocaleString('Root cause was deleted successfully.'), 'success', 5);
+      this.props.handleNotification(I18n.get('info.delete.rootcause'), 'success', 5);
       this.setState({
         rootCauses: updatedRootCauses,
-        title: `${getLocaleString('Root Causes')} (${updatedRootCauses.length})`,
+        title: `${I18n.get('text.rootcauses')} (${updatedRootCauses.length})`,
         rootCause: '',
         isModalProcessing: false,
         showModal: false,
@@ -232,15 +232,15 @@ class RootCause extends React.Component<IProps, IState> {
         modalType: ModalType.None
       });
     } catch (error) {
-      let message = getLocaleString('Error occurred while deleting the root cause.');
+      let message = I18n.get('error.delete.rootcause');
 
       if (error.errors) {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         } else if (errorType === 'EventExistingError') {
-          message = getLocaleString('You need to detach the root cause from all events.');
+          message = I18n.get('error.detach.rootcause.from.events');
         }
       }
 
@@ -263,7 +263,7 @@ class RootCause extends React.Component<IProps, IState> {
     reader.onerror = () => {
       this.setState({ isModalProcessing: false });
       reader.abort();
-      this.props.handleNotification(getLocaleString('Error occurred while processing the CSV file.'), 'error', 5);
+      this.props.handleNotification(I18n.get('error.process.csv'), 'error', 5);
     }
 
     // Handle file load.
@@ -281,7 +281,7 @@ class RootCause extends React.Component<IProps, IState> {
 
         // Do nothing if there's no data.
         if (lines.length === 0) {
-          this.props.handleNotification(getLocaleString('There is no data in the CSV.'), 'error', 5);
+          this.props.handleNotification(I18n.get('error.no.csv.data'), 'error', 5);
         } else {
           let uploadResult: IUploadResult[] = [];
 
@@ -291,24 +291,25 @@ class RootCause extends React.Component<IProps, IState> {
             const rootCause = line.trim().split(',')[0];
 
             // Validate root cause.
-            if (/[a-zA-Z0-9- _/#()]$/.test(rootCause)) {
+            // if (/[a-zA-Z0-9- _/#()]$/.test(rootCause)) {
+            if (validateGeneralInput(rootCause, 1, 100, '- _/#()')) {
               try {
                 await API.graphql(graphqlOperation(createRootCause, { rootCause }));
 
                 uploadResult.push({
                   name: rootCause,
-                  result: getLocaleString('Success')
+                  result: I18n.get('text.success')
                 });
               } catch (error) {
-                let message = getLocaleString('Failure');
+                let message = I18n.get('text.failure');
 
                 if (error.errors) {
                   const { errorType } = error.errors[0];
 
                   if (errorType === 'Unauthorized') {
-                    message = getLocaleString('Not authorized, please contact your Admin.');
+                    message = I18n.get('error.not.authorized');
                   } else if (errorType === 'DataDuplicatedError') {
-                    message = getLocaleString('Root cause already exists.');
+                    message = I18n.get('error.duplicate.rootcause');
                   }
                 }
 
@@ -320,7 +321,7 @@ class RootCause extends React.Component<IProps, IState> {
             } else {
               uploadResult.push({
                 name: rootCause,
-                result: getLocaleString('Root cause is not valid.')
+                result: I18n.get('error.invalid.rootcause')
               });
             }
           }
@@ -330,7 +331,7 @@ class RootCause extends React.Component<IProps, IState> {
         }
       } catch (error) {
         LOGGER.error(error);
-        this.props.handleNotification(getLocaleString('An error occurred while processing CSV file.'), 'error', 5);
+        this.props.handleNotification(I18n.get('An error occurred while processing CSV file.'), 'error', 5);
       } finally {
         this.setState({ isModalProcessing: false });
       }
@@ -348,13 +349,13 @@ class RootCause extends React.Component<IProps, IState> {
     let modalTitle = '';
 
     if (modalType === ModalType.Add) {
-      modalTitle = getLocaleString('Add Root Cause');
+      modalTitle = I18n.get('button.add.rootcause');
     } else if (modalType === ModalType.Delete) {
-      modalTitle = getLocaleString('Delete Root Cause');
+      modalTitle = I18n.get('text.delete.rootcause');
     } else if (modalType === ModalType.Upload) {
-      modalTitle = getLocaleString('Upload CSV');
+      modalTitle = I18n.get('text.upload.csv');
     } else {
-      this.props.handleNotification(`${getLocaleString('Unsupported modal type')}: ${modalType}`, 'warning', 5);
+      this.props.handleNotification(`${I18n.get('error.unsupported.modal.type')}: ${modalType}`, 'warning', 5);
       return;
     }
 
@@ -399,7 +400,7 @@ class RootCause extends React.Component<IProps, IState> {
       rootCause: '',
       isRootCauseValid: false,
       csvFile: new File([''], ''),
-      csvFileName: getLocaleString('Select a CSV file with the downloaded format.'),
+      csvFileName: I18n.get('text.select.csv.file'),
       isFileValid: false,
       showModal: false,
       uploadResult: []
@@ -412,7 +413,7 @@ class RootCause extends React.Component<IProps, IState> {
    */
   handleRootCauseChange(event: any) {
     const rootCause = event.target.value;
-    const isRootCauseValid = /[a-zA-Z0-9- _/#()]$/.test(rootCause);
+    const isRootCauseValid = validateGeneralInput(rootCause, 1, 100, '- _/#()');
 
     this.setState({
       rootCause,
@@ -432,10 +433,10 @@ class RootCause extends React.Component<IProps, IState> {
 
       // Limit upload file size
       if (size > FILE_SIZE_LIMIT) {
-        this.props.handleNotification(getLocaleString('CSV file size cannot be greater than 10KB.'), 'error', 5);
+        this.props.handleNotification(I18n.get('error.limit.csv.size'), 'error', 5);
         this.setState({
           csvFile: new File([''], ''),
-          csvFileName: getLocaleString('Select a CSV file with the downloaded format.'),
+          csvFileName: I18n.get('text.select.csv.file'),
           isFileValid: false
         });
       } else if (type === 'text/csv' || extension === 'csv') {
@@ -445,10 +446,10 @@ class RootCause extends React.Component<IProps, IState> {
           isFileValid: true
         });
       } else {
-        this.props.handleNotification(getLocaleString('Choose CSV file with the downloaded format.'), 'error', 5);
+        this.props.handleNotification(I18n.get('error.choose.csv'), 'error', 5);
         this.setState({
           csvFile: new File([''], ''),
-          csvFileName: getLocaleString('Select a CSV file with the downloaded format.'),
+          csvFileName: I18n.get('text.select.csv.file'),
           isFileValid: false
         });
       }
@@ -465,7 +466,7 @@ class RootCause extends React.Component<IProps, IState> {
           <Row>
             <Col>
               <Breadcrumb>
-                <Breadcrumb.Item active>{ getLocaleString('Root Causes') }</Breadcrumb.Item>
+                <Breadcrumb.Item active>{ I18n.get('text.rootcauses') }</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -477,11 +478,11 @@ class RootCause extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={4} controlId="searchKeyword">
-                        <Form.Label>{ getLocaleString('Search Keyword') }</Form.Label>
-                        <Form.Control type="text" placeholder={ getLocaleString('Search by Root Cause') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
+                        <Form.Label>{ I18n.get('text.search.keyword') }</Form.Label>
+                        <Form.Control type="text" placeholder={ I18n.get('text.search.rootcause') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
                       </Form.Group>
                       <Form.Group as={Col} md={4} controlId="sortBy">
-                        <Form.Label>{ getLocaleString('Sort By') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.sort.by') }</Form.Label>
                         <Form.Control as="select" defaultValue={this.state.sort} onChange={this.handleSort}>
                           <option value={SortBy.Asc}>A-Z</option>
                           <option value={SortBy.Desc}>Z-A</option>
@@ -498,11 +499,11 @@ class RootCause extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <CSVLink data={this.state.csvRootCauses} filename={'root-cause-upload-template.csv'} className="btn btn-primary btn-sm">{ getLocaleString('Download CSV Format') }</CSVLink>
+                  <CSVLink data={this.state.csvRootCauses} filename={'root-cause-upload-template.csv'} className="btn btn-primary btn-sm">{ I18n.get('button.download.csv.format') }</CSVLink>
                   <EmptyCol />
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Upload)}>{ getLocaleString('Upload CSV') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Upload)}>{ I18n.get('button.upload.csv') }</Button>
                   <EmptyCol />
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ getLocaleString('Add Root Cause') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ I18n.get('button.add.rootcause') }</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -513,7 +514,7 @@ class RootCause extends React.Component<IProps, IState> {
             {
               this.state.rootCauses.length === 0 && !this.state.isLoading &&
               <Jumbotron>
-                <p>{ getLocaleString('No root cause found.') }</p>
+                <p>{ I18n.get('text.no.rootcause') }</p>
               </Jumbotron>
             }
             {
@@ -523,8 +524,8 @@ class RootCause extends React.Component<IProps, IState> {
                   <Table striped bordered>
                     <thead>
                       <tr>
-                        <th>{ getLocaleString('Root Cause') }</th>
-                        <th className="fixed-th-50">{ getLocaleString('Action') }</th>
+                        <th>{ I18n.get('text.rootcause') }</th>
+                        <th className="fixed-th-150">{ I18n.get('text.action') }</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -535,7 +536,7 @@ class RootCause extends React.Component<IProps, IState> {
                             <tr key={rootCause.id}>
                               <td>{rootCause.rootCause}</td>
                               <td>
-                                <Button variant="danger" size="sm" onClick={() => this.openModal(ModalType.Delete, rootCause.id, rootCause.rootCause)}>{ getLocaleString('Delete') }</Button>
+                                <Button variant="danger" size="sm" onClick={() => this.openModal(ModalType.Delete, rootCause.id, rootCause.rootCause)}>{ I18n.get('button.delete') }</Button>
                               </td>
                             </tr>
                           );
@@ -561,7 +562,7 @@ class RootCause extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ getLocaleString('Error') }:</strong><br />
+                  <strong>{ I18n.get('error') }:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -578,16 +579,16 @@ class RootCause extends React.Component<IProps, IState> {
               <Modal.Body>
                 <Form>
                   <Form.Group controlId="rootCause">
-                    <Form.Label>{ getLocaleString('Root Cause') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ getLocaleString('Enter the root cause') }
+                    <Form.Label>{ I18n.get('text.rootcause') } <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={ I18n.get('input.rootcause') }
                       defaultValue="" onChange={this.handleRootCauseChange} className={ getInputFormValidationClassName(this.state.rootCause, this.state.isRootCauseValid) } />
-                    <Form.Text className="text-muted">{ `(${getLocaleString('Required')}) ${getLocaleString('Must contain only alphanumeric characters and/or the following: - _/#()')}` }</Form.Text>
+                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.rootcause')}` }</Form.Text>
                   </Form.Group>
                 </Form>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-                <Button variant="primary" onClick={this.addRootCause} disabled={this.state.isModalProcessing || !this.state.isRootCauseValid}>{ getLocaleString('Add') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="primary" onClick={this.addRootCause} disabled={this.state.isModalProcessing || !this.state.isRootCauseValid}>{ I18n.get('button.add') }</Button>
               </Modal.Footer>
             </div>
           }
@@ -595,15 +596,15 @@ class RootCause extends React.Component<IProps, IState> {
             this.state.modalType === ModalType.Delete &&
             <div>
               <Modal.Body>
-                { getLocaleString('Are you sure you want to delete this root cause') }: <strong>{this.state.rootCause}</strong>?
+                { I18n.get('text.confirm.delete.rootcause') }: <strong>{this.state.rootCause}</strong>?
                 <EmptyRow />
                 <Alert variant="warning">
-                  { getLocaleString('This will not detach the root cause from any event it is currently linked to. You will need to do this manually from the Events page.') }
+                  { I18n.get('warning.delete.rootcause') }
                 </Alert>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-                <Button variant="danger" onClick={this.deleteRootCause} disabled={this.state.isModalProcessing}>{ getLocaleString('Delete') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="danger" onClick={this.deleteRootCause} disabled={this.state.isModalProcessing}>{ I18n.get('button.delete') }</Button>
               </Modal.Footer>
             </div>
           }
@@ -614,8 +615,8 @@ class RootCause extends React.Component<IProps, IState> {
                 {
                   this.state.uploadResult.length === 0 &&
                   <Form.File>
-                    <Form.File.Label>{ getLocaleString('Make sure you are using downloaded CSV format.') }</Form.File.Label>
-                    <Form.File label={this.state.csvFileName} lang="en" accept=".csv" custom onChange={this.handleFileChange} disabled={this.state.isModalProcessing} />
+                    <Form.File.Label>{ I18n.get('info.upload.csv') }</Form.File.Label>
+                    <Form.File label={this.state.csvFileName} data-browse={I18n.get('button.browse')} accept=".csv" custom onChange={this.handleFileChange} disabled={this.state.isModalProcessing} />
                   </Form.File>
                 }
                 {
@@ -623,8 +624,8 @@ class RootCause extends React.Component<IProps, IState> {
                   <Table striped bordered>
                     <thead>
                       <tr>
-                        <th>{ getLocaleString('Root Cause') }</th>
-                        <th>{ getLocaleString('Result') }</th>
+                        <th>{ I18n.get('text.rootcause') }</th>
+                        <th>{ I18n.get('text.result') }</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -644,10 +645,10 @@ class RootCause extends React.Component<IProps, IState> {
                 }
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
                 {
                   this.state.uploadResult.length === 0 &&
-                  <Button variant="primary" onClick={this.uploadCsv} disabled={this.state.isModalProcessing || !this.state.isFileValid}>{ getLocaleString('Upload') }</Button>
+                  <Button variant="primary" onClick={this.uploadCsv} disabled={this.state.isModalProcessing || !this.state.isFileValid}>{ I18n.get('button.upload') }</Button>
                 }
               </Modal.Footer>
             </div>

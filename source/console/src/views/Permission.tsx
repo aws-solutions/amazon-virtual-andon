@@ -13,7 +13,7 @@
 
 // Import React and Amplify packages
 import React from 'react';
-import { Auth } from 'aws-amplify';
+import { Auth, I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -31,7 +31,7 @@ import Alert from 'react-bootstrap/Alert';
 import Modal from 'react-bootstrap/Modal';
 
 // Import custom setting
-import { LOGGING_LEVEL, CustomError, sortByName, getLocaleString, makeVisibleBySearchKeyword } from '../util/CustomUtil';
+import { LOGGING_LEVEL, CustomError, sortByName, makeVisibleBySearchKeyword } from '../util/CustomUtil';
 import CognitoController from '../util/CognitoController';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IPermission, IUser } from '../components/Interfaces';
@@ -84,7 +84,7 @@ class Permission extends React.Component<IProps, IState> {
     super(props);
 
     this.state = {
-      title: getLocaleString('Permissions'),
+      title: I18n.get('text.permissions'),
       permissions: [],
       isLoading: false,
       searchKeyword: '',
@@ -162,10 +162,10 @@ class Permission extends React.Component<IProps, IState> {
       const { sort } = this.state;
       this.setState({
         permissions: sortByName(permissions, sort, 'username'),
-        title: `${getLocaleString('Permissions')} (${permissions.length})`
+        title: `${I18n.get('text.permissions')} (${permissions.length})`
       });
     } catch (error) {
-      let message = getLocaleString('Error occurred while getting permissions.');
+      let message = I18n.get('error.get.permissions');
 
       if (error instanceof CustomError) {
         message = error.message;
@@ -173,7 +173,7 @@ class Permission extends React.Component<IProps, IState> {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         }
       }
 
@@ -255,27 +255,27 @@ class Permission extends React.Component<IProps, IState> {
         }
       }
 
-      this.props.handleNotification(getLocaleString('Permission was deleted successfully.'), 'success', 5);
+      this.props.handleNotification(I18n.get('info.delete.permission'), 'success', 5);
       this.setState({
         permissions: updatedPermissions,
-        title: `${getLocaleString('Permissions')} (${updatedPermissions.length})`,
+        title: `${I18n.get('text.permissions')} (${updatedPermissions.length})`,
         user: INIT_USER,
         isModalProcessing: false,
         showModal: false
       });
     } catch (error) {
-      let message = getLocaleString('Error occurred while deleting the permission.');
+      let message = I18n.get('error.delete.permission');
 
       if (error.errors) {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         }
       }
 
       LOGGER.error('Error while deleting permission', error);
-      this.props.handleNotification(getLocaleString(message), 'error', 5);
+      this.props.handleNotification(I18n.get(message), 'error', 5);
       this.setState({ isModalProcessing: false });
     }
   }
@@ -347,7 +347,7 @@ class Permission extends React.Component<IProps, IState> {
           <Row>
             <Col>
               <Breadcrumb>
-                <Breadcrumb.Item active>{ getLocaleString('Permissions') }</Breadcrumb.Item>
+                <Breadcrumb.Item active>{ I18n.get('text.permissions') }</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -359,11 +359,11 @@ class Permission extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={4} controlId="searchKeyword">
-                        <Form.Label>{ getLocaleString('Search Keyword') }</Form.Label>
-                        <Form.Control type="text" placeholder={ getLocaleString('Search by User Name (E-Mail)') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
+                        <Form.Label>{ I18n.get('text.search.keyword') }</Form.Label>
+                        <Form.Control type="text" placeholder={ I18n.get('text.search.user.name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
                       </Form.Group>
                       <Form.Group as={Col} md={4} controlId="sortBy">
-                        <Form.Label>{ getLocaleString('Sort By') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.sort.by') }</Form.Label>
                         <Form.Control as="select" defaultValue={this.state.sort} onChange={this.handleSort}>
                           <option value={SortBy.Asc}>A-Z</option>
                           <option value={SortBy.Desc}>Z-A</option>
@@ -380,7 +380,7 @@ class Permission extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <Button size="sm" variant="primary" onClick={this.addPermission}>{ getLocaleString('Add Permission') }</Button>
+                  <Button size="sm" variant="primary" onClick={this.addPermission}>{ I18n.get('button.add.permission') }</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -391,7 +391,7 @@ class Permission extends React.Component<IProps, IState> {
             {
               this.state.permissions.length === 0 && !this.state.isLoading &&
               <Jumbotron>
-                <p>{ getLocaleString('No permission found.') }</p>
+                <p>{ I18n.get('text.no.permission') }</p>
               </Jumbotron>
             }
             {
@@ -401,9 +401,9 @@ class Permission extends React.Component<IProps, IState> {
                   <Table striped bordered>
                     <thead>
                       <tr>
-                        <th>{ getLocaleString('E-Mail') }</th>
-                        <th>{ getLocaleString('Permissions') }</th>
-                        <th colSpan={2}>{ getLocaleString('Actions') }</th>
+                        <th>{ I18n.get('text.email') }</th>
+                        <th>{ I18n.get('text.permissions') }</th>
+                        <th colSpan={2}>{ I18n.get('text.actions') }</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -441,7 +441,7 @@ class Permission extends React.Component<IProps, IState> {
                                                     {
                                                       filteredProcesses.map((process) => {
                                                         return (
-                                                          <li key={process.id}>{`${getLocaleString('Process Name')}: ${process.name}`}</li>
+                                                          <li key={process.id}>{`${I18n.get('text.process.name')}: ${process.name}`}</li>
                                                         );
                                                       })
                                                     }
@@ -451,7 +451,7 @@ class Permission extends React.Component<IProps, IState> {
                                                         if (filteredDevices.length > 0) {
                                                           return (
                                                             <li key={station.id}>
-                                                              {`${getLocaleString('Station Name')}: ${station.name}`}
+                                                              {`${I18n.get('text.station.name')}: ${station.name}`}
                                                               <ul key={station.id}>
                                                               {
                                                                 filteredDevices.map((device) => {
@@ -465,7 +465,7 @@ class Permission extends React.Component<IProps, IState> {
                                                           )
                                                         } else {
                                                           return (
-                                                            <li key={station.id}>{`${getLocaleString('Station Name')}: ${station.name}`}</li>
+                                                            <li key={station.id}>{`${I18n.get('text.station.name')}: ${station.name}`}</li>
                                                           );
                                                         }
                                                       })
@@ -494,11 +494,11 @@ class Permission extends React.Component<IProps, IState> {
                               </td>
                               <td>
                                 <Button variant="primary" size="sm"
-                                  onClick={() => this.editPermission(permission)}>{ getLocaleString('Edit') }</Button>
+                                  onClick={() => this.editPermission(permission)}>{ I18n.get('button.edit') }</Button>
                               </td>
                               <td>
                                 <Button variant="danger" size="sm"
-                                  onClick={() => this.openModal(user)}>{ getLocaleString('Delete') }</Button>
+                                  onClick={() => this.openModal(user)}>{ I18n.get('button.delete') }</Button>
                               </td>
                             </tr>
                           );
@@ -524,7 +524,7 @@ class Permission extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ getLocaleString('Error') }:</strong><br />
+                  <strong>{ I18n.get('error') }:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -533,14 +533,14 @@ class Permission extends React.Component<IProps, IState> {
         </Container>
         <Modal show={this.state.showModal} onHide={this.handleModalClose}>
           <Modal.Header>
-            <Modal.Title>{ getLocaleString('Delete Permission') }</Modal.Title>
+            <Modal.Title>{ I18n.get('text.delete.permission') }</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            { getLocaleString('Are you sure you want to delete this permission') }: <strong>{this.state.user.username}</strong>?
+            { I18n.get('text.confirm.delete.permission') }: <strong>{this.state.user.username}</strong>?
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-            <Button variant="danger" onClick={this.deletePermission} disabled={this.state.isModalProcessing}>{ getLocaleString('Delete') }</Button>
+            <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+            <Button variant="danger" onClick={this.deletePermission} disabled={this.state.isModalProcessing}>{ I18n.get('button.delete') }</Button>
           </Modal.Footer>
           {
             this.state.isModalProcessing &&

@@ -11,8 +11,9 @@
  *  and limitations under the License.                                                                                *
  *********************************************************************************************************************/
 
- // Import React packages
+ // Import React and Amplify packages
 import React from 'react';
+import { I18n } from 'aws-amplify';
 
 // Import React Bootstrap components
 import Container from 'react-bootstrap/Container';
@@ -48,7 +49,7 @@ class Home extends React.Component<IProps, IState> {
             <Jumbotron className="text-alig-center">
               <h2>Amazon Virtual Andon</h2>
               <p>
-                Please see the <a href="https://docs.aws.amazon.com/solutions/latest/amazon-virtual-andon/" target="_blank" rel="noopener noreferrer">Implementation Guide</a> for more information.
+                { I18n.get('text.user.guide.for.more.information') }&nbsp;<a href="https://docs.aws.amazon.com/solutions/latest/amazon-virtual-andon/" target="_blank" rel="noopener noreferrer">{ I18n.get('text.user.guide') }</a>
               </p>
             </Jumbotron>
           </Col>

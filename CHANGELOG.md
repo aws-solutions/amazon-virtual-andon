@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2020-08-31
+### Added
+- Multi-language support: German, English, Spanish, French, Japanese, Korean, and simplified Chinese
+
+### Changed
+- Users will not see choosing root cause pop-up when there is no attached root cause to the event when they close issues.
+
+### Fixed
+- Fix duplicated devices insertion at permission setting
 
 ## [2.0.0] - 2020-07-07
 ### Added

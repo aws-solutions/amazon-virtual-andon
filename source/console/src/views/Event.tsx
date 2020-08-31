@@ -14,7 +14,7 @@
 // Import React, Amplify, and AWS SDK packages
 import React from 'react';
 import { LinkContainer } from 'react-router-bootstrap';
-import { API, graphqlOperation } from 'aws-amplify';
+import { API, graphqlOperation, I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
 import Auth from "@aws-amplify/auth";
 import SNS from 'aws-sdk/clients/sns';
@@ -46,7 +46,7 @@ import { onCreateRootCause, onDeleteRootCause } from '../graphql/subscriptions';
 import * as uuid from 'uuid';
 
 // Import custom setting
-import { LOGGING_LEVEL, sendMetrics, validateGeneralInput, validatePhoneNumber, validateEmailAddress, sortByName, getLocaleString, getInputFormValidationClassName, makeAllVisible, makeVisibleBySearchKeyword } from '../util/CustomUtil';
+import { LOGGING_LEVEL, sendMetrics, validateGeneralInput, validatePhoneNumber, validateEmailAddress, sortByName, getInputFormValidationClassName, makeAllVisible, makeVisibleBySearchKeyword } from '../util/CustomUtil';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IEvent, IEventUpdate, IRootCause } from '../components/Interfaces';
 import { ModalType, EventPriority, SortBy } from '../components/Enums';
@@ -128,7 +128,7 @@ class Event extends React.Component<IProps, IState> {
     super(props);
 
     this.state = {
-      title: getLocaleString('Events'),
+      title: I18n.get('text.events'),
       rootCauses: [],
       events: [],
       isLoading: false,
@@ -273,11 +273,11 @@ class Event extends React.Component<IProps, IState> {
         areaName,
         processId,
         events,
-        title: `${getLocaleString('Events')} (${events.length})`
+        title: `${I18n.get('text.events')} (${events.length})`
       });
     } catch (error) {
       LOGGER.error('Error while getting process', error);
-      this.setState({ error: getLocaleString('Error occurred while getting a process.') });
+      this.setState({ error: I18n.get('error.get.process') });
     }
 
     this.setState({ isLoading: false });
@@ -302,7 +302,7 @@ class Event extends React.Component<IProps, IState> {
     } catch (error) {
       LOGGER.error('Error occurred while getting users.');
       this.setState((prevState) => ({
-        error: `${prevState.error}\n${getLocaleString('Error occurred while getting root causes.')}`
+        error: `${prevState.error}\n${I18n.get('error.get.rootcauses')}`
       }));
     }
   }
@@ -319,10 +319,10 @@ class Event extends React.Component<IProps, IState> {
 
       const updatedEvents = this.state.events.filter(event => event.id !== eventId);
 
-      this.props.handleNotification(getLocaleString('Event was deleted successfully.'), 'success', 5);
+      this.props.handleNotification(I18n.get('info.delete.event'), 'success', 5);
       this.setState({
         events: updatedEvents,
-        title: `${getLocaleString('Events')} (${updatedEvents.length})`,
+        title: `${I18n.get('text.events')} (${updatedEvents.length})`,
         eventId: '',
         eventName: '',
         isModalProcessing: false,
@@ -331,13 +331,13 @@ class Event extends React.Component<IProps, IState> {
         modalType: ModalType.None
       });
     } catch (error) {
-      let message = getLocaleString('Error occurred while deleting the event.');
+      let message = I18n.get('error.delete.event');
 
       if (error.errors) {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         }
       }
 
@@ -362,7 +362,7 @@ class Event extends React.Component<IProps, IState> {
       // Check if the same event name exists in the process
       const existingEventLength = queryEvents.filter(event => event.name === eventName).length;
       if (existingEventLength > 0) {
-        this.props.handleNotification(getLocaleString('Event name already exists.'), 'error', 5);
+        this.props.handleNotification(I18n.get('error.duplicate.event.name'), 'error', 5);
         this.setState({ isModalProcessing: false });
       } else {
         // Create topic if SMS or E-Mail is provided only.
@@ -404,7 +404,7 @@ class Event extends React.Component<IProps, IState> {
 
         this.setState({
           events: (sortByName(newEvents, sort, 'name') as IEvent[]),
-          title: `${getLocaleString('Events')} (${newEvents.length})`,
+          title: `${I18n.get('text.events')} (${newEvents.length})`,
           eventName: '',
           eventDescription: '',
           eventSms: '',
@@ -426,19 +426,19 @@ class Event extends React.Component<IProps, IState> {
 
         this.rootCauses = [];
 
-        this.props.handleNotification(getLocaleString('Event was added successfully.'), 'info', 5);
+        this.props.handleNotification(I18n.get('info.add.event'), 'info', 5);
         await sendMetrics({ 'event': 1 });
       }
     } catch (error) {
-      let message = getLocaleString('Error occurred while creating an event.');
+      let message = I18n.get('error.create.event');
 
       if (error.errors) {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         } else if (errorType === 'DataDuplicatedError') {
-          message = getLocaleString('Event name already exists.');
+          message = I18n.get('error.duplicate.event.name');
         }
       }
 
@@ -446,8 +446,8 @@ class Event extends React.Component<IProps, IState> {
       if (topicArn !== '') {
         try {
           await this.graphQlCommon.deleteSns(topicArn);
-        } catch (error) {
-          LOGGER.error('Error while deleting SNS', error);
+        } catch (snsError) {
+          LOGGER.error('Error while deleting SNS', snsError);
         }
       }
 
@@ -533,15 +533,15 @@ class Event extends React.Component<IProps, IState> {
 
       this.rootCauses = [];
 
-      this.props.handleNotification(getLocaleString('Event was edited successfully.'), 'info', 5);
+      this.props.handleNotification(I18n.get('info.edit.event'), 'info', 5);
     } catch (error) {
-      let message = getLocaleString('Error occurred while updating an event.');
+      let message = I18n.get('error.update.event');
 
       if (error.errors) {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         }
       }
 
@@ -549,8 +549,8 @@ class Event extends React.Component<IProps, IState> {
       if (topicArn !== '') {
         try {
           await this.graphQlCommon.deleteSns(topicArn);
-        } catch (error) {
-          LOGGER.error('Error while deleting SNS', error);
+        } catch (snsError) {
+          LOGGER.error('Error while deleting SNS', snsError);
         }
       }
 
@@ -614,7 +614,7 @@ class Event extends React.Component<IProps, IState> {
       try {
         await sns.subscribe({ Protocol: 'email', TopicArn: topicArn, Endpoint: email }).promise();
       } catch (error) {
-        this.props.handleNotification(getLocaleString('E-Mail notification not set.'), 'warning', 5);
+        this.props.handleNotification(I18n.get('error.set.email.notification'), 'warning', 5);
         LOGGER.error(error.message);
       }
     }
@@ -624,7 +624,7 @@ class Event extends React.Component<IProps, IState> {
       try {
         await sns.subscribe({ Protocol: 'sms', TopicArn: topicArn, Endpoint: sms }).promise();
       } catch (error) {
-        this.props.handleNotification(getLocaleString('SMS notification not set.'), 'warning', 5);
+        this.props.handleNotification(I18n.get('warning.set.no.sms'), 'warning', 5);
         LOGGER.error(error.message);
       }
     }
@@ -670,13 +670,13 @@ class Event extends React.Component<IProps, IState> {
     const { rootCauses } = this.state;
 
     if (modalType === ModalType.Add) {
-      modalTitle = getLocaleString('Event Registration');
+      modalTitle = I18n.get('text.event.registration');
     } else if (modalType === ModalType.Edit) {
-      modalTitle = getLocaleString('Edit Event');
+      modalTitle = I18n.get('text.edit.event');
     } else if (modalType === ModalType.Delete) {
-      modalTitle = getLocaleString('Delete Event');
+      modalTitle = I18n.get('text.delete.event');
     } else {
-      this.props.handleNotification(`${getLocaleString('Unsupported modal type')}: ${modalType}`, 'warning', 5);
+      this.props.handleNotification(`${I18n.get('error.unsupported.modal.type')}: ${modalType}`, 'warning', 5);
       return;
     }
 
@@ -830,7 +830,7 @@ class Event extends React.Component<IProps, IState> {
    */
   handleEventNameChange(event: any) {
     const eventName = event.target.value;
-    const isEventNameValid = validateGeneralInput(eventName);
+    const isEventNameValid = validateGeneralInput(eventName, 1, 40, '- _/#');
 
     this.setState({
       eventName,
@@ -845,7 +845,7 @@ class Event extends React.Component<IProps, IState> {
    */
   handleEventDescriptionChange(event: any) {
     const eventDescription = event.target.value;
-    const isEventDescriptionValid = validateGeneralInput(eventDescription);
+    const isEventDescriptionValid = validateGeneralInput(eventDescription, 1, 40, '- _/#');
 
     this.setState({
       eventDescription,
@@ -897,7 +897,7 @@ class Event extends React.Component<IProps, IState> {
    */
   handleEventTypeChange(event: any) {
     const eventType = event.target.value;
-    const isEventTypeValid = eventType === '' || validateGeneralInput(eventType);
+    const isEventTypeValid = eventType === '' || validateGeneralInput(eventType, 1, 40, '- _/');
 
     this.setState({
       eventType,
@@ -965,15 +965,15 @@ class Event extends React.Component<IProps, IState> {
             <Col>
               <Breadcrumb>
                 <LinkContainer to="/sites" exact>
-                  <Breadcrumb.Item>{ getLocaleString('Sites') }</Breadcrumb.Item>
+                  <Breadcrumb.Item>{ I18n.get('text.sites') }</Breadcrumb.Item>
                 </LinkContainer>
                 <LinkContainer to={`/sites/${this.state.siteId}`} exact>
-                  <Breadcrumb.Item>{ getLocaleString('Areas') }{this.state.siteName}</Breadcrumb.Item>
+                  <Breadcrumb.Item>{ I18n.get('text.areas') }{this.state.siteName}</Breadcrumb.Item>
                 </LinkContainer>
                 <LinkContainer to={`/areas/${this.state.areaId}/processes`} exact>
-                  <Breadcrumb.Item>{ getLocaleString('Processes') }{this.state.areaName}</Breadcrumb.Item>
+                  <Breadcrumb.Item>{ I18n.get('info.processes') }{this.state.areaName}</Breadcrumb.Item>
                 </LinkContainer>
-                <Breadcrumb.Item active>{ getLocaleString('Events') }{this.state.processName}</Breadcrumb.Item>
+                <Breadcrumb.Item active>{ I18n.get('text.events') }{this.state.processName}</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -981,7 +981,7 @@ class Event extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ getLocaleString('Add Event') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ I18n.get('button.add.event') }</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -995,11 +995,11 @@ class Event extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={4} controlId="searchKeyword">
-                        <Form.Label>{ getLocaleString('Search Keyword') }</Form.Label>
-                        <Form.Control type="text" placeholder={ getLocaleString('Search by Event Name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
+                        <Form.Label>{ I18n.get('text.search.keyword') }</Form.Label>
+                        <Form.Control type="text" placeholder={ I18n.get('text.search.event.name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
                       </Form.Group>
                       <Form.Group as={Col} md={4} controlId="sortBy">
-                        <Form.Label>{ getLocaleString('Sort By') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.sort.by') }</Form.Label>
                         <Form.Control as="select" defaultValue={this.state.sort} onChange={this.handleSort}>
                           <option value={SortBy.Asc}>A-Z</option>
                           <option value={SortBy.Desc}>Z-A</option>
@@ -1017,13 +1017,20 @@ class Event extends React.Component<IProps, IState> {
               this.state.events.length === 0 && !this.state.isLoading &&
               <Col>
                 <Jumbotron>
-                  <p>{ getLocaleString('No event found.') }</p>
+                  <p>{ I18n.get('text.no.event') }</p>
                 </Jumbotron>
               </Col>
             }
             {
               this.state.events.filter((event: IEvent) => event.visible)
                 .map((event: IEvent) => {
+                  let { priority } = event;
+                  priority = I18n.get(`text.priority.${priority}`);
+
+                  if (priority.includes('text.priority')) {
+                    priority = I18n.get('text.not.found');
+                  }
+
                   return (
                     <Col md={4} key={event.id}>
                       <Card className="custom-card">
@@ -1032,30 +1039,30 @@ class Event extends React.Component<IProps, IState> {
                           <Table striped bordered>
                             <tbody>
                               <tr>
-                                <td>{ getLocaleString('Description') }</td>
+                                <td>{ I18n.get('text.description') }</td>
                                 <td>{event.description}</td>
                               </tr>
                               <tr>
-                                <td>{ getLocaleString('SMS') }</td>
+                                <td>{ I18n.get('text.sms') }</td>
                                 <td>{event.sms}</td>
                               </tr>
                               <tr>
-                                <td>{ getLocaleString('E-Mail') }</td>
+                                <td>{ I18n.get('text.email') }</td>
                                 <td>{event.email}</td>
                               </tr>
                               <tr>
-                                <td>{ getLocaleString('Priority') }</td>
-                                <td>{event.priority}</td>
+                                <td>{ I18n.get('text.priority') }</td>
+                                <td>{priority}</td>
                               </tr>
                               <tr>
-                                <td>{ getLocaleString('Type') }</td>
+                                <td>{ I18n.get('text.type') }</td>
                                 <td>{event.type}</td>
                               </tr>
                               <tr>
-                                <td>{ getLocaleString('Root Causes') }</td>
+                                <td>{ I18n.get('text.rootcauses') }</td>
                                 <td>
                                 {
-                                  event.rootCauses ? `${event.rootCauses.length} ${getLocaleString('root cause(s) attached')}` : ''
+                                  event.rootCauses ? `${event.rootCauses.length} ${I18n.get('text.attached.rootcause')}` : ''
                                 }
                                 </td>
                               </tr>
@@ -1064,8 +1071,8 @@ class Event extends React.Component<IProps, IState> {
                           <Form>
                             <Form.Row className="justify-content-between">
                               <Button size="sm" variant="danger"
-                                onClick={() => this.openModal(ModalType.Delete, event)}>{ getLocaleString('Delete') }</Button>
-                              <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Edit, event)}>{ getLocaleString('Edit') }</Button>
+                                onClick={() => this.openModal(ModalType.Delete, event)}>{ I18n.get('button.delete') }</Button>
+                              <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Edit, event)}>{ I18n.get('button.edit') }</Button>
                             </Form.Row>
                           </Form>
                         </Card.Body>
@@ -1088,7 +1095,7 @@ class Event extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ getLocaleString('Error') }:</strong><br />
+                  <strong>{ I18n.get('error') }:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -1104,41 +1111,41 @@ class Event extends React.Component<IProps, IState> {
             <div>
               <Modal.Body>
                 <Alert variant="warning">
-                  <span className="required-field">*</span> { getLocaleString('If SMS No. or E-Mail is provided, SNS Topic is going to be created.') }
+                  <span className="required-field">*</span> { I18n.get('info.create.event') }
                 </Alert>
                 <Form>
                   <Form.Row>
                     <Form.Group as={Col} md={6} controlId="eventName">
-                      <Form.Label>{ getLocaleString('Event Name') } <span className="required-field">*</span></Form.Label>
-                      <Form.Control required type="text" placeholder={ getLocaleString('Enter the event name') }
+                      <Form.Label>{ I18n.get('text.event.name') } <span className="required-field">*</span></Form.Label>
+                      <Form.Control required type="text" placeholder={ I18n.get('input.event.nat') }
                         defaultValue={this.state.eventName} onChange={this.handleEventNameChange} className={ this.state.modalType === ModalType.Add ? getInputFormValidationClassName(this.state.eventName, this.state.isEventNameValid) : '' } disabled={this.state.modalType === ModalType.Edit} />
                       {
                         this.state.modalType === ModalType.Add &&
-                        <Form.Text className="text-muted">{ `(${getLocaleString('Required')}) ${getLocaleString('Must contain only alphanumeric characters and/or the following: - _/# with length 4 to 40')}` }</Form.Text>
+                        <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
                       }
                     </Form.Group>
                     <Form.Group as={Col} md={6} controlId="eventDescription">
-                      <Form.Label>{ getLocaleString('Event Description') } <span className="required-field">*</span></Form.Label>
-                      <Form.Control required type="text" placeholder={ getLocaleString('Enter the event description') }
+                      <Form.Label>{ I18n.get('text.event.description') } <span className="required-field">*</span></Form.Label>
+                      <Form.Control required type="text" placeholder={ I18n.get('input.event.description') }
                         defaultValue="" onChange={this.handleEventDescriptionChange} className={ this.state.modalType === ModalType.Add ? getInputFormValidationClassName(this.state.eventDescription, this.state.isEventDescriptionValid) : ''  } disabled={this.state.modalType === ModalType.Edit} />
                       {
                         this.state.modalType === ModalType.Add &&
-                        <Form.Text className="text-muted">{ `(${getLocaleString('Required')}) ${getLocaleString('Must contain only alphanumeric characters and/or the following: - _/# with length 4 to 40')}` }</Form.Text>
+                        <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
                       }
                     </Form.Group>
                   </Form.Row>
                   <Form.Row>
                     <Form.Group as={Col} md={6} controlId="eventSms">
-                      <Form.Label>{ getLocaleString('SMS No.') }</Form.Label>
-                      <Form.Control type="text" placeholder={ getLocaleString('Enter SMS number, eg: +1 1111111111') }
+                      <Form.Label>{ I18n.get('text.sms.no') }</Form.Label>
+                      <Form.Control type="text" placeholder={ I18n.get('input.sms') }
                         defaultValue={this.state.eventSms} onChange={this.handleEventSmsChange} className={ getInputFormValidationClassName(this.state.eventSms, this.state.isEventSmsValid) } />
-                      <Form.Text className="text-muted">{ `(${getLocaleString('Optional')}) ${getLocaleString('Must be a valid phone number')}` }</Form.Text>
+                      <Form.Text className="text-muted">{ `(${I18n.get('text.optional')}) ${I18n.get('info.valid.phone.number')}` }</Form.Text>
                     </Form.Group>
                     <Form.Group as={Col} md={6} controlId="eventEmail">
-                      <Form.Label>{ getLocaleString('E-Mail') }</Form.Label>
-                      <Form.Control type="text" placeholder={ getLocaleString('Enter the group E-Mail address') }
+                      <Form.Label>{ I18n.get('text.email') }</Form.Label>
+                      <Form.Control type="text" placeholder={ I18n.get('input.group.email') }
                         defaultValue={this.state.eventEmail} onChange={this.handleEventEmailChange} className={ getInputFormValidationClassName(this.state.eventEmail, this.state.isEventEmailValid) } />
-                      <Form.Text className="text-muted">{ `(${getLocaleString('Optional')}) ${getLocaleString('Must be a valid email address')}` }</Form.Text>
+                      <Form.Text className="text-muted">{ `(${I18n.get('text.optional')}) ${I18n.get('info.valid.email')}` }</Form.Text>
                     </Form.Group>
                   </Form.Row>
                   {
@@ -1146,25 +1153,25 @@ class Event extends React.Component<IProps, IState> {
                     <div>
                       <Form.Row>
                         <Form.Group as={Col} md={6} controlId="eventPriority">
-                          <Form.Label>{ getLocaleString('Event Priority') } <span className="required-field">*</span></Form.Label>
+                          <Form.Label>{ I18n.get('text.event.priority') } <span className="required-field">*</span></Form.Label>
                           <Form.Control as="select" defaultValue={this.state.eventPriority} onChange={this.handleEventPriorityChange}>
-                            <option value={EventPriority.Low}>Low</option>
-                            <option value={EventPriority.Medium}>Medium</option>
-                            <option value={EventPriority.High}>High</option>
-                            <option value={EventPriority.Critical}>Critical</option>
+                            <option value={EventPriority.Low}>{ I18n.get('text.priority.low') }</option>
+                            <option value={EventPriority.Medium}>{ I18n.get('text.priority.medium') }</option>
+                            <option value={EventPriority.High}>{ I18n.get('text.priority.high') }</option>
+                            <option value={EventPriority.Critical}>{ I18n.get('text.priority.critical') }</option>
                           </Form.Control>
                         </Form.Group>
                         <Form.Group as={Col} md={6} controlId="eventType">
-                          <Form.Label>{ getLocaleString('Event Type') }</Form.Label>
-                          <Form.Control required type="text" placeholder={ getLocaleString('Enter the event type') }
+                          <Form.Label>{ I18n.get('text.event.type') }</Form.Label>
+                          <Form.Control required type="text" placeholder={ I18n.get('input.event.type') }
                             defaultValue="" onChange={this.handleEventTypeChange} className={ getInputFormValidationClassName(this.state.eventType, this.state.isEventTypeValid) } />
-                          <Form.Text className="text-muted">{ `(${getLocaleString('Optional')}) ${getLocaleString('Must contain only alphanumeric characters and/or the following: -_/space with max length of 40')}` }</Form.Text>
+                          <Form.Text className="text-muted">{ `(${I18n.get('text.optional')}) ${I18n.get('info.valid.event.type')}` }</Form.Text>
                         </Form.Group>
                       </Form.Row>
                     </div>
                   }
                   <Form.Row>
-                    <Form.Label>{ getLocaleString('Root Causes') }</Form.Label>
+                    <Form.Label>{ I18n.get('text.rootcauses') }</Form.Label>
                     <Table striped bordered>
                       <thead>
                         <tr>
@@ -1173,7 +1180,7 @@ class Event extends React.Component<IProps, IState> {
                           </th>
                           <th>
                             <Form.Group className="form-group-no-margin">
-                              <Form.Control size="sm" type="text" placeholder={ getLocaleString('Search by Root Cause') } onChange={this.handleRootCauseSearchKeywordChange} />
+                              <Form.Control size="sm" type="text" placeholder={ I18n.get('text.search.rootcause') } onChange={this.handleRootCauseSearchKeywordChange} />
                             </Form.Group>
                           </th>
                         </tr>
@@ -1190,7 +1197,7 @@ class Event extends React.Component<IProps, IState> {
                                 <td>
                                   <Form.Check type="checkbox" id={rootCauseId} checked={isRootCauseChecked} onChange={this.handleCheckboxChange} />
                                 </td>
-                                <td>{rootCause.rootCause}{rootCause.deleted ? ` (${getLocaleString('Deleted')})` : ''}</td>
+                                <td>{rootCause.rootCause}{rootCause.deleted ? ` (${I18n.get('text.deleted')})` : ''}</td>
                               </tr>
                             );
                           })
@@ -1201,7 +1208,7 @@ class Event extends React.Component<IProps, IState> {
                 </Form>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
                 {
                   this.state.modalType === ModalType.Add &&
                   <Button variant="primary" onClick={this.addEvent}
@@ -1212,7 +1219,7 @@ class Event extends React.Component<IProps, IState> {
                       !this.state.isEventSmsValid ||
                       !this.state.isEventEmailValid ||
                       !this.state.isEventTypeValid
-                    }>{ getLocaleString('Register') }</Button>
+                    }>{ I18n.get('button.register') }</Button>
                 }
                 {
                   this.state.modalType === ModalType.Edit &&
@@ -1221,7 +1228,7 @@ class Event extends React.Component<IProps, IState> {
                       this.state.isModalProcessing ||
                       !this.state.isEventSmsValid ||
                       !this.state.isEventEmailValid
-                    }>{ getLocaleString('Save') }</Button>
+                    }>{ I18n.get('button.save') }</Button>
                 }
               </Modal.Footer>
             </div>
@@ -1230,11 +1237,11 @@ class Event extends React.Component<IProps, IState> {
             this.state.modalType === ModalType.Delete &&
             <div>
               <Modal.Body>
-                { getLocaleString('Are you sure you want to delete this event') }: <strong>{this.state.eventName}</strong>?
+                { I18n.get('text.confirm.delete.event') }: <strong>{this.state.eventName}</strong>?
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-                <Button variant="danger" onClick={this.deleteEvent} disabled={this.state.isModalProcessing}>{ getLocaleString('Delete') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="danger" onClick={this.deleteEvent} disabled={this.state.isModalProcessing}>{ I18n.get('button.delete') }</Button>
               </Modal.Footer>
             </div>
           }

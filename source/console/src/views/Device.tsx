@@ -14,7 +14,7 @@
 // Import React and Amplify packages
 import React from 'react';
 import { LinkContainer } from 'react-router-bootstrap';
-import { API, graphqlOperation } from 'aws-amplify';
+import { API, graphqlOperation, I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -36,7 +36,7 @@ import { getStation } from '../graphql/queries';
 import { createDevice } from '../graphql/mutations';
 
 // Import custom setting
-import { LOGGING_LEVEL, sendMetrics, validateGeneralInput, sortByName, getLocaleString, getInputFormValidationClassName, makeAllVisible, makeVisibleBySearchKeyword } from '../util/CustomUtil';
+import { LOGGING_LEVEL, sendMetrics, validateGeneralInput, sortByName, getInputFormValidationClassName, makeAllVisible, makeVisibleBySearchKeyword } from '../util/CustomUtil';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IGeneralQueryData } from '../components/Interfaces';
 import { ModalType, SortBy } from '../components/Enums';
@@ -95,7 +95,7 @@ class Device extends React.Component<IProps, IState> {
     super(props);
 
     this.state = {
-      title: getLocaleString('Devices'),
+      title: I18n.get('text.devices'),
       devices: [],
       isLoading: false,
       searchKeyword: '',
@@ -170,11 +170,11 @@ class Device extends React.Component<IProps, IState> {
         areaName,
         stationId,
         devices,
-        title: `${getLocaleString('Devices')} (${devices.length})`
+        title: `${I18n.get('text.devices')} (${devices.length})`
       });
     } catch (error) {
       LOGGER.error('Error while getting station', error);
-      this.setState({ error: getLocaleString('Error occurred while getting a station.')});
+      this.setState({ error: I18n.get('error.get.station')});
     }
 
     this.setState({ isLoading: false });
@@ -192,10 +192,10 @@ class Device extends React.Component<IProps, IState> {
 
       const updatedDevices = this.state.devices.filter(device => device.id !== deviceId);
 
-      this.props.handleNotification(getLocaleString('Device was deleted successfully.'), 'success', 5);
+      this.props.handleNotification(I18n.get('info.delete.device'), 'success', 5);
       this.setState({
         devices: updatedDevices,
-        title: `${getLocaleString('Devices')} (${updatedDevices.length})`,
+        title: `${I18n.get('text.devices')} (${updatedDevices.length})`,
         deviceId: '',
         deviceName: '',
         isModalProcessing: false,
@@ -204,13 +204,13 @@ class Device extends React.Component<IProps, IState> {
         modalType: ModalType.None
       });
     } catch (error) {
-      let message = getLocaleString('Error occurred while deleting the device.');
+      let message = I18n.get('error.delete.device');
 
       if (error.errors) {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         }
       }
 
@@ -243,7 +243,7 @@ class Device extends React.Component<IProps, IState> {
       const newDevices = [...devices, newDevice];
       this.setState({
         devices: sortByName(newDevices, sort, 'name'),
-        title: `${getLocaleString('Devices')} (${newDevices.length})`,
+        title: `${I18n.get('text.devices')} (${newDevices.length})`,
         deviceName: '',
         deviceDescription: '',
         isModalProcessing: false,
@@ -254,18 +254,18 @@ class Device extends React.Component<IProps, IState> {
         modalType: ModalType.None
       });
 
-      this.props.handleNotification(getLocaleString('Device was added successfully.'), 'info', 5);
+      this.props.handleNotification(I18n.get('info.add.device'), 'info', 5);
       await sendMetrics({ 'device': 1 });
     } catch (error) {
-      let message = getLocaleString('Error occurred while creating a device.');
+      let message = I18n.get('error.create.device');
 
       if (error.errors) {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         } else if (errorType === 'DataDuplicatedError') {
-          message = getLocaleString('Device name already exists.');
+          message = I18n.get('error.duplicate.device.name');
         }
       }
 
@@ -285,11 +285,11 @@ class Device extends React.Component<IProps, IState> {
     let modalTitle = '';
 
     if (modalType === ModalType.Add) {
-      modalTitle = getLocaleString('Device Registration');
+      modalTitle = I18n.get('text.device.registration');
     } else if (modalType === ModalType.Delete) {
-      modalTitle = getLocaleString('Delete Device');
+      modalTitle = I18n.get('text.delete.device');
     } else {
-      this.props.handleNotification(`${getLocaleString('Unsupported modal type')}: ${modalType}`, 'warning', 5);
+      this.props.handleNotification(`${I18n.get('error.unsupported.modal.type')}: ${modalType}`, 'warning', 5);
       return;
     }
 
@@ -345,7 +345,7 @@ class Device extends React.Component<IProps, IState> {
    */
   handleDeviceNameChange(event: any) {
     const deviceName = event.target.value;
-    const isDeviceNameValid = validateGeneralInput(deviceName);
+    const isDeviceNameValid = validateGeneralInput(deviceName, 1, 40, '- _/#');
 
     this.setState({
       deviceName,
@@ -359,7 +359,7 @@ class Device extends React.Component<IProps, IState> {
    */
   handleDeviceDescriptionChange(event: any) {
     const deviceDescription = event.target.value;
-    const isDeviceDescriptionValid = validateGeneralInput(deviceDescription);
+    const isDeviceDescriptionValid = validateGeneralInput(deviceDescription, 1, 40, '- _/#');
 
     this.setState({
       deviceDescription,
@@ -378,15 +378,15 @@ class Device extends React.Component<IProps, IState> {
             <Col>
               <Breadcrumb>
                 <LinkContainer to="/sites" exact>
-                  <Breadcrumb.Item>{ getLocaleString('Sites') }</Breadcrumb.Item>
+                  <Breadcrumb.Item>{ I18n.get('text.sites') }</Breadcrumb.Item>
                 </LinkContainer>
                 <LinkContainer to={`/sites/${this.state.siteId}`} exact>
-                  <Breadcrumb.Item>{ getLocaleString('Areas') }{this.state.siteName}</Breadcrumb.Item>
+                  <Breadcrumb.Item>{ I18n.get('text.areas') }{this.state.siteName}</Breadcrumb.Item>
                 </LinkContainer>
                 <LinkContainer to={`/areas/${this.state.areaId}/stations`} exact>
-                  <Breadcrumb.Item>{ getLocaleString('Stations') }{this.state.areaName}</Breadcrumb.Item>
+                  <Breadcrumb.Item>{ I18n.get('text.stations') }{this.state.areaName}</Breadcrumb.Item>
                 </LinkContainer>
-                <Breadcrumb.Item active>{ getLocaleString('Devices') }{this.state.stationName}</Breadcrumb.Item>
+                <Breadcrumb.Item active>{ I18n.get('text.devices') }{this.state.stationName}</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -394,7 +394,7 @@ class Device extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ getLocaleString('Add Device') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ I18n.get('button.add.device') }</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -408,11 +408,11 @@ class Device extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={4} controlId="searchKeyword">
-                        <Form.Label>{ getLocaleString('Search Keyword') }</Form.Label>
-                        <Form.Control type="text" placeholder={ getLocaleString('Search by Device Name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
+                        <Form.Label>{ I18n.get('text.search.keyword') }</Form.Label>
+                        <Form.Control type="text" placeholder={ I18n.get('text.search.device.name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
                       </Form.Group>
                       <Form.Group as={Col} md={4} controlId="sortBy">
-                        <Form.Label>{ getLocaleString('Sort By') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.sort.by') }</Form.Label>
                         <Form.Control as="select" defaultValue={this.state.sort} onChange={this.handleSort}>
                           <option value={SortBy.Asc}>A-Z</option>
                           <option value={SortBy.Desc}>Z-A</option>
@@ -430,7 +430,7 @@ class Device extends React.Component<IProps, IState> {
               this.state.devices.length === 0 && !this.state.isLoading &&
               <Col>
                 <Jumbotron>
-                  <p>{ getLocaleString('No device found.') }</p>
+                  <p>{ I18n.get('text.no.device') }</p>
                 </Jumbotron>
               </Col>
             }
@@ -445,7 +445,7 @@ class Device extends React.Component<IProps, IState> {
                           <Table striped bordered>
                             <tbody>
                               <tr>
-                                <td>{ getLocaleString('Description') }</td>
+                                <td>{ I18n.get('text.description') }</td>
                                 <td>{device.description}</td>
                               </tr>
                             </tbody>
@@ -453,7 +453,7 @@ class Device extends React.Component<IProps, IState> {
                           <Form>
                             <Form.Row className="justify-content-between">
                               <Button size="sm" variant="danger"
-                                onClick={() => this.openModal(ModalType.Delete, device.id, device.name)}>{ getLocaleString('Delete') }</Button>
+                                onClick={() => this.openModal(ModalType.Delete, device.id, device.name)}>{ I18n.get('button.delete') }</Button>
                             </Form.Row>
                           </Form>
                         </Card.Body>
@@ -476,7 +476,7 @@ class Device extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ getLocaleString('Error') }:</strong><br />
+                  <strong>{ I18n.get('error') }:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -493,22 +493,22 @@ class Device extends React.Component<IProps, IState> {
               <Modal.Body>
                 <Form>
                   <Form.Group controlId="deviceName">
-                    <Form.Label>{ getLocaleString('Device Name') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ getLocaleString('Enter the device name') }
+                    <Form.Label>{ I18n.get('text.device.name') } <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={ I18n.get('input.device.name') }
                       defaultValue="" onChange={this.handleDeviceNameChange} className={ getInputFormValidationClassName(this.state.deviceName, this.state.isDeviceNameValid) } />
-                    <Form.Text className="text-muted">{ `(${getLocaleString('Required')}) ${getLocaleString('Must contain only alphanumeric characters and/or the following: - _/# with length 4 to 40')}` }</Form.Text>
+                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
                   </Form.Group>
                   <Form.Group controlId="deviceDescription">
-                    <Form.Label>{ getLocaleString('Device Description') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ getLocaleString('Enter the device description') }
+                    <Form.Label>{ I18n.get('text.device.description') } <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={ I18n.get('input.device.description') }
                       defaultValue="" onChange={this.handleDeviceDescriptionChange} className={ getInputFormValidationClassName(this.state.deviceDescription, this.state.isDeviceDescriptionValid) } />
-                    <Form.Text className="text-muted">{ `(${getLocaleString('Required')}) ${getLocaleString('Must contain only alphanumeric characters and/or the following: - _/# with length 4 to 40')}` }</Form.Text>
+                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
                   </Form.Group>
                 </Form>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-                <Button variant="primary" onClick={this.addDevice} disabled={this.state.isModalProcessing || !this.state.isDeviceNameValid || !this.state.isDeviceDescriptionValid}>{ getLocaleString('Register') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="primary" onClick={this.addDevice} disabled={this.state.isModalProcessing || !this.state.isDeviceNameValid || !this.state.isDeviceDescriptionValid}>{ I18n.get('button.register') }</Button>
               </Modal.Footer>
             </div>
           }
@@ -516,11 +516,11 @@ class Device extends React.Component<IProps, IState> {
             this.state.modalType === ModalType.Delete &&
             <div>
               <Modal.Body>
-                { getLocaleString('Are you sure you want to delete this device') }: <strong>{this.state.deviceName}</strong>?
+                { I18n.get('text.confirm.delete.device') }: <strong>{this.state.deviceName}</strong>?
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-                <Button variant="danger" onClick={this.deleteDevice} disabled={this.state.isModalProcessing}>{ getLocaleString('Delete') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="danger" onClick={this.deleteDevice} disabled={this.state.isModalProcessing}>{ I18n.get('button.delete') }</Button>
               </Modal.Footer>
             </div>
           }

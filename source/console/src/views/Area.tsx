@@ -14,7 +14,7 @@
 // Import React and Amplify packages
 import React from 'react';
 import { LinkContainer } from 'react-router-bootstrap';
-import { API, graphqlOperation } from 'aws-amplify';
+import { API, graphqlOperation, I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -36,7 +36,7 @@ import { getSite } from '../graphql/queries';
 import { createArea } from '../graphql/mutations';
 
 // Import custom setting
-import { LOGGING_LEVEL, sendMetrics, validateGeneralInput, sortByName, getLocaleString, getInputFormValidationClassName, makeAllVisible, makeVisibleBySearchKeyword } from '../util/CustomUtil';
+import { LOGGING_LEVEL, sendMetrics, validateGeneralInput, sortByName, getInputFormValidationClassName, makeAllVisible, makeVisibleBySearchKeyword } from '../util/CustomUtil';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IGeneralQueryData } from '../components/Interfaces';
 import { ModalType, SortBy } from '../components/Enums';
@@ -92,7 +92,7 @@ class Area extends React.Component<IProps, IState> {
     super(props);
 
     this.state = {
-      title: getLocaleString('Areas'),
+      title: I18n.get('text.areas'),
       areas: [],
       isLoading: false,
       searchKeyword: '',
@@ -156,11 +156,11 @@ class Area extends React.Component<IProps, IState> {
         siteId,
         siteName,
         areas,
-        title: `${getLocaleString('Areas')} (${areas.length})`
+        title: `${I18n.get('text.areas')} (${areas.length})`
       });
     } catch (error) {
       LOGGER.error('Error while getting site', error);
-      this.setState({ error: getLocaleString('Error occurred while getting a site.') });
+      this.setState({ error: I18n.get('error.get.site') });
     }
 
     this.setState({ isLoading: false });
@@ -179,10 +179,10 @@ class Area extends React.Component<IProps, IState> {
 
       const updatedAreas = this.state.areas.filter(area => area.id !== areaId);
 
-      this.props.handleNotification(getLocaleString('Area was deleted successfully.'), 'success', 5);
+      this.props.handleNotification(I18n.get('info.delete.area'), 'success', 5);
       this.setState({
         areas: updatedAreas,
-        title: `${getLocaleString('Areas')} (${updatedAreas.length})`,
+        title: `${I18n.get('text.areas')} (${updatedAreas.length})`,
         areaId: '',
         areaName: '',
         isModalProcessing: false,
@@ -191,13 +191,13 @@ class Area extends React.Component<IProps, IState> {
         modalType: ModalType.None
       });
     } catch (error) {
-      let message = getLocaleString('Error occurred while deleting the area.');
+      let message = I18n.get('error.delete.area');
 
       if (error.errors) {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         }
       }
 
@@ -230,7 +230,7 @@ class Area extends React.Component<IProps, IState> {
       const newAreas = [...areas, newArea];
       this.setState({
         areas: sortByName(newAreas, sort, 'name'),
-        title: `${getLocaleString('Areas')} (${newAreas.length})`,
+        title: `${I18n.get('text.areas')} (${newAreas.length})`,
         areaName: '',
         areaDescription: '',
         isModalProcessing: false,
@@ -241,18 +241,18 @@ class Area extends React.Component<IProps, IState> {
         modalType: ModalType.None
       });
 
-      this.props.handleNotification(getLocaleString('Area was added successfully.'), 'info', 5);
+      this.props.handleNotification(I18n.get('info.add.area'), 'info', 5);
       await sendMetrics({ 'area': 1 });
     } catch (error) {
-      let message = getLocaleString('Error occurred while creating an area.');
+      let message = I18n.get('error.create.area');
 
       if (error.errors) {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         } else if (errorType === 'DataDuplicatedError') {
-          message = getLocaleString('Area name already exists.');
+          message = I18n.get('error.duplicate.area.name');
         }
       }
 
@@ -272,11 +272,11 @@ class Area extends React.Component<IProps, IState> {
     let modalTitle = '';
 
     if (modalType === ModalType.Add) {
-      modalTitle = getLocaleString('Area Registration');
+      modalTitle = I18n.get('text.area.registration');
     } else if (modalType === ModalType.Delete) {
-      modalTitle = getLocaleString('Delete Area');
+      modalTitle = I18n.get('text.delete.area');
     } else {
-      this.props.handleNotification(`${getLocaleString('Unsupported modal type')}: ${modalType}`, 'warning', 5);
+      this.props.handleNotification(`${I18n.get('error.unsupported.modal.type')}: ${modalType}`, 'warning', 5);
       return;
     }
 
@@ -332,7 +332,7 @@ class Area extends React.Component<IProps, IState> {
    */
   handleAreaNameChange(event: any) {
     const areaName = event.target.value;
-    const isAreaNameValid = validateGeneralInput(areaName);
+    const isAreaNameValid = validateGeneralInput(areaName, 1, 40, '- _/#');
 
     this.setState({
       areaName,
@@ -346,7 +346,7 @@ class Area extends React.Component<IProps, IState> {
    */
   handleAreaDescriptionChange(event: any) {
     const areaDescription = event.target.value;
-    const isAreaDescriptionValid = validateGeneralInput(areaDescription);
+    const isAreaDescriptionValid = validateGeneralInput(areaDescription, 1, 40, '- _/#');
 
     this.setState({
       areaDescription,
@@ -365,9 +365,9 @@ class Area extends React.Component<IProps, IState> {
             <Col>
               <Breadcrumb>
                 <LinkContainer to="/sites" exact>
-                  <Breadcrumb.Item>{ getLocaleString('Sites') }</Breadcrumb.Item>
+                  <Breadcrumb.Item>{ I18n.get('text.sites') }</Breadcrumb.Item>
                 </LinkContainer>
-                <Breadcrumb.Item active>{ getLocaleString('Areas') }{this.state.siteName}</Breadcrumb.Item>
+                <Breadcrumb.Item active>{ I18n.get('text.areas') }{this.state.siteName}</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -375,7 +375,7 @@ class Area extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ getLocaleString('Add Area') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ I18n.get('button.add.area') }</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -389,11 +389,11 @@ class Area extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={4} controlId="searchKeyword">
-                        <Form.Label>{ getLocaleString('Search Keyword') }</Form.Label>
-                        <Form.Control type="text" placeholder={ getLocaleString('Search by Area Name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
+                        <Form.Label>{ I18n.get('text.search.keyword') }</Form.Label>
+                        <Form.Control type="text" placeholder={ I18n.get('text.search.area.name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
                       </Form.Group>
                       <Form.Group as={Col} md={4} controlId="sortBy">
-                        <Form.Label>{ getLocaleString('Sort By') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.sort.by') }</Form.Label>
                         <Form.Control as="select" defaultValue={this.state.sort} onChange={this.handleSort}>
                           <option value={SortBy.Asc}>A-Z</option>
                           <option value={SortBy.Desc}>Z-A</option>
@@ -411,7 +411,7 @@ class Area extends React.Component<IProps, IState> {
               this.state.areas.length === 0 && !this.state.isLoading &&
               <Col>
                 <Jumbotron>
-                  <p>{ getLocaleString('No area found.') }</p>
+                  <p>{ I18n.get('text.no.area') }</p>
                 </Jumbotron>
               </Col>
             }
@@ -426,7 +426,7 @@ class Area extends React.Component<IProps, IState> {
                           <Table striped bordered>
                             <tbody>
                               <tr>
-                                <td>{ getLocaleString('Description') }</td>
+                                <td>{ I18n.get('text.description') }</td>
                                 <td>{area.description}</td>
                               </tr>
                             </tbody>
@@ -434,11 +434,11 @@ class Area extends React.Component<IProps, IState> {
                           <Form>
                             <Form.Row className="justify-content-between">
                               <Button size="sm" variant="danger"
-                                onClick={() => this.openModal(ModalType.Delete, area.id, area.name)}>{ getLocaleString('Delete') }</Button>
+                                onClick={() => this.openModal(ModalType.Delete, area.id, area.name)}>{ I18n.get('button.delete') }</Button>
                               <Form.Row>
-                                <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/areas/${area.id}/stations`)}>{ getLocaleString('Stations') }</Button>
+                                <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/areas/${area.id}/stations`)}>{ I18n.get('text.stations') }</Button>
                                 <EmptyCol />
-                                <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/areas/${area.id}/processes`)}>{ getLocaleString('Processes') }</Button>
+                                <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/areas/${area.id}/processes`)}>{ I18n.get('info.processes') }</Button>
                               </Form.Row>
                             </Form.Row>
                           </Form>
@@ -462,7 +462,7 @@ class Area extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ getLocaleString('Error') }:</strong><br />
+                  <strong>{ I18n.get('error') }:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -479,22 +479,22 @@ class Area extends React.Component<IProps, IState> {
               <Modal.Body>
                 <Form>
                   <Form.Group controlId="areaName">
-                    <Form.Label>{ getLocaleString('Area Name') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ getLocaleString('Enter the area name') }
+                    <Form.Label>{ I18n.get('text.area.name') } <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={ I18n.get('input.area.name') }
                       defaultValue="" onChange={this.handleAreaNameChange} className={ getInputFormValidationClassName(this.state.areaName, this.state.isAreaNameValid) } />
-                    <Form.Text className="text-muted">{ `(${getLocaleString('Required')}) ${getLocaleString('Must contain only alphanumeric characters and/or the following: - _/# with length 4 to 40')}` }</Form.Text>
+                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
                   </Form.Group>
                   <Form.Group controlId="areaDescription">
-                    <Form.Label>{ getLocaleString('Area Description') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ getLocaleString('Enter the area description') }
+                    <Form.Label>{ I18n.get('text.area.description') } <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={ I18n.get('input.area.description') }
                       defaultValue="" onChange={this.handleAreaDescriptionChange} className={ getInputFormValidationClassName(this.state.areaDescription, this.state.isAreaDescriptionValid) } />
-                    <Form.Text className="text-muted">{ `(${getLocaleString('Required')}) ${getLocaleString('Must contain only alphanumeric characters and/or the following: - _/# with length 4 to 40')}` }</Form.Text>
+                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
                   </Form.Group>
                 </Form>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-                <Button variant="primary" onClick={this.addArea} disabled={this.state.isModalProcessing || !this.state.isAreaNameValid || !this.state.isAreaDescriptionValid}>{ getLocaleString('Register') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="primary" onClick={this.addArea} disabled={this.state.isModalProcessing || !this.state.isAreaNameValid || !this.state.isAreaDescriptionValid}>{ I18n.get('button.register') }</Button>
               </Modal.Footer>
             </div>
           }
@@ -502,15 +502,15 @@ class Area extends React.Component<IProps, IState> {
             this.state.modalType === ModalType.Delete &&
             <div>
               <Modal.Body>
-                { getLocaleString('Are you sure you want to delete this area') }: <strong>{this.state.areaName}</strong>?
+                { I18n.get('text.confirm.delete.area') }: <strong>{this.state.areaName}</strong>?
                 <EmptyRow />
                 <Alert variant="danger">
-                  { getLocaleString('Every station, device, process, and event belonged to the area will be deleted as well.') }
+                  { I18n.get('warning.delete.area') }
                 </Alert>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-                <Button variant="danger" onClick={this.deleteArea} disabled={this.state.isModalProcessing}>{ getLocaleString('Delete') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="danger" onClick={this.deleteArea} disabled={this.state.isModalProcessing}>{ I18n.get('button.delete') }</Button>
               </Modal.Footer>
             </div>
           }

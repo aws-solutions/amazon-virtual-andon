@@ -14,7 +14,7 @@
 // Import React and Amplify packages
 import React from 'react';
 import { LinkContainer } from 'react-router-bootstrap';
-import { API, graphqlOperation } from 'aws-amplify';
+import { API, graphqlOperation, I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -36,7 +36,7 @@ import { getArea } from '../graphql/queries';
 import { createStation } from '../graphql/mutations';
 
 // Import custom setting
-import { LOGGING_LEVEL, sendMetrics, validateGeneralInput, sortByName, getLocaleString, getInputFormValidationClassName, makeAllVisible, makeVisibleBySearchKeyword } from '../util/CustomUtil';
+import { LOGGING_LEVEL, sendMetrics, validateGeneralInput, sortByName, getInputFormValidationClassName, makeAllVisible, makeVisibleBySearchKeyword } from '../util/CustomUtil';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IGeneralQueryData } from '../components/Interfaces';
 import { ModalType, SortBy } from '../components/Enums';
@@ -93,7 +93,7 @@ class Station extends React.Component<IProps, IState> {
     super(props);
 
     this.state = {
-      title: getLocaleString('Stations'),
+      title: I18n.get('text.stations'),
       stations: [],
       isLoading: false,
       searchKeyword: '',
@@ -163,11 +163,11 @@ class Station extends React.Component<IProps, IState> {
         areaId,
         areaName,
         stations,
-        title: `${getLocaleString('Stations')} (${stations.length})`
+        title: `${I18n.get('text.stations')} (${stations.length})`
       });
     } catch (error) {
       LOGGER.error('Error while getting area', error);
-      this.setState({ error: getLocaleString('Error occurred while getting an area.') });
+      this.setState({ error: I18n.get('error.get.area') });
     }
 
     this.setState({ isLoading: false });
@@ -186,10 +186,10 @@ class Station extends React.Component<IProps, IState> {
 
       const updatedStations = this.state.stations.filter(station => station.id !== stationId);
 
-      this.props.handleNotification(getLocaleString('Station was deleted successfully.'), 'success', 5);
+      this.props.handleNotification(I18n.get('info.delete.station'), 'success', 5);
       this.setState({
         stations: updatedStations,
-        title: `${getLocaleString('Stations')} (${updatedStations.length})`,
+        title: `${I18n.get('text.stations')} (${updatedStations.length})`,
         stationId: '',
         stationName: '',
         isModalProcessing: false,
@@ -198,13 +198,13 @@ class Station extends React.Component<IProps, IState> {
         modalType: ModalType.None
       });
     } catch (error) {
-      let message = getLocaleString('Error occurred while deleting the station.');
+      let message = I18n.get('error.delete.station');
 
       if (error.errors) {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         }
       }
 
@@ -237,7 +237,7 @@ class Station extends React.Component<IProps, IState> {
       const newStations = [...stations, newStation]
       this.setState({
         stations: sortByName(newStations, sort, 'name'),
-        title: `${getLocaleString('Stations')} (${newStations.length})`,
+        title: `${I18n.get('text.stations')} (${newStations.length})`,
         stationName: '',
         stationDescription: '',
         isModalProcessing: false,
@@ -248,18 +248,18 @@ class Station extends React.Component<IProps, IState> {
         modalType: ModalType.None
       });
 
-      this.props.handleNotification(getLocaleString('Station was added successfully.'), 'info', 5);
+      this.props.handleNotification(I18n.get('info.add.station'), 'info', 5);
       await sendMetrics({ 'station': 1 });
     } catch (error) {
-      let message = getLocaleString('Error occurred while creating a station.');
+      let message = I18n.get('error.create.station');
 
       if (error.errors) {
         const { errorType } = error.errors[0];
 
         if (errorType === 'Unauthorized') {
-          message = getLocaleString('Not authorized, please contact your Admin.');
+          message = I18n.get('error.not.authorized');
         } else if (errorType === 'DataDuplicatedError') {
-          message = getLocaleString('Station name already exists.');
+          message = I18n.get('error.duplicate.station.name');
         }
       }
 
@@ -279,11 +279,11 @@ class Station extends React.Component<IProps, IState> {
     let modalTitle = '';
 
     if (modalType === ModalType.Add) {
-      modalTitle = getLocaleString('Station Registration');
+      modalTitle = I18n.get('text.station.registration');
     } else if (modalType === ModalType.Delete) {
-      modalTitle = getLocaleString('Delete Station');
+      modalTitle = I18n.get('text.delete.station');
     } else {
-      this.props.handleNotification(`${getLocaleString('Unsupported modal type')}: ${modalType}`, 'warning', 5);
+      this.props.handleNotification(`${I18n.get('error.unsupported.modal.type')}: ${modalType}`, 'warning', 5);
       return;
     }
 
@@ -339,7 +339,7 @@ class Station extends React.Component<IProps, IState> {
    */
   handleStationNameChange(event: any) {
     const stationName = event.target.value;
-    const isStationNameValid = validateGeneralInput(stationName);
+    const isStationNameValid = validateGeneralInput(stationName, 1, 40, '- _/#');
 
     this.setState({
       stationName,
@@ -353,7 +353,7 @@ class Station extends React.Component<IProps, IState> {
    */
   handleStationDescriptionChange(event: any) {
     const stationDescription = event.target.value;
-    const isStationDescriptionValid = validateGeneralInput(stationDescription);
+    const isStationDescriptionValid = validateGeneralInput(stationDescription, 1, 40, '- _/#');
 
     this.setState({
       stationDescription,
@@ -372,12 +372,12 @@ class Station extends React.Component<IProps, IState> {
             <Col>
               <Breadcrumb>
                 <LinkContainer to="/sites" exact>
-                  <Breadcrumb.Item>{ getLocaleString('Sites') }</Breadcrumb.Item>
+                  <Breadcrumb.Item>{ I18n.get('text.sites') }</Breadcrumb.Item>
                 </LinkContainer>
                 <LinkContainer to={`/sites/${this.state.siteId}`} exact>
-                  <Breadcrumb.Item>{ getLocaleString('Areas') }{this.state.siteName}</Breadcrumb.Item>
+                  <Breadcrumb.Item>{ I18n.get('text.areas') }{this.state.siteName}</Breadcrumb.Item>
                 </LinkContainer>
-                <Breadcrumb.Item active>{ getLocaleString('Stations') }{this.state.areaName}</Breadcrumb.Item>
+                <Breadcrumb.Item active>{ I18n.get('text.stations') }{this.state.areaName}</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -385,7 +385,7 @@ class Station extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ getLocaleString('Add Station') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ I18n.get('button.add.station') }</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -399,11 +399,11 @@ class Station extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={4} controlId="searchKeyword">
-                        <Form.Label>{ getLocaleString('Search Keyword') }</Form.Label>
-                        <Form.Control type="text" placeholder={ getLocaleString('Search by Station Name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
+                        <Form.Label>{ I18n.get('text.search.keyword') }</Form.Label>
+                        <Form.Control type="text" placeholder={ I18n.get('text.search.station.name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
                       </Form.Group>
                       <Form.Group as={Col} md={4} controlId="sortBy">
-                        <Form.Label>{ getLocaleString('Sort By') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.sort.by') }</Form.Label>
                         <Form.Control as="select" defaultValue={this.state.sort} onChange={this.handleSort}>
                           <option value={SortBy.Asc}>A-Z</option>
                           <option value={SortBy.Desc}>Z-A</option>
@@ -421,7 +421,7 @@ class Station extends React.Component<IProps, IState> {
               this.state.stations.length === 0 && !this.state.isLoading &&
               <Col>
                 <Jumbotron>
-                  <p>{ getLocaleString('No station found.') }</p>
+                  <p>{ I18n.get('text.no.station') }</p>
                 </Jumbotron>
               </Col>
             }
@@ -436,7 +436,7 @@ class Station extends React.Component<IProps, IState> {
                           <Table striped bordered>
                             <tbody>
                               <tr>
-                                <td>{ getLocaleString('Description') }</td>
+                                <td>{ I18n.get('text.description') }</td>
                                 <td>{station.description}</td>
                               </tr>
                             </tbody>
@@ -444,8 +444,8 @@ class Station extends React.Component<IProps, IState> {
                           <Form>
                             <Form.Row className="justify-content-between">
                               <Button size="sm" variant="danger"
-                                onClick={() => this.openModal(ModalType.Delete, station.id, station.name)}>{ getLocaleString('Delete') }</Button>
-                              <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/stations/${station.id}`)}>{ getLocaleString('Detail') }</Button>
+                                onClick={() => this.openModal(ModalType.Delete, station.id, station.name)}>{ I18n.get('button.delete') }</Button>
+                              <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/stations/${station.id}`)}>{ I18n.get('button.detail') }</Button>
                             </Form.Row>
                           </Form>
                         </Card.Body>
@@ -468,7 +468,7 @@ class Station extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ getLocaleString('Error') }:</strong><br />
+                  <strong>{ I18n.get('error') }:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -485,22 +485,22 @@ class Station extends React.Component<IProps, IState> {
               <Modal.Body>
                 <Form>
                   <Form.Group controlId="stationName">
-                    <Form.Label>{ getLocaleString('Station Name') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ getLocaleString('Enter the station name') }
+                    <Form.Label>{ I18n.get('text.station.name') } <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={ I18n.get('input.station.name') }
                       defaultValue="" onChange={this.handleStationNameChange} className={ getInputFormValidationClassName(this.state.stationName, this.state.isStationNameValid) } />
-                    <Form.Text className="text-muted">{ `(${getLocaleString('Required')}) ${getLocaleString('Must contain only alphanumeric characters and/or the following: - _/# with length 4 to 40')}` }</Form.Text>
+                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
                   </Form.Group>
                   <Form.Group controlId="stationDescription">
-                    <Form.Label>{ getLocaleString('Station Description') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ getLocaleString('Enter the station description') }
+                    <Form.Label>{ I18n.get('text.station.description') } <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={ I18n.get('input.station.description') }
                       defaultValue="" onChange={this.handleStationDescriptionChange} className={ getInputFormValidationClassName(this.state.stationDescription, this.state.isStationDescriptionValid) } />
-                    <Form.Text className="text-muted">{ `(${getLocaleString('Required')}) ${getLocaleString('Must contain only alphanumeric characters and/or the following: - _/# with length 4 to 40')}` }</Form.Text>
+                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
                   </Form.Group>
                 </Form>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-                <Button variant="primary" onClick={this.addStation} disabled={this.state.isModalProcessing || !this.state.isStationNameValid || !this.state.isStationDescriptionValid}>{ getLocaleString('Register') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="primary" onClick={this.addStation} disabled={this.state.isModalProcessing || !this.state.isStationNameValid || !this.state.isStationDescriptionValid}>{ I18n.get('button.register') }</Button>
               </Modal.Footer>
             </div>
           }
@@ -508,15 +508,15 @@ class Station extends React.Component<IProps, IState> {
             this.state.modalType === ModalType.Delete &&
             <div>
               <Modal.Body>
-                { getLocaleString('Are you sure you want to delete this station') }: <strong>{this.state.stationName}</strong>?
+                { I18n.get('text.confirm.delete.station') }: <strong>{this.state.stationName}</strong>?
                 <EmptyRow />
                 <Alert variant="danger">
-                  { getLocaleString('Every device belonged to the station will be deleted as well.') }
+                  { I18n.get('warning.delete.station') }
                 </Alert>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-                <Button variant="danger" onClick={this.deleteStation} disabled={this.state.isModalProcessing}>{ getLocaleString('Delete') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="danger" onClick={this.deleteStation} disabled={this.state.isModalProcessing}>{ I18n.get('button.delete') }</Button>
               </Modal.Footer>
             </div>
           }

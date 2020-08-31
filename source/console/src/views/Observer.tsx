@@ -13,7 +13,7 @@
 
 // Import React and Amplify packages
 import React from 'react';
-import { API, graphqlOperation } from 'aws-amplify';
+import { API, graphqlOperation, I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -35,7 +35,7 @@ import { getEvent } from '../graphql/queries';
 import { updateIssue } from '../graphql/mutations';
 
 // Import custom setting
-import { LOGGING_LEVEL, addISOTimeOffset, getLocaleString, makeAllVisible } from '../util/CustomUtil';
+import { LOGGING_LEVEL, addISOTimeOffset, makeAllVisible } from '../util/CustomUtil';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IGeneralQueryData, IIssue, ISelectedData } from '../components/Interfaces';
 import EmptyRow from '../components/EmptyRow';
@@ -129,7 +129,7 @@ class Observer extends React.Component<IProps, IState> {
           const updatedIssues = [...issues, newIssue];
           this.setState({ issues: updatedIssues });
 
-          this.props.handleNotification(`New issue was created at ${newIssue.deviceName}`, 'info', 5);
+          this.props.handleNotification(`${I18n.get('text.issue')}: ${newIssue.deviceName}`, 'info', 5);
         }
       },
       error: () => {
@@ -196,7 +196,7 @@ class Observer extends React.Component<IProps, IState> {
       this.setState({ sites });
     } catch (error) {
       LOGGER.error('Error while getting sites', error);
-      this.setState({ error: getLocaleString('Error occurred while getting sites.') });
+      this.setState({ error: I18n.get('error.get.sites') });
     }
   }
 
@@ -224,7 +224,7 @@ class Observer extends React.Component<IProps, IState> {
       this.setState({ areas });
     } catch (error) {
       LOGGER.error('Error while getting areas', error);
-      this.setState({ error: getLocaleString('Error occurred while getting areas.') });
+      this.setState({ error: I18n.get('error.get.areas') });
     }
   }
 
@@ -277,7 +277,7 @@ class Observer extends React.Component<IProps, IState> {
       });
     } catch (error) {
       LOGGER.error('Error while getting issues', error);
-      this.setState({ error: getLocaleString('Error occurred while getting issues.') });
+      this.setState({ error: I18n.get('error.get.issues') });
     }
 
     this.setState({ isLoading: false })
@@ -368,21 +368,25 @@ class Observer extends React.Component<IProps, IState> {
       delete issue.version;
       delete issue.visible;
 
+      let translatedStatus = '';
       if (status === 'closed') {
         issue.closed = addISOTimeOffset(new Date());
         issue.resolutionTime = Math.ceil((new Date(issue.closed).valueOf() - new Date(issue.created).valueOf()) / 1000);
+        translatedStatus = I18n.get('text.status.close');
       } else if (status === 'rejected') {
         // If the issue is rejected, resolution time would be 0.
         issue.closed = addISOTimeOffset(new Date());
         issue.resolutionTime = 0;
+        translatedStatus = I18n.get('text.status.reject');
       } else if (status === 'acknowledged') {
         issue.acknowledged = addISOTimeOffset(new Date());
         issue.acknowledgedTime = Math.ceil((new Date(issue.acknowledged).valueOf() - new Date(issue.created).valueOf()) / 1000);
+        translatedStatus = I18n.get('text.status.acknowledge');
       }
 
       const input = issue;
       await API.graphql(graphqlOperation(updateIssue, { input }));
-      this.props.handleNotification(`${getLocaleString('Issue')}: ${issue.eventDescription}, ${getLocaleString('Device')}: ${issue.deviceName}, ${getLocaleString('Status')}: ${status}`, 'info', 5);
+      this.props.handleNotification(`${I18n.get('text.issue')}: ${issue.eventDescription}, ${I18n.get('text.device')}: ${issue.deviceName}, ${I18n.get('text.status')}: ${translatedStatus}`, 'info', 5);
 
       if (!['rejected', 'closed'].includes(status)) {
         issue.visible = true;
@@ -390,7 +394,7 @@ class Observer extends React.Component<IProps, IState> {
       issue.version = newVersion;
     } catch (error) {
       LOGGER.error(error);
-      this.props.handleNotification(getLocaleString('Error occurred while updating the issue.'), 'error', 5);
+      this.props.handleNotification(I18n.get('error.update.issue'), 'error', 5);
     }
   }
 
@@ -405,12 +409,17 @@ class Observer extends React.Component<IProps, IState> {
     const response = await API.graphql(graphqlOperation(getEvent, { id: eventId }));
     const rootCauses: string[] = response.data.getEvent.rootCauses ? response.data.getEvent.rootCauses : [];
 
-    this.setState({
-      issue,
-      rootCauses: rootCauses.sort((a, b) => a.localeCompare(b)),
-      showModal: true,
-      rootCause: ''
-    });
+    if (rootCauses.length > 0) {
+      rootCauses.sort((a, b) => a.localeCompare(b));
+      this.setState({
+        issue,
+        rootCauses,
+        showModal: true,
+        rootCause: ''
+      });
+    } else {
+      await this.handleUpdateIssue(issue, 'closed');
+    }
   }
 
   /**
@@ -435,7 +444,7 @@ class Observer extends React.Component<IProps, IState> {
           <Row>
             <Col>
               <Breadcrumb>
-                <Breadcrumb.Item active>{ getLocaleString('Observer') }</Breadcrumb.Item>
+                <Breadcrumb.Item active>{ I18n.get('menu.observer') }</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -446,9 +455,9 @@ class Observer extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={6} controlId="siteSelect">
-                        <Form.Label>{ getLocaleString('Select the site where you want to view the issues') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.select.site.issues') }</Form.Label>
                         <Form.Control as="select" value={this.state.selectedSite.name} onChange={this.handleSiteChange}>
-                          <option data-key="" key="none-site" value="">{ getLocaleString('Select Site') }</option>
+                          <option data-key="" key="none-site" value="">{ I18n.get('text.select.site') }</option>
                           {
                             this.state.sites.map((site: IGeneralQueryData) => {
                               return (
@@ -459,9 +468,9 @@ class Observer extends React.Component<IProps, IState> {
                         </Form.Control>
                       </Form.Group>
                       <Form.Group as={Col} md={6} controlId="areaSelect">
-                        <Form.Label>{ getLocaleString('Select the work area where you want to view the issues') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.select.area.issues') }</Form.Label>
                         <Form.Control as="select" value={this.state.selectedArea.name} onChange={this.handleAreaChange}>
-                          <option data-key="" key="none-area" value="">{ getLocaleString('Select Area') }</option>
+                          <option data-key="" key="none-area" value="">{ I18n.get('text.select.area') }</option>
                           {
                             this.state.areas.map((area: IGeneralQueryData) => {
                               return (
@@ -483,7 +492,7 @@ class Observer extends React.Component<IProps, IState> {
             {
               this.state.showIssue && this.state.issues.filter(issue => issue.visible).length === 0 && !this.state.isLoading &&
               <Jumbotron>
-                <p>{ getLocaleString('No issues open currently at this site / area.') }</p>
+                <p>{ I18n.get('text.no.issues.currently') }</p>
               </Jumbotron>
             }
             {
@@ -502,19 +511,19 @@ class Observer extends React.Component<IProps, IState> {
                             </Card.Header>
                             <Card.Body>
                               <Card.Title>
-                                <h6>{ getLocaleString('Process Name') } - {issue.processName}</h6>
+                                <h6>{ I18n.get('text.process.name') } - {issue.processName}</h6>
                               </Card.Title>
                               <Form>
                                 {
                                   issue.status === 'open' &&
                                   <Form.Row className="justify-content-between">
-                                    <Button variant="success" size="sm" onClick={async () => this.handleUpdateIssue(issue, 'acknowledged')}>{ getLocaleString('Acknowledge') }</Button>
-                                    <Button variant="secondary" size="sm" onClick={async () => this.handleUpdateIssue(issue, 'rejected')}>{ getLocaleString('Reject') }</Button>
+                                    <Button variant="success" size="sm" onClick={async () => this.handleUpdateIssue(issue, 'acknowledged')}>{ I18n.get('button.acknowledge') }</Button>
+                                    <Button variant="secondary" size="sm" onClick={async () => this.handleUpdateIssue(issue, 'rejected')}>{ I18n.get('button.reject') }</Button>
                                   </Form.Row>
                                 }
                                 {
                                   issue.status === 'acknowledged' &&
-                                  <Button variant="warning" size="sm" onClick={async () => this.handleClose(issue)}>{ getLocaleString('Close') }</Button>
+                                  <Button variant="warning" size="sm" onClick={async () => this.handleClose(issue)}>{ I18n.get('button.close') }</Button>
                                 }
                               </Form>
                             </Card.Body>
@@ -541,7 +550,7 @@ class Observer extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ getLocaleString('Error') }:</strong><br />
+                  <strong>{ I18n.get('error') }:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -550,14 +559,14 @@ class Observer extends React.Component<IProps, IState> {
         </Container>
         <Modal show={this.state.showModal} onHide={this.handleModalClose}>
           <Modal.Header>
-            <Modal.Title>{ getLocaleString('Closing Issue') }</Modal.Title>
+            <Modal.Title>{ I18n.get('text.closing.issue') }</Modal.Title>
           </Modal.Header>
           <Modal.Body>
             <Form>
               <Form.Group controlId="rootCause">
-                <Form.Label>{ getLocaleString('Root Cause') }</Form.Label>
+                <Form.Label>{ I18n.get('text.rootcause') }</Form.Label>
                 <Form.Control as="select" defaultValue={this.state.rootCause} onChange={this.handleRootCauseChange}>
-                  <option value="">{ getLocaleString('Choose the root cause') }</option>
+                  <option value="">{ I18n.get('text.choose.rootcause') }</option>
                   {
                     this.state.rootCauses && this.state.rootCauses.map((rootCause: string) => {
                       return(
@@ -570,8 +579,8 @@ class Observer extends React.Component<IProps, IState> {
             </Form>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={this.handleModalClose}>{ getLocaleString('Close') }</Button>
-            <Button variant="primary" onClick={this.closeIssue}>{ getLocaleString('Submit') }</Button>
+            <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+            <Button variant="primary" onClick={this.closeIssue}>{ I18n.get('button.submit') }</Button>
           </Modal.Footer>
         </Modal>
       </div>

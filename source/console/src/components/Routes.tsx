@@ -33,100 +33,106 @@ import Permission from '../views/Permission';
 import PermissionSetting from '../views/PermissionSetting';
 import RootCause from '../views/RootCause';
 
-import { getLocaleString } from '../util/CustomUtil';
-
 /**
  * Admin group routes
  */
 export const adminRoutes: IRoute[] = [
   {
     path: '/sites',
-    name: getLocaleString('Sites'),
+    nameCode: 'text.sites',
+    description: 'Sites',
     component: Site,
     icon: GoLocation,
     visible: true
   },
   {
     path: '/sites/:siteId',
-    name: 'Site - Areas',
+    description: 'Site - Areas',
     component: Area,
     visible: false
   },
   {
     path: '/areas/:areaId/stations',
-    name: 'Site - Area - Stations',
+    description: 'Site - Area - Stations',
     component: Station,
     visible: false
   },
   {
     path: '/stations/:stationId',
-    name: 'Site - Area - Station - Devices',
+    description: 'Site - Area - Station - Devices',
     component: Device,
     visible: false
   },
   {
     path: '/areas/:areaId/processes',
-    name: 'Site - Area - Processes',
+    description: 'Site - Area - Processes',
     component: Process,
     visible: false
   },
   {
     path: '/processes/:processId',
-    name: 'Site - Area - Process - Events',
+    description: 'Site - Area - Process - Events',
     component: Event,
     visible: false
   },
   {
     path: '/client',
-    name: getLocaleString('Client'),
+    nameCode: 'menu.client',
+    description: 'Client',
     component: Client,
     icon: GoPerson,
     visible: true
   },
   {
     path: '/observer',
-    name: getLocaleString('Observer'),
+    nameCode: 'menu.observer',
+    description: 'Observer',
     component: Observer,
     icon: GoEye,
     visible: true
   },
   {
     path: '/metrics',
-    name: getLocaleString('Metrics'),
+    nameCode: 'text.metrics',
+    description: 'Metrics',
     component: Metrics,
     icon: GoGraph,
     visible: true
   },
   {
     path: '/history',
-    name: getLocaleString('History'),
+    nameCode: 'text.history',
+    description: 'Histroy',
     component: History,
     icon: GoHistory,
     visible: true
   },
   {
     path: '/users',
-    name: getLocaleString('Users'),
+    nameCode:'text.users',
+    description: 'User',
     component: User,
     icon: GoOrganization,
     visible: true
   },
   {
     path: '/permissions',
-    name: getLocaleString('Permissions'),
+    nameCode: 'text.permissions',
+    description: 'Permission',
     component: Permission,
     icon: GoLock,
     visible: true
   },
   {
     path: '/permissions/setting',
-    name: getLocaleString('Permissions Setting'),
+    description: 'Permission Setting',
     component: PermissionSetting,
     visible: false
   },
   {
     path: '/rootcause',
-    name: getLocaleString('Root Causes'),
+    nameCode: 'text.rootcauses',
+    description: 'Root Cause',
     component: RootCause,
     icon: GoGear,
     visible: true
@@ -139,28 +145,32 @@ export const adminRoutes: IRoute[] = [
 export const managerRoutes: IRoute[] = [
   {
     path: '/client',
-    name: getLocaleString('Client'),
+    nameCode: 'menu.client',
+    description: 'Client',
     component: Client,
     icon: GoPerson,
     visible: true
   },
   {
     path: '/observer',
-    name: getLocaleString('Observer'),
+    nameCode: 'menu.observer',
+    description: 'Observer',
     component: Observer,
     icon: GoEye,
     visible: true
   },
   {
     path: '/metrics',
-    name: getLocaleString('Metrics'),
+    nameCode: 'text.metrics',
+    description: 'Metrics',
     component: Metrics,
     icon: GoGraph,
     visible: true
   },
   {
     path: '/history',
-    name: getLocaleString('History'),
+    nameCode: 'text.history',
+    description: 'History',
     component: History,
     icon: GoHistory,
     visible: true
@@ -173,14 +183,16 @@ export const managerRoutes: IRoute[] = [
 export const engineerRoutes: IRoute[] = [
   {
     path: '/client',
-    name: getLocaleString('Client'),
+    nameCode: 'menu.client',
+    description: 'Client',
     component: Client,
     icon: GoPerson,
     visible: true
   },
   {
     path: '/observer',
-    name: getLocaleString('Observer'),
+    nameCode: 'menu.observer',
+    description: 'Observer',
     component: Observer,
     icon: GoEye,
     visible: true
@@ -193,7 +205,8 @@ export const engineerRoutes: IRoute[] = [
 export const associateRoutes: IRoute[] = [
   {
     path: '/client',
-    name: getLocaleString('Client'),
+    nameCode: 'menu.client',
+    description: 'Client',
     component: Client,
     icon: GoPerson,
     visible: true

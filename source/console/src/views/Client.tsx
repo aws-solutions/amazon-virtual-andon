@@ -13,7 +13,7 @@
 
 // Import React and Amplify packages
 import React from 'react';
-import { API, graphqlOperation, PubSub, Auth } from 'aws-amplify';
+import { API, graphqlOperation, PubSub, Auth, I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -35,7 +35,7 @@ import { onCreateIssue, onUpdateIssue, onPutPermission, onDeletePermission } fro
 import * as uuid from 'uuid';
 
 // Import custom setting
-import { LOGGING_LEVEL, sendMetrics, addISOTimeOffset, getLocaleString } from '../util/CustomUtil';
+import { LOGGING_LEVEL, sendMetrics, addISOTimeOffset } from '../util/CustomUtil';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IGeneralQueryData, IIssue, IEvent, ISelectedData, IPermission } from '../components/Interfaces';
 import EmptyRow from '../components/EmptyRow';
@@ -325,7 +325,7 @@ class Client extends React.Component<IProps, IState> {
       selectedStation: EMPTY_SELECT,
       showEvent: false
     }, () => {
-      this.props.handleNotification(getLocaleString('Your permission has been changed.'), 'info', 300);
+      this.props.handleNotification(I18n.get('info.change.permission'), 'info', 300);
       this.setLocalStorage('selectedSite', EMPTY_SELECT);
       this.setLocalStorage('selectedArea', EMPTY_SELECT);
       this.setLocalStorage('selectedProcess', EMPTY_SELECT);
@@ -445,12 +445,10 @@ class Client extends React.Component<IProps, IState> {
       }
 
       if (sites.length === 1) {
-        const selectedSite = {
+        this.setLocalStorage('selectedSite', {
           id: sites[0].id,
           name: sites[0].name
-        };
-
-        this.setLocalStorage('selectedSite', selectedSite);
+        });
       }
 
       const selectedSite = this.getLocalStorage('selectedSite');
@@ -463,7 +461,7 @@ class Client extends React.Component<IProps, IState> {
       this.setState({ sites });
     } catch (error) {
       LOGGER.error('Error while getting sites', error);
-      this.setState({ error: getLocaleString('Error occurred while getting sites.')});
+      this.setState({ error: I18n.get('error.get.sites')});
     }
   }
 
@@ -495,12 +493,10 @@ class Client extends React.Component<IProps, IState> {
       }
 
       if (areas.length === 1) {
-        const selectedArea = {
+        this.setLocalStorage('selectedArea', {
           id: areas[0].id,
           name: areas[0].name
-        };
-
-        this.setLocalStorage('selectedArea', selectedArea);
+        });
       }
 
       const selectedArea = this.getLocalStorage('selectedArea');
@@ -513,7 +509,7 @@ class Client extends React.Component<IProps, IState> {
       this.setState({ areas });
     } catch (error) {
       LOGGER.error('Error while getting areas', error);
-      this.setState({ error: getLocaleString('Error occurred while getting areas.')});
+      this.setState({ error: I18n.get('error.get.areas')});
     }
   }
 
@@ -554,23 +550,21 @@ class Client extends React.Component<IProps, IState> {
       }
 
       if (processes.length === 1) {
-        const selectedProcess = {
+        const initSelectedProcess = {
           id: processes[0].id,
           name: processes[0].name
         };
 
-        this.setLocalStorage('selectedProcess', selectedProcess);
-        this.setState({ selectedProcess });
+        this.setLocalStorage('selectedProcess', initSelectedProcess);
+        this.setState({ selectedProcess: initSelectedProcess });
       }
       processes.sort((a, b) => a.name.localeCompare(b.name));
 
       if (stations.length === 1) {
-        const selectedStation = {
+        this.setLocalStorage('selectedStation', {
           id: stations[0].id,
           name: stations[0].name
-        };
-
-        this.setLocalStorage('selectedStation', selectedStation);
+        });
       }
 
       const selectedStation = this.getLocalStorage('selectedStation');
@@ -586,7 +580,7 @@ class Client extends React.Component<IProps, IState> {
       });
     } catch (error) {
       LOGGER.error('Error while getting processes and stations', error);
-      this.setState({ error: getLocaleString('Error occurred while getting processes and stations.')});
+      this.setState({ error: I18n.get('error.get.processes.stations')});
     }
   }
 
@@ -620,17 +614,20 @@ class Client extends React.Component<IProps, IState> {
       }
 
       if (devices.length === 1) {
-        const selectedDevice = {
+        const initSelectedDevice = {
           id: devices[0].id,
           name: devices[0].name
         };
 
-        this.setLocalStorage('selectedDevice', selectedDevice);
-        this.setState({ selectedDevice });
+        this.setLocalStorage('selectedDevice', initSelectedDevice);
+        this.setState({ selectedDevice: initSelectedDevice });
       }
 
       const selectedDevice = this.getLocalStorage('selectedDevice');
-      if (selectedDevice && selectedDevice.id && selectedDevice.id !== '') {
+      if (
+        selectedDevice && selectedDevice.id && selectedDevice.id !== '' &&
+        selectedProcess && selectedProcess.id && selectedProcess.id !== ''
+      ) {
         this.getEvents(selectedProcess);
         this.getIssues(selectedDevice, selectedProcess);
       }
@@ -639,7 +636,7 @@ class Client extends React.Component<IProps, IState> {
       this.setState({ devices });
     } catch (error) {
       LOGGER.error('Error while getting devices', error);
-      this.setState({ error: getLocaleString('Error occurred while getting devices.')});
+      this.setState({ error: I18n.get('error.get.devices')});
     }
   }
 
@@ -710,7 +707,7 @@ class Client extends React.Component<IProps, IState> {
       });
     } catch (error) {
       LOGGER.error('Error while getting issues', error);
-      this.setState({ error: getLocaleString('Error occurred while getting issues.')});
+      this.setState({ error: I18n.get('error.get.issues')});
     }
   }
 
@@ -741,7 +738,7 @@ class Client extends React.Component<IProps, IState> {
       this.setState({ events });
     } catch (error) {
       LOGGER.error('Error while getting events', error);
-      this.setState({ error: getLocaleString('Error occurred while getting events.')});
+      this.setState({ error: I18n.get('error.get.events')});
     }
 
     this.setState({
@@ -963,7 +960,7 @@ class Client extends React.Component<IProps, IState> {
           <Row>
             <Col>
               <Breadcrumb>
-                <Breadcrumb.Item active>{ getLocaleString('Client') }</Breadcrumb.Item>
+                <Breadcrumb.Item active>{ I18n.get('menu.client') }</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -974,9 +971,9 @@ class Client extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} xs={6} sm={3} md={2} controlId="siteSelect">
-                        <Form.Label>{ getLocaleString('Site Name') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.site.name') }</Form.Label>
                         <Form.Control as="select" value={this.state.selectedSite.name} onChange={this.handleSiteChange}>
-                          <option data-key="" key="none-site" value="">{ getLocaleString('Select Site') }</option>
+                          <option data-key="" key="none-site" value="">{ I18n.get('text.select.site') }</option>
                           {
                             this.state.sites.map((site: IGeneralQueryData) => {
                               return (
@@ -987,9 +984,9 @@ class Client extends React.Component<IProps, IState> {
                         </Form.Control>
                       </Form.Group>
                       <Form.Group as={Col} xs={6} sm={3} md={2} controlId="areaSelect">
-                        <Form.Label>{ getLocaleString('Area Name') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.area.name') }</Form.Label>
                         <Form.Control as="select" value={this.state.selectedArea.name} onChange={this.handleAreaChange}>
-                          <option data-key="" key="none-area" value="">{ getLocaleString('Select Area') }</option>
+                          <option data-key="" key="none-area" value="">{ I18n.get('text.select.area') }</option>
                           {
                             this.state.areas.map((area: IGeneralQueryData) => {
                               return (
@@ -1000,9 +997,9 @@ class Client extends React.Component<IProps, IState> {
                         </Form.Control>
                       </Form.Group>
                       <Form.Group as={Col} xs={6} sm={3} md={2} controlId="processSelect">
-                        <Form.Label>{ getLocaleString('Process Name') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.process.name') }</Form.Label>
                         <Form.Control as="select" value={this.state.selectedProcess.name} onChange={this.handleProcessChange}>
-                          <option data-key="" key="none-process" value="">{ getLocaleString('Select Process') }</option>
+                          <option data-key="" key="none-process" value="">{ I18n.get('text.select.process') }</option>
                           {
                             this.state.processes.map((process: IGeneralQueryData) => {
                               return (
@@ -1013,9 +1010,9 @@ class Client extends React.Component<IProps, IState> {
                         </Form.Control>
                       </Form.Group>
                       <Form.Group as={Col} xs={6} sm={3} md={2} controlId="stationSelect">
-                        <Form.Label>{ getLocaleString('Station Name') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.station.name') }</Form.Label>
                         <Form.Control as="select" value={this.state.selectedStation.name} onChange={this.handleStationChange}>
-                          <option data-key="" key="none-station" value="">{ getLocaleString('Select Station') }</option>
+                          <option data-key="" key="none-station" value="">{ I18n.get('text.select.station') }</option>
                           {
                             this.state.stations.map((station: IGeneralQueryData) => {
                               return (
@@ -1026,9 +1023,9 @@ class Client extends React.Component<IProps, IState> {
                         </Form.Control>
                       </Form.Group>
                       <Form.Group as={Col} xs={6} sm={3} md={2} controlId="deviceSelect">
-                        <Form.Label>{ getLocaleString('Device Name') }</Form.Label>
+                        <Form.Label>{ I18n.get('text.device.name') }</Form.Label>
                         <Form.Control as="select" value={this.state.selectedDevice.name} onChange={this.handleDeviceChange}>
-                          <option data-key="" key="none-device" value="">{ getLocaleString('Select Device') }</option>
+                          <option data-key="" key="none-device" value="">{ I18n.get('text.select.device') }</option>
                           {
                             this.state.devices.map((device: IGeneralQueryData) => {
                               return (
@@ -1050,7 +1047,7 @@ class Client extends React.Component<IProps, IState> {
             {
               this.state.showEvent && this.state.events.length === 0 && !this.state.isLoading &&
               <Jumbotron>
-                <p>{ getLocaleString('No events found for the selected process. Please contact your administrator.') }</p>
+                <p>{ I18n.get('text.no.events.for.process') }</p>
               </Jumbotron>
             }
             {
@@ -1097,7 +1094,7 @@ class Client extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ getLocaleString('Error') }:</strong><br />
+                  <strong>{ I18n.get('error') }:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>

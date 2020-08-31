@@ -12,7 +12,8 @@
  *********************************************************************************************************************/
 
 // Import React and Amplify packages
-import * as React from 'react';
+import React from 'react';
+import { I18n } from 'aws-amplify';
 import { VerifyContact } from 'aws-amplify-react';
 
 // Import React Bootstrap components
@@ -22,9 +23,6 @@ import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
-
-// Import custom setting
-import { getLocaleString } from '../../util/CustomUtil';
 
 /**
  * Customized Amplify verify contact
@@ -66,7 +64,7 @@ class CustomVerifyContact extends VerifyContact {
    */
   checkRadio() {
     if (!this.isEmailChecked) {
-      this.error(getLocaleString('E-Mail not selected.'));
+      this.error(I18n.get('error.select.email'));
     } else {
       this.verify();
     }
@@ -77,7 +75,7 @@ class CustomVerifyContact extends VerifyContact {
    */
   checkCode() {
     if (this.code.trim() === '') {
-      this.error(getLocaleString('Confirmation code cannot be empty.'));
+      this.error(I18n.get('error.empty.confirmation.code'));
     } else {
       this.submit();
     }
@@ -91,7 +89,7 @@ class CustomVerifyContact extends VerifyContact {
     return (
       <Form.Group as={Row} controlId="formUnverifed" key="formUnverifed" className="justify-content-md-center">
         <Col md={6}>
-          <Form.Check type="radio" name="contact" value="email" label={ getLocaleString('E-Mail') } onChange={(event: any) => { this.handleInputChange(event); this.isEmailChecked = true }} />
+          <Form.Check type="radio" name="contact" value="email" label={ I18n.get('text.email') } onChange={(event: any) => { this.handleInputChange(event); this.isEmailChecked = true }} />
         </Col>
       </Form.Group>
     );
@@ -105,10 +103,10 @@ class CustomVerifyContact extends VerifyContact {
     return (
       <Form.Group as={Row} controlId="formCode" key="formCode">
         <Form.Label column md={3}>
-          { getLocaleString('Code') }
+          { I18n.get('text.code') }
         </Form.Label>
         <Col md={9}>
-          <Form.Control key="code" name="code" type="text" autoComplete="off" placeholder={ getLocaleString('Code') } onKeyDown={this.handleKeyDown} onChange={(event: any) => { this.handleInputChange(event); this.code = event.target.value }} />
+          <Form.Control key="code" name="code" type="text" autoComplete="off" placeholder={ I18n.get('text.code') } onKeyDown={this.handleKeyDown} onChange={(event: any) => { this.handleInputChange(event); this.code = event.target.value }} />
         </Col>
       </Form.Group>
     );
@@ -129,7 +127,7 @@ class CustomVerifyContact extends VerifyContact {
         <Container>
           <Row className="justify-content-md-center">
             <Col lg={6} md={8} xs={12}>
-              <h4>{ getLocaleString('Account recovery requires verified contact information') }</h4>
+              <h4>{ I18n.get('text.account.recovery') }</h4>
             </Col>
           </Row>
           <Row className="justify-content-md-center">
@@ -139,11 +137,11 @@ class CustomVerifyContact extends VerifyContact {
                   this.state.verifyAttr ? this.codeView() : this.verifyView()
                 }
                 <Form.Group as={Row} className="justify-content-between">
-                  <Button key="buttonSkip" onClick={() => this.changeState('signedIn', authData)}>{ getLocaleString('Skip') }</Button>
+                  <Button key="buttonSkip" onClick={() => this.changeState('signedIn', authData)}>{ I18n.get('button.skip') }</Button>
                   {
                     this.state.verifyAttr ?
-                    <Button key="buttonSubmit" variant="primary" onClick={this.checkCode}>{ getLocaleString('Submit') }</Button> :
-                    <Button key="buttonVerify" variant="primary" onClick={this.checkRadio}>{ getLocaleString('Send') }</Button>
+                    <Button key="buttonSubmit" variant="primary" onClick={this.checkCode}>{ I18n.get('button.submit') }</Button> :
+                    <Button key="buttonVerify" variant="primary" onClick={this.checkRadio}>{ I18n.get('button.send') }</Button>
                   }
                 </Form.Group>
               </Form>

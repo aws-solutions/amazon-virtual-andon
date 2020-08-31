@@ -13,6 +13,7 @@
 
 // Import React and Amplify packages
 import React from 'react';
+import { I18n } from 'aws-amplify';
 import { RequireNewPassword } from 'aws-amplify-react';
 
 // Import React Bootstrap components
@@ -22,9 +23,6 @@ import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
-
-// Import custom setting
-import { getLocaleString } from '../../util/CustomUtil';
 
 /**
  * Customized Amplify required new password
@@ -62,9 +60,9 @@ class CustomRequireNewPassword extends RequireNewPassword {
    */
   checkPassword() {
     if (this.password.trim() === '') {
-      this.error(getLocaleString('Password cannot be empty.'));
+      this.error(I18n.get('error.empty.password'));
     } else if (this.password !== this.confirmPassword) {
-      this.error(getLocaleString('Password and confirm password are different.'));
+      this.error(I18n.get('error.check.password.confirm.password'));
     } else {
       this.change();
     }
@@ -84,7 +82,7 @@ class CustomRequireNewPassword extends RequireNewPassword {
         <Container>
           <Row className="justify-content-md-center">
             <Col lg={6} md={8} xs={12}>
-              <h4>{ getLocaleString('Change Password') }</h4>
+              <h4>{ I18n.get('text.change.password') }</h4>
             </Col>
           </Row>
           <Row className="justify-content-md-center">
@@ -92,23 +90,23 @@ class CustomRequireNewPassword extends RequireNewPassword {
               <Form>
                 <Form.Group as={Row} controlId="formPassword" key="formPassword">
                   <Form.Label column md={3}>
-                    { getLocaleString('New Password') }
+                    { I18n.get('text.new.password') }
                   </Form.Label>
                   <Col md={9}>
-                    <Form.Control key="password" name="password" type="password" placeholder={ getLocaleString('New Password') } onKeyDown={this.handleKeyDown} onChange={(event: any) => { this.handleInputChange(event); this.password = event.target.value }} />
+                    <Form.Control key="password" name="password" type="password" placeholder={ I18n.get('text.new.password') } onKeyDown={this.handleKeyDown} onChange={(event: any) => { this.handleInputChange(event); this.password = event.target.value }} />
                   </Col>
                 </Form.Group>
                 <Form.Group as={Row} controlId="formConfirmPassword" key="formConfirmPassword">
                   <Form.Label column md={3}>
-                    { getLocaleString('Confirm Password') }
+                    { I18n.get('text.confirm.passwrod') }
                   </Form.Label>
                   <Col md={9}>
-                    <Form.Control key="confirmPassword" name="confirmPassword" type="password" placeholder={ getLocaleString('Confirm Password') } onKeyDown={this.handleKeyDown} onChange={(event: any) => { this.confirmPassword = event.target.value }} />
+                    <Form.Control key="confirmPassword" name="confirmPassword" type="password" placeholder={ I18n.get('text.confirm.passwrod') } onKeyDown={this.handleKeyDown} onChange={(event: any) => { this.confirmPassword = event.target.value }} />
                   </Col>
                 </Form.Group>
                 <Form.Group as={Row} className="justify-content-between">
-                  <Button key="buttonBackToSignIn" variant="link" onClick={() => this.changeState('signIn')}>{ getLocaleString('Back to Sign In') }</Button>
-                  <Button key="buttonSend" className="pull-right" variant="primary" onClick={this.checkPassword}>{ getLocaleString('Change') }</Button>
+                  <Button key="buttonBackToSignIn" variant="link" onClick={() => this.changeState('signIn')}>{ I18n.get('text.back.to.sign.in') }</Button>
+                  <Button key="buttonSend" className="pull-right" variant="primary" onClick={this.checkPassword}>{ I18n.get('button.change') }</Button>
                 </Form.Group>
               </Form>
             </Col>

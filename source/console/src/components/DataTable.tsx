@@ -14,6 +14,7 @@
 
 // Import React and Amplify packages
 import React from 'react';
+import { I18n } from 'aws-amplify';
 
 // Import React Bootstrap components
 import Row from 'react-bootstrap/Row';
@@ -25,7 +26,7 @@ import Pagination from 'react-bootstrap/Pagination';
 
 // Import custom setting
 import { SortBy } from './Enums';
-import { getLocaleString, sortByName } from '../util/CustomUtil';
+import { sortByName } from '../util/CustomUtil';
 import EmptyCol from '../components/EmptyCol';
 import * as uuid from 'uuid';
 
@@ -357,7 +358,7 @@ class DataTable extends React.Component<IProps, IState> {
                 <Col md={3}>
                   <Form.Group as={Row} controlId="showCountId">
                     <Form.Label column sm={6}>
-                      { getLocaleString('Page Size') }
+                      { I18n.get('text.page.size') }
                     </Form.Label>
                     <Col sm={6}>
                       <Form.Control as="select" defaultValue={pageSize} onChange={this.handlePageSizeChange}>
@@ -370,7 +371,7 @@ class DataTable extends React.Component<IProps, IState> {
                   </Form.Group>
                 </Col>
                 <Col md={3}>
-                  <Form.Control id="searchKeyword" placeholder={ getLocaleString('Search Keyword') } onChange={this.handleSearchKeywordChange} />
+                  <Form.Control id="searchKeyword" placeholder={ I18n.get('text.search.keyword') } onChange={this.handleSearchKeywordChange} />
                 </Col>
               </Form.Row>
             </Form>
@@ -381,7 +382,7 @@ class DataTable extends React.Component<IProps, IState> {
           {
             headers.length === 0 &&
             <Jumbotron>
-              <p>{ getLocaleString('No header found DataTable.') }</p>
+              <p>{ I18n.get('text.no.header.datatable') }</p>
             </Jumbotron>
           }
           {
@@ -390,15 +391,15 @@ class DataTable extends React.Component<IProps, IState> {
               <Form.Text>
                 <span className="required-field">*</span>
                 <EmptyCol />
-                <strong>{ getLocaleString('Sort By') }</strong>:
+                <strong>{ I18n.get('text.sort.by') }</strong>:
                 <EmptyCol />
                 { headers.filter(header => header.key === sort.key).length > 0 ? headers.filter(header => header.key === sort.key)[0].name : 'N/A' },
                 <EmptyCol />
-                <strong>{ getLocaleString('Order') }</strong>:
+                <strong>{ I18n.get('text.order') }</strong>:
                 <EmptyCol />
-                { sort.order === SortBy.Asc ? getLocaleString('Ascending') : getLocaleString('Descending') } -
+                { sort.order === SortBy.Asc ? I18n.get('text.order.asc') : I18n.get('text.order.desc') } -
                 <EmptyCol />
-                { getLocaleString('Click each column header to change the data sort.')}
+                { I18n.get('text.sort.datatable')}
               </Form.Text>
               <Table striped bordered>
                 <thead>
@@ -416,7 +417,7 @@ class DataTable extends React.Component<IProps, IState> {
                 {
                   data.filter(datum => datum.visible).slice(startIndex, endIndex).length === 0 &&
                   <tr>
-                    <td colSpan={headers.length}>{ getLocaleString('No data') }</td>
+                    <td colSpan={headers.length}>{ I18n.get('text.no.data') }</td>
                   </tr>
                 }
                 {

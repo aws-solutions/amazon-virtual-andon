@@ -73,7 +73,8 @@ const WEB_CONFIG = `const andon_config = {
   "solutions_metrics_endpoint": "https://metrics.awssolutionsbuilder.com/page",
   "solutions_solutionId": "SOLUTION_ID",
   "solutions_solutionUuId": "mock-uuid",
-  "solutions_version": "test-version"
+  "solutions_version": "test-version",
+  "default_language": "English"
 };`;
 
 // Import index.js
@@ -119,7 +120,8 @@ describe('index', function() {
         "ServiceToken": "LAMBDA_ARN",
         "SolutionId": "SOLUTION_ID",
         "UUID": "mock-uuid",
-        "Version": "test-version"
+        "Version": "test-version",
+        "DefaultLanguage": "English"
       }
     };
 
@@ -267,7 +269,8 @@ describe('index', function() {
           "SolutionsSendMetrics": "Yes",
           "SolutionId": "SOLUTION_ID",
           "SolutionUuid": "mock-uuid",
-          "SolutionVersion": "test-version"
+          "SolutionVersion": "test-version",
+          "DefaultLanguage": "English"
         }
       }
     };

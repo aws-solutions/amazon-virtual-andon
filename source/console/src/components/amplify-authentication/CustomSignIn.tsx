@@ -13,6 +13,7 @@
 
 // Import React and Amplify packages
 import React from 'react';
+import { I18n } from 'aws-amplify';
 import { SignIn } from 'aws-amplify-react';
 
 // Import React Bootstrap components
@@ -22,9 +23,6 @@ import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
-
-// Import custom setting
-import { getLocaleString } from '../../util/CustomUtil';
 
 /**
  * Customized Amplify sign in
@@ -63,7 +61,7 @@ class CustomSignIn extends SignIn {
    */
   checkUsername() {
     if (this.username.trim() === '') {
-      this.error(getLocaleString('Username cannot be empty.'));
+      this.error(I18n.get('error.empty.username'));
     } else {
       this.checkPassword();
     }
@@ -74,7 +72,7 @@ class CustomSignIn extends SignIn {
    */
   checkPassword() {
     if (this.password.trim() === '') {
-      this.error(getLocaleString('Password cannot be empty.'));
+      this.error(I18n.get('error.empty.password'));
     } else {
       this.signIn();
     }
@@ -94,7 +92,7 @@ class CustomSignIn extends SignIn {
         <Container>
           <Row className="justify-content-md-center">
             <Col lg={6} md={8} xs={12}>
-              <h4>{ getLocaleString('Sign in to your account') }</h4>
+              <h4>{ I18n.get('text.sign.into.account') }</h4>
             </Col>
           </Row>
           <Row className="justify-content-md-center">
@@ -102,25 +100,25 @@ class CustomSignIn extends SignIn {
               <Form>
                 <Form.Group as={Row} controlId="formUsername" key="formUsername">
                   <Form.Label column md={3}>
-                    { getLocaleString('E-Mail') }
+                    { I18n.get('text.email') }
                   </Form.Label>
                   <Col md={9}>
-                    <Form.Control key="username" name="username" type="text" placeholder={ getLocaleString('Enter your E-Mail') } onChange={(event: any) => { this.handleInputChange(event); this.username = event.target.value }} />
+                    <Form.Control key="username" name="username" type="text" placeholder={ I18n.get('input.email') } onChange={(event: any) => { this.handleInputChange(event); this.username = event.target.value }} />
                   </Col>
                 </Form.Group>
                 <Form.Group as={Row} controlId="formPassword" key="formPassword">
                   <Form.Label column md={3}>
-                    { getLocaleString('Password') }
+                    { I18n.get('text.password') }
                   </Form.Label>
                   <Col md={9}>
-                    <Form.Control key="password" name="password" type="password" placeholder={ getLocaleString('Enter your password') } onKeyDown={this.handleKeyDown} onChange={(event: any) => { this.handleInputChange(event); this.password = event.target.value }} />
+                    <Form.Control key="password" name="password" type="password" placeholder={ I18n.get('input.password') } onKeyDown={this.handleKeyDown} onChange={(event: any) => { this.handleInputChange(event); this.password = event.target.value }} />
                   </Col>
                 </Form.Group>
                 <Form.Group as={Row} className="justify-content-between">
                   <div>
-                  { getLocaleString('Forgot password') }? <Button variant="link" onClick={() => this.changeState('forgotPassword')}>{ getLocaleString('Reset password') }</Button>
+                  { I18n.get('text.forgot.password') }? <Button variant="link" onClick={() => this.changeState('forgotPassword')}>{ I18n.get('button.reset.password') }</Button>
                   </div>
-                  <Button className="justify-content-end" variant="primary" onClick={this.checkUsername}>{ getLocaleString('Sign In') }</Button>
+                  <Button className="justify-content-end" variant="primary" onClick={this.checkUsername}>{ I18n.get('button.sign.in') }</Button>
                 </Form.Group>
               </Form>
             </Col>
