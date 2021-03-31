@@ -13,6 +13,7 @@
 
 // Import React, Amplify, and AWS SDK packages
 import { API, graphqlOperation } from 'aws-amplify';
+import { GraphQLResult } from '@aws-amplify/api-graphql';
 import { Logger } from '@aws-amplify/core';
 import Auth from "@aws-amplify/auth";
 import SNS from 'aws-sdk/clients/sns';
@@ -46,22 +47,24 @@ class GraphQLCommon {
   async list(queryName: string, query: string, variables?: any): Promise<any[]> {
     try {
       let result: any[] = [];
-      let response = await API.graphql(graphqlOperation(query, variables));
-      result = response.data[queryName].items;
+      let response = await API.graphql(graphqlOperation(query, variables)) as GraphQLResult;
+      let data: any = response.data;
+      result = data[queryName].items;
 
       // Set nextToken
       if (!variables) {
         variables = {};
       }
-      variables.nextToken = response.data[queryName].nextToken;
+      variables.nextToken = data[queryName].nextToken;
 
       while (variables.nextToken !== null) {
-        response = await API.graphql(graphqlOperation(query, variables));
+        response = await API.graphql(graphqlOperation(query, variables)) as GraphQLResult;
+        data = response.data;
         result = [
           ...result,
-          ...response.data[queryName].items
+          ...data[queryName].items
         ];
-        variables.nextToken = response.data[queryName].nextToken;
+        variables.nextToken = data[queryName].nextToken;
       }
 
       return result;
@@ -167,8 +170,10 @@ class GraphQLCommon {
    */
   async delete(queryName: string, query: string, variables: any): Promise<any> {
     try {
-      const response = await API.graphql(graphqlOperation(query, variables));
-      return response.data[queryName];
+      const response = await API.graphql(graphqlOperation(query, variables)) as GraphQLResult;
+      const data: any = response.data;
+
+      return data[queryName];
     } catch (error) {
       LOGGER.error(error);
       throw error;

@@ -15,6 +15,7 @@
 import React from 'react';
 import { LinkContainer } from 'react-router-bootstrap';
 import { API, graphqlOperation, I18n } from 'aws-amplify';
+import { GraphQLResult } from '@aws-amplify/api-graphql';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -142,9 +143,10 @@ class Area extends React.Component<IProps, IState> {
     try {
       // Graphql operation to get a site
       const { siteId } = this.props.match.params;
-      const response = await API.graphql(graphqlOperation(getSite, { id: siteId }));
-      const siteName = `: ${response.data.getSite.name}`;
-      let areas: IGeneralQueryData[] = response.data.getSite.area.items;
+      const response = await API.graphql(graphqlOperation(getSite, { id: siteId })) as GraphQLResult;
+      const data: any = response.data;
+      const siteName = `: ${data.getSite.name}`;
+      let areas: IGeneralQueryData[] = data.getSite.area.items;
 
       // Make all areas visible.
       makeAllVisible(areas);
@@ -223,8 +225,9 @@ class Area extends React.Component<IProps, IState> {
         __typename: 'Area'
       };
 
-      const response = await API.graphql(graphqlOperation(createArea, input));
-      let newArea: IGeneralQueryData = response.data.createArea;
+      const response = await API.graphql(graphqlOperation(createArea, input)) as GraphQLResult;
+      const data: any = response.data;
+      let newArea: IGeneralQueryData = data.createArea;
       newArea.visible = searchKeyword === '' || newArea.name.toLowerCase().includes(searchKeyword.toLowerCase());
 
       const newAreas = [...areas, newArea];

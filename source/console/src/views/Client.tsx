@@ -14,6 +14,7 @@
 // Import React and Amplify packages
 import React from 'react';
 import { API, graphqlOperation, PubSub, Auth, I18n } from 'aws-amplify';
+import { GraphQLResult } from '@aws-amplify/api-graphql';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -183,6 +184,7 @@ class Client extends React.Component<IProps, IState> {
     this.getSites();
 
     // Subscribe to new issues
+    // @ts-ignore
     this.createIssueSubscription = API.graphql(graphqlOperation(onCreateIssue)).subscribe({
       next: (response: any) => {
         const { issues, selectedSite, selectedArea, selectedProcess, selectedStation, selectedDevice } = this.state;
@@ -219,6 +221,7 @@ class Client extends React.Component<IProps, IState> {
     });
 
     // Subscribe to update issues
+    // @ts-ignore
     this.updateIssuesubscription = API.graphql(graphqlOperation(onUpdateIssue)).subscribe({
       next: (response: any) => {
         const { issues, selectedSite, selectedArea, selectedProcess, selectedStation, selectedDevice } = this.state;
@@ -265,6 +268,7 @@ class Client extends React.Component<IProps, IState> {
     });
 
     // Subscribe to put permission
+    // @ts-ignore
     this.putPermissionSubscription = API.graphql(graphqlOperation(onPutPermission)).subscribe({
       next: (response: any) => {
         const putPermission = response.value.data.onPutPermission;
@@ -280,6 +284,7 @@ class Client extends React.Component<IProps, IState> {
     });
 
     // Subscribe to delete permission
+    // @ts-ignore
     this.deletePermissionSubscription = API.graphql(graphqlOperation(onDeletePermission)).subscribe({
       next: (response: any) => {
         const newPermission = response.value.data.onDeletePermission;
@@ -299,10 +304,10 @@ class Client extends React.Component<IProps, IState> {
    * React componentWillUnmount function
    */
   componentWillUnmount() {
-    this.updateIssuesubscription.unsubscribe();
-    this.createIssueSubscription.unsubscribe();
-    this.putPermissionSubscription.unsubscribe();
-    this.deletePermissionSubscription.unsubscribe();
+    if (this.updateIssuesubscription) this.updateIssuesubscription.unsubscribe();
+    if (this.createIssueSubscription) this.createIssueSubscription.unsubscribe();
+    if (this.putPermissionSubscription) this.putPermissionSubscription.unsubscribe();
+    if (this.deletePermissionSubscription) this.deletePermissionSubscription.unsubscribe();
   }
 
   /**
@@ -409,9 +414,10 @@ class Client extends React.Component<IProps, IState> {
    */
   async getPermission() {
     if (this.userId && this.userId !== '' && this.userGroups.length === 0) {
-      const response = await API.graphql(graphqlOperation(getPermission, { userId: this.userId }));
-      if (response.data.getPermission) {
-        const permission: IPermission = response.data.getPermission;
+      const response = await API.graphql(graphqlOperation(getPermission, { userId: this.userId })) as GraphQLResult;
+      const data: any = response.data;
+      if (data.getPermission) {
+        const permission: IPermission = data.getPermission;
         permission.username = '';
 
         this.setState({ permission });

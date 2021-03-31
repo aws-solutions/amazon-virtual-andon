@@ -15,6 +15,7 @@
 import React from 'react';
 import { LinkContainer } from 'react-router-bootstrap';
 import { API, graphqlOperation, I18n } from 'aws-amplify';
+import { GraphQLResult } from '@aws-amplify/api-graphql';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -146,11 +147,12 @@ class Process extends React.Component<IProps, IState> {
     try {
       // Graphql operation to get a site
       const { areaId } = this.props.match.params;
-      const response = await API.graphql(graphqlOperation(getArea, { id: areaId }));
-      const siteId = response.data.getArea.site.id;
-      const siteName = `: ${response.data.getArea.site.name}`;
-      const areaName = `: ${response.data.getArea.name}`;
-      let processes: IGeneralQueryData[] = response.data.getArea.process.items;
+      const response = await API.graphql(graphqlOperation(getArea, { id: areaId })) as GraphQLResult;
+      const data: any = response.data;
+      const siteId = data.getArea.site.id;
+      const siteName = `: ${data.getArea.site.name}`;
+      const areaName = `: ${data.getArea.name}`;
+      let processes: IGeneralQueryData[] = data.getArea.process.items;
 
       // Make all processes visible.
       makeAllVisible(processes);
@@ -230,8 +232,9 @@ class Process extends React.Component<IProps, IState> {
         __typename: 'Process'
       };
 
-      const response = await API.graphql(graphqlOperation(createProcess, input));
-      let newProcess: IGeneralQueryData = response.data.createProcess;
+      const response = await API.graphql(graphqlOperation(createProcess, input)) as GraphQLResult;
+      const data: any = response.data;
+      let newProcess: IGeneralQueryData = data.createProcess;
       newProcess.visible = searchKeyword === '' || newProcess.name.toLowerCase().includes(searchKeyword.toLowerCase());
 
       this.setState({

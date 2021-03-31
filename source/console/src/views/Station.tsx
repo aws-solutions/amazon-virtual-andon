@@ -15,6 +15,7 @@
 import React from 'react';
 import { LinkContainer } from 'react-router-bootstrap';
 import { API, graphqlOperation, I18n } from 'aws-amplify';
+import { GraphQLResult } from '@aws-amplify/api-graphql';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -146,11 +147,12 @@ class Station extends React.Component<IProps, IState> {
     try {
       // Graphql operation to get a site
       const { areaId } = this.props.match.params;
-      const response = await API.graphql(graphqlOperation(getArea, { id: areaId }));
-      const siteId = response.data.getArea.site.id;
-      const siteName = `: ${response.data.getArea.site.name}`;
-      const areaName = `: ${response.data.getArea.name}`;
-      let stations: IGeneralQueryData[] = response.data.getArea.station.items;
+      const response = await API.graphql(graphqlOperation(getArea, { id: areaId })) as GraphQLResult;
+      const data: any = response.data;
+      const siteId = data.getArea.site.id;
+      const siteName = `: ${data.getArea.site.name}`;
+      const areaName = `: ${data.getArea.name}`;
+      let stations: IGeneralQueryData[] = data.getArea.station.items;
 
       // Make all stations visible.
       makeAllVisible(stations);
@@ -230,8 +232,9 @@ class Station extends React.Component<IProps, IState> {
         __typename: 'Station'
       };
 
-      const response = await API.graphql(graphqlOperation(createStation, input));
-      let newStation: IGeneralQueryData = response.data.createStation;
+      const response = await API.graphql(graphqlOperation(createStation, input)) as GraphQLResult;
+      const data: any = response.data;
+      let newStation: IGeneralQueryData = data.createStation;
       newStation.visible = searchKeyword === '' || newStation.name.toLowerCase().includes(searchKeyword.toLowerCase());
 
       const newStations = [...stations, newStation]

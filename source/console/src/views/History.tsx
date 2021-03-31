@@ -107,6 +107,7 @@ class History extends React.Component<IProps, IState> {
     this.getSites();
 
     // Subscribe to new issues
+    // @ts-ignore
     this.createIssueSubscription = API.graphql(graphqlOperation(onCreateIssue)).subscribe({
       next: (response: any) => {
         const newIssue = response.value.data.onCreateIssue;
@@ -125,6 +126,7 @@ class History extends React.Component<IProps, IState> {
     });
 
     // Subscribe to update issues
+    // @ts-ignore
     this.updateIssuesubscription = API.graphql(graphqlOperation(onUpdateIssue)).subscribe({
       next: (response: any) => {
         const { issues } = this.state;
@@ -152,8 +154,8 @@ class History extends React.Component<IProps, IState> {
    * React componentWillUnmount function
    */
   componentWillUnmount() {
-    this.updateIssuesubscription.unsubscribe();
-    this.createIssueSubscription.unsubscribe();
+    if (this.updateIssuesubscription) this.updateIssuesubscription.unsubscribe();
+    if (this.createIssueSubscription) this.createIssueSubscription.unsubscribe();
   }
 
   /**

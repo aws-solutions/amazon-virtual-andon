@@ -15,6 +15,7 @@
 import React from 'react';
 import { LinkContainer } from 'react-router-bootstrap';
 import { API, graphqlOperation, I18n } from 'aws-amplify';
+import { GraphQLResult } from '@aws-amplify/api-graphql';
 import { Logger } from '@aws-amplify/core';
 import Auth from "@aws-amplify/auth";
 import SNS from 'aws-sdk/clients/sns';
@@ -192,6 +193,7 @@ class Event extends React.Component<IProps, IState> {
     await this.getRootCauses();
 
     // Subscribe to create root cause
+    // @ts-ignore
     this.createRootCauseSubscription = API.graphql(graphqlOperation(onCreateRootCause)).subscribe({
       next: (response: any) => {
         const { rootCauses } = this.state;
@@ -211,6 +213,7 @@ class Event extends React.Component<IProps, IState> {
     });
 
     // Subscribe to delete root cause
+    // @ts-ignore
     this.deleteRootCauseSubscription = API.graphql(graphqlOperation(onDeleteRootCause)).subscribe({
       next: (response: any) => {
         const { rootCauses } = this.state;
@@ -236,8 +239,8 @@ class Event extends React.Component<IProps, IState> {
    * React componentWillUnmount function
    */
   componentWillUnmount() {
-    this.createRootCauseSubscription.unsubscribe();
-    this.deleteRootCauseSubscription.unsubscribe();
+    if (this.createRootCauseSubscription) this.createRootCauseSubscription.unsubscribe();
+    if (this.deleteRootCauseSubscription) this.deleteRootCauseSubscription.unsubscribe();
   }
 
   /**
@@ -252,8 +255,9 @@ class Event extends React.Component<IProps, IState> {
     try {
       // Graphql operation to get a site
       const { processId } = this.props.match.params;
-      const response = await API.graphql(graphqlOperation(getProcess, { id: processId }));
-      const resultData = response.data.getProcess;
+      const response = await API.graphql(graphqlOperation(getProcess, { id: processId })) as GraphQLResult;
+      const data: any = response.data;
+      const resultData = data.getProcess;
 
       const siteId = resultData.area.site.id;
       const siteName = `: ${resultData.area.site.name}`;
@@ -396,8 +400,9 @@ class Event extends React.Component<IProps, IState> {
           input.type = eventType;
         }
 
-        const response = await API.graphql(graphqlOperation(createEvent, input));
-        let newEvent: IEvent = response.data.createEvent;
+        const response = await API.graphql(graphqlOperation(createEvent, input)) as GraphQLResult;
+        const data: any = response.data;
+        let newEvent: IEvent = data.createEvent;
         newEvent.visible = searchKeyword === '' || newEvent.name.toLowerCase().includes(searchKeyword.toLowerCase());
 
         const newEvents = [...events, newEvent];
@@ -502,8 +507,9 @@ class Event extends React.Component<IProps, IState> {
         input.email = eventEmail;
       }
 
-      const response = await API.graphql(graphqlOperation(updateEvent, input));
-      let updatedEvent: IEvent = response.data.updateEvent;
+      const response = await API.graphql(graphqlOperation(updateEvent, input)) as GraphQLResult;
+      const data: any = response.data;
+      let updatedEvent: IEvent = data.updateEvent;
       updatedEvent.visible = searchKeyword === '' || updatedEvent.name.includes(searchKeyword);
 
       const index = events.findIndex((event: IEvent) => event.id === updatedEvent.id);

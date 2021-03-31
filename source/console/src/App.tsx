@@ -87,9 +87,7 @@ class App extends React.Component<IProps, IState> {
    * React componentWillUnmount function
    */
   componentWillUnmount() {
-    if (this.groupSubscription !== null) {
-      this.groupSubscription.unsubscribe();
-    }
+    if (this.groupSubscription) this.groupSubscription.unsubscribe();
   }
 
   /**
@@ -160,9 +158,6 @@ class App extends React.Component<IProps, IState> {
           error: () => {
             // If there's an error (e.g. connection closed), reload the window.
             window.location.reload();
-          },
-          close: () => {
-            LOGGER.info('Closing the subscription.');
           }
         });
       } catch (error) {

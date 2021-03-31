@@ -1,16 +1,16 @@
 {
   "name": "ava-issue-handler",
-  "version": "2.0.0",
+  "version": "2.1.1",
   "description": "Amazon Virtual Andon issue handler",
   "main": "index.js",
   "dependencies": {
     "aws-appsync": "^3.0.2",
     "graphql-tag": "^2.10.3",
-    "isomorphic-fetch": "^2.2.1"
+    "isomorphic-fetch": "^3.0.0"
   },
   "devDependencies": {
-    "aws-sdk": "2.585.0",
-    "jest": "^25.1.0"
+    "aws-sdk": "2.804.0",
+    "jest": "^26.6.3"
   },
   "scripts": {
     "pretest": "npm run build:init && npm install",

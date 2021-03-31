@@ -14,6 +14,7 @@
 // Import React and Amplify packages
 import React from 'react';
 import { API, graphqlOperation, I18n } from 'aws-amplify';
+import { GraphQLResult } from '@aws-amplify/api-graphql';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -119,6 +120,7 @@ class Observer extends React.Component<IProps, IState> {
     this.getSites();
 
     // Subscribe to new issues
+    // @ts-ignore
     this.createIssueSubscription = API.graphql(graphqlOperation(onCreateIssue)).subscribe({
       next: (response: any) => {
         const { issues, selectedSite, selectedArea, showIssue } = this.state;
@@ -139,6 +141,7 @@ class Observer extends React.Component<IProps, IState> {
     });
 
     // Subscribe to update issues
+    // @ts-ignore
     this.updateIssueSubscription = API.graphql(graphqlOperation(onUpdateIssue)).subscribe({
       next: (response: any) => {
         const { issues, selectedSite, selectedArea, showIssue } = this.state;
@@ -168,8 +171,8 @@ class Observer extends React.Component<IProps, IState> {
    * React componentWillUnmount function
    */
   componentWillUnmount() {
-    this.updateIssueSubscription.unsubscribe();
-    this.createIssueSubscription.unsubscribe();
+    if (this.updateIssueSubscription) this.updateIssueSubscription.unsubscribe();
+    if (this.createIssueSubscription) this.createIssueSubscription.unsubscribe();
   }
 
   /**
@@ -365,6 +368,7 @@ class Observer extends React.Component<IProps, IState> {
       issue.status = status;
       issue.expectedVersion = issue.version;
       const newVersion = issue.version + 1;
+      // @ts-ignore
       delete issue.version;
       delete issue.visible;
 
@@ -406,8 +410,9 @@ class Observer extends React.Component<IProps, IState> {
     // Get event
     const { eventId } = issue;
 
-    const response = await API.graphql(graphqlOperation(getEvent, { id: eventId }));
-    const rootCauses: string[] = response.data.getEvent.rootCauses ? response.data.getEvent.rootCauses : [];
+    const response = await API.graphql(graphqlOperation(getEvent, { id: eventId })) as GraphQLResult;
+    const data: any = response.data;
+    const rootCauses: string[] = data.getEvent.rootCauses ? data.getEvent.rootCauses : [];
 
     if (rootCauses.length > 0) {
       rootCauses.sort((a, b) => a.localeCompare(b));

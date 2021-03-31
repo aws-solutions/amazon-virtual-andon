@@ -14,6 +14,7 @@
 // Import React and Amplify packages
 import React from 'react';
 import { API, graphqlOperation, I18n } from 'aws-amplify';
+import { GraphQLResult } from '@aws-amplify/api-graphql';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -207,8 +208,9 @@ class Site extends React.Component<IProps, IState> {
         __typename: 'Site'
       };
 
-      const response = await API.graphql(graphqlOperation(createSite, input));
-      let newSite: IGeneralQueryData = response.data.createSite;
+      const response = await API.graphql(graphqlOperation(createSite, input)) as GraphQLResult;
+      const data: any = response.data;
+      let newSite: IGeneralQueryData = data.createSite;
       newSite.visible = searchKeyword === '' || newSite.name.toLowerCase().includes(searchKeyword.toLowerCase());
 
       const newSites = [...sites, newSite];

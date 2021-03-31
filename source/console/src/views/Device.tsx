@@ -15,6 +15,7 @@
 import React from 'react';
 import { LinkContainer } from 'react-router-bootstrap';
 import { API, graphqlOperation, I18n } from 'aws-amplify';
+import { GraphQLResult } from '@aws-amplify/api-graphql';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -149,8 +150,9 @@ class Device extends React.Component<IProps, IState> {
     try {
       // Graphql operation to get a site
       const { stationId } = this.props.match.params;
-      const response = await API.graphql(graphqlOperation(getStation, { id: stationId }));
-      const resultData = response.data.getStation;
+      const response = await API.graphql(graphqlOperation(getStation, { id: stationId })) as GraphQLResult;
+      const data: any = response.data;
+      const resultData = data.getStation;
 
       const siteId = resultData.area.site.id;
       const siteName = `: ${resultData.area.site.name}`;
@@ -236,8 +238,9 @@ class Device extends React.Component<IProps, IState> {
         __typename: 'Device'
       };
 
-      const response = await API.graphql(graphqlOperation(createDevice, input));
-      let newDevice: IGeneralQueryData = response.data.createDevice;
+      const response = await API.graphql(graphqlOperation(createDevice, input)) as GraphQLResult;
+      const data: any = response.data;
+      let newDevice: IGeneralQueryData = data.createDevice;
       newDevice.visible = searchKeyword === '' || newDevice.name.includes(searchKeyword);
 
       const newDevices = [...devices, newDevice];

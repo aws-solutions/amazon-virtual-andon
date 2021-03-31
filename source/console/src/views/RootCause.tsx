@@ -15,6 +15,7 @@
 import React from 'react';
 import { CSVLink } from 'react-csv';
 import { API, graphqlOperation, I18n } from 'aws-amplify';
+import { GraphQLResult } from '@aws-amplify/api-graphql';
 import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
@@ -172,8 +173,9 @@ class RootCause extends React.Component<IProps, IState> {
       // Graphql operation to register root cause
       const { rootCauses, rootCause, searchKeyword, sort } = this.state;
 
-      const response = await API.graphql(graphqlOperation(createRootCause, { rootCause }));
-      const newRootCause: IRootCause = response.data.createRootCause;
+      const response = await API.graphql(graphqlOperation(createRootCause, { rootCause })) as GraphQLResult;
+      const data: any = response.data;
+      const newRootCause: IRootCause = data.createRootCause;
       newRootCause.visible = searchKeyword === '' || newRootCause.rootCause.toLowerCase().includes(searchKeyword.toLowerCase());
 
       const newRootCauses = [...rootCauses, newRootCause];
