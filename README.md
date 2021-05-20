@@ -3,12 +3,11 @@ Amazon Virtual Andon is a self-service, cloud based andon system that makes it e
 any business to deploy andon in their factory. It is based on the same technology used
 by the Amazon Fulfillment centers built on AWS.
 
-The events occurring on the factory floor are captured either using a web-interface or connecting the machines to AWS IoT core that publish the events to a topic. These events are then stored in Dynamo DB. Using the IoT Rule Engine, the events are integrated with other AWS services such as SNS to send notifications about the events
-and Amazon Sagemaker for machine learning.
+The events occurring on the factory floor are captured either using a web-interface or connecting the machines to AWS IoT core that publish the events to a topic. These events are then stored in Dynamo DB. Using the IoT Rule Engine, the events are integrated with other AWS services such as SNS to send notifications about the events.
 
 The solution comes with 4 different user personas, Admin, Manager, Engineer and Associate.
 
-For more information and a detailed deployment guide visit the Amazon Virtual Andon solution at https://aws.amazon.com/solutions/amazon-virtual-andon/.
+For more information and a detailed deployment guide visit the Amazon Virtual Andon solution at https://aws.amazon.com/solutions/implementations/amazon-virtual-andon/.
 
 ## Architecture Overview
 ![Architecture](architecture.png)
@@ -72,9 +71,12 @@ The Amzon Virtual Andon solution consists of a management and owner console, IoT
   |- migration                            [ Migration template custom resource Lambda function ]
 ```
 
+## Collection of operational metrics
+This solution collects anonymous operational metrics to help AWS improve the quality and features of the solution. For more information, including how to disable this capability, please see the [implementation guide](https://docs.aws.amazon.com/solutions/latest/amazon-virtual-andon/appendix-g-collection-of-operational-metrics.html).
+
 ***
 
-Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

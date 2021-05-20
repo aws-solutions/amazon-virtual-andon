@@ -664,6 +664,13 @@ Resources:
         Variables:
           API_ENDPOINT: !GetAtt GraphQLStack.Outputs.GraphQLEndpoint
           ACCOUNT_ID: !Ref "AWS::AccountId"
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: The function does not require a VPC.
+          - id: W92
+            reason: The function does not require ReservedConcurrentExecution.
 
   HandleIssuesRule:
     Type: AWS::IoT::TopicRule
@@ -767,6 +774,13 @@ Resources:
       Environment:
         Variables:
           RetrySeconds: 5
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: The function does not require a VPC.
+          - id: W92
+            reason: The function does not require ReservedConcurrentExecution.
 
   CustomResourceRole:
     Type: AWS::IAM::Role

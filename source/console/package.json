@@ -2,7 +2,7 @@
   "name": "amazon-virtual-andon",
   "license": "Apache-2.0",
   "description": "Amazon Virtual Andon",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "private": true,
   "dependencies": {
     "@aws-amplify/pubsub": "~3.2.26",

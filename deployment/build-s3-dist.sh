@@ -81,7 +81,7 @@ echo "--------------------------------------------------------------------------
 echo "[Build] Amazon Virtual Andon Console"
 echo "------------------------------------------------------------------------------"
 cd $source_dir/console
-INLINE_RUNTIME_CHUNK=false npm run build
+GENERATE_SOURCEMAP=false INLINE_RUNTIME_CHUNK=false npm run build
 mkdir $build_dist_dir/console
 cp -r ./build/* $build_dist_dir/console
 

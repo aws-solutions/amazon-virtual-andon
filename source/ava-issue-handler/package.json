@@ -1,6 +1,6 @@
 {
   "name": "ava-issue-handler",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Amazon Virtual Andon issue handler",
   "main": "index.js",
   "dependencies": {

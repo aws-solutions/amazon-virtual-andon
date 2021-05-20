@@ -196,6 +196,13 @@ Resources:
       Environment:
         Variables:
           MigrationSnsTopicArn: !Ref MigraionSns
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: The function does not require a VPC.
+          - id: W92
+            reason: The function does not require ReservedConcurrentExecution.
 
   SendAnonymousUsage:
     Type: Custom::SendAnonymousUsage

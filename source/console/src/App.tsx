@@ -14,10 +14,11 @@
 // Import React, Amplify, and AWS SDK packages
 import React from 'react';
 import NotificationSystem from 'react-notification-system';
-import Amplify, { PubSub } from 'aws-amplify';
+import Amplify from 'aws-amplify';
 import { Authenticator } from 'aws-amplify-react';
 import { Logger } from '@aws-amplify/core';
 import Auth from '@aws-amplify/auth';
+import PubSub from '@aws-amplify/pubsub';
 import { AWSIoTProvider } from '@aws-amplify/pubsub/lib/Providers';
 import AWS from 'aws-sdk';
 
@@ -59,6 +60,7 @@ Amplify.addPluggable(new AWSIoTProvider({
   aws_pubsub_region: andon_config.aws_project_region,
   aws_pubsub_endpoint: andon_config.aws_iot_endpoint + '/mqtt'
 }));
+PubSub.configure(andon_config);
 
 /**
  * The default application

@@ -1,6 +1,6 @@
 {
   "name": "ava-custom-resource",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Amazon Virtual Andon custom resource",
   "main": "index.js",
   "dependencies": {
