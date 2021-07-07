@@ -50,6 +50,10 @@
   #set ($expression = "$expression rootCauses = :rootCauses,")
   $util.qr($expressionValues.put(":rootCauses", $util.dynamodb.toDynamoDB($ctx.args.rootCauses)))
 #end
+#if ($ctx.args.eventImgKey)
+  #set ($expression = "$expression eventImgKey = :eventImgKey,")
+  $util.qr($expressionValues.put(":eventImgKey", $util.dynamodb.toDynamoDB($ctx.args.eventImgKey)))
+#end
 
 $util.qr($expressionValues.put(":version", $util.dynamodb.toDynamoDB($util.defaultIfNull($ctx.args.version, 1))))
 $util.qr($expressionValues.put(":updatedAt", $util.dynamodb.toDynamoDB($updatedAt)))

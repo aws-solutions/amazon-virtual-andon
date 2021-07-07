@@ -95,11 +95,15 @@ body {
 
 .custom-card-event {
   text-align: center;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  height: 32.5vh;
+  height: 100%;
+  min-height: 32.5vh;
   background-color: rgb(233, 233, 233) !important;
   cursor: pointer;
+}
+
+.custom-card-event-col {
+  margin-top: 5px;
+  margin-bottom: 5px;
 }
 
 .custom-card-issue {
@@ -188,4 +192,74 @@ ul {
 
 .form-group-no-margin {
   margin-bottom: 0 !important;
+}
+
+.event-image {
+  height: 100px;
+  width: 100px;
+  margin-right: 5px;
+}
+
+.event-image.selected {
+  border: 5px solid #FF9900;
+}
+
+.event-image-thumbnail-container {
+  position: relative;
+  width: 40px;
+  height: 40px;
+}
+
+.event-image-thumbnail-container div {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+.event-image-thumbnail {
+  max-width: 100%;
+  max-height: 100%;
+  position: absolute;  
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.client-event-img-container {
+  width: 100%;
+  flex-grow: 1;
+  display: flex;
+}
+
+.client-event-card-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.client-event-img-container > div {
+  max-height: 100%;
+  flex-grow: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.client-event-img-container img {
+  margin: auto;
+  max-width: 75%;
+}
+
+.div-upload-new-image-button {
+  position: relative;
+  margin-top: 5px;
+}
+
+.div-upload-new-image-button input {
+  width: 100%;
+  height: 100%;
+  display: inline-block;
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  opacity: 0;
+  cursor: pointer;
 }

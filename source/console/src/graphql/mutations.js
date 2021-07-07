@@ -52,7 +52,8 @@ export const createEvent = `mutation CreateEvent(
     $sms: String,
     $email: String,
     $topicArn: String,
-    $rootCauses: [String]
+    $rootCauses: [String],
+    $eventImgKey: String
   ) {
   createEvent(
     id: $id,
@@ -65,7 +66,8 @@ export const createEvent = `mutation CreateEvent(
     sms: $sms,
     email: $email,
     topicArn: $topicArn,
-    rootCauses: $rootCauses
+    rootCauses: $rootCauses,
+    eventImgKey: $eventImgKey
   ) {
     id
     name
@@ -77,6 +79,7 @@ export const createEvent = `mutation CreateEvent(
     topicArn
     rootCauses
     version
+    eventImgKey
   }
 }`;
 export const updateEvent = `mutation UpdateEvent(
@@ -84,14 +87,16 @@ export const updateEvent = `mutation UpdateEvent(
     $sms: String,
     $email: String,
     $topicArn: String,
-    $rootCauses: [String]
+    $rootCauses: [String],
+    $eventImgKey: String
   ) {
     updateEvent(
     id: $id,
     sms: $sms,
     email: $email,
     topicArn: $topicArn,
-    rootCauses: $rootCauses
+    rootCauses: $rootCauses,
+    eventImgKey: $eventImgKey
   ) {
     id
     name
@@ -103,6 +108,7 @@ export const updateEvent = `mutation UpdateEvent(
     topicArn
     rootCauses
     version
+    eventImgKey
   }
 }`;
 export const deleteEvent = `mutation DeleteEvent($eventId: ID!) {
@@ -150,6 +156,7 @@ export const updateIssue = `mutation UpdateIssue($input: UpdateIssueInput!) {
     stationName
     deviceName
     created
+    createdAt
     acknowledged
     closed
     resolutionTime
@@ -157,6 +164,7 @@ export const updateIssue = `mutation UpdateIssue($input: UpdateIssueInput!) {
     status
     version
     rootCause
+    comment
   }
 }`;
 export const putPermission = `mutation PutPermission($input: PermissionInput!) {

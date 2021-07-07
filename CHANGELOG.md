@@ -4,7 +4,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2021-07-07
+### Added
+- Added ability to upload images and associate them with events
+- Added ability to add additional messages to root causes when closing issues
+- Added ability for issues to be created in response to a JSON object being uploaded to an S3 bucket
+- Added an option to view issues for all areas within a site in the Observer view
+- Display relative time (i.e. created 5 minutes ago) when viewing an issue
+
+### Changed
+- Changed URL structure to allow bookmarking
+
+### Fixed
+- Fixed an issue when editing a user's permissions
+
 ## [2.1.2] - 2021-05-20
+### Fixed
 - Fixed AppSync subscription issue on the Client and Observer pages
 
 ## [2.1.1] - 2021-03-31

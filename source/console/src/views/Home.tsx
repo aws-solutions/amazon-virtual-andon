@@ -1,15 +1,5 @@
-/**********************************************************************************************************************
- *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://www.apache.org/licenses/LICENSE-2.0                                                                    *
- *                                                                                                                    *
- *  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
  // Import React and Amplify packages
 import React from 'react';
@@ -49,7 +39,7 @@ class Home extends React.Component<IProps, IState> {
             <Jumbotron className="text-alig-center">
               <h2>Amazon Virtual Andon</h2>
               <p>
-                { I18n.get('text.user.guide.for.more.information') }&nbsp;<a href="https://docs.aws.amazon.com/solutions/latest/amazon-virtual-andon/" target="_blank" rel="noopener noreferrer">{ I18n.get('text.user.guide') }</a>
+                { I18n.get('text.user.guide.for.more.information') }&nbsp;<a href="https://docs.aws.amazon.com/solutions/latest/amazon-virtual-andon/automated-deployment.html" target="_blank" rel="noopener noreferrer">{ I18n.get('text.user.guide') }</a>
               </p>
             </Jumbotron>
           </Col>

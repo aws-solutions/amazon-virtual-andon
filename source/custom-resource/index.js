@@ -1,24 +1,16 @@
-/**********************************************************************************************************************
- *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://www.apache.org/licenses/LICENSE-2.0                                                                    *
- *                                                                                                                    *
- *  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 // Import packages
 const uuid = require('uuid');
 const axios = require('axios');
+const { getOptions } = require('solution-utils');
 
 // Import AWS SDK
 const AWS = require('aws-sdk');
-const s3 = new AWS.S3();
-const iot = new AWS.Iot();
+const awsSdkOptions = getOptions();
+const s3 = new AWS.S3(awsSdkOptions);
+const iot = new AWS.Iot(awsSdkOptions);
 
 // Declare constant variables
 const WEB_CONFIG = `const andon_config = {
@@ -38,7 +30,8 @@ const WEB_CONFIG = `const andon_config = {
   "solutions_solutionId": "SOLUTION_ID",
   "solutions_solutionUuId": "SOLUTION_UUID",
   "solutions_version": "SOLUTION_VERION",
-  "default_language": "DEFAULT_LANGUAGE"
+  "default_language": "DEFAULT_LANGUAGE",
+  "website_bucket": "WEBSITE_BUCKET"
 };`;
 
 // Metrics endpoint
@@ -74,9 +67,9 @@ exports.handler = async (event, context) => {
         break;
       case 'CopyWebsite':
         if (['Create', 'Update'].includes(event.RequestType)) {
-          const { SourceBucket, SourceKey, SourceManifest, DestinationBucket } = properties;
+          const { SourceBucket, SourceKey, SourceManifest, DestinationBucket, WebsiteDistributionDomain } = properties;
           try {
-            response.data = await copyWebsite(SourceBucket, SourceKey, SourceManifest, DestinationBucket);
+            response.data = await copyWebsite(SourceBucket, SourceKey, SourceManifest, DestinationBucket, WebsiteDistributionDomain);
           } catch (error) {
             console.error(`Copying website asset failed.`);
             throw error;
@@ -99,7 +92,8 @@ exports.handler = async (event, context) => {
             .replace('SOLUTION_ID', ConfigItem.SolutionId)
             .replace('SOLUTION_UUID', ConfigItem.SolutionUuid)
             .replace('SOLUTION_VERION', ConfigItem.SolutionVersion)
-            .replace('DEFAULT_LANGUAGE', ConfigItem.DefaultLanguage);
+            .replace('DEFAULT_LANGUAGE', ConfigItem.DefaultLanguage)
+            .replace('WEBSITE_BUCKET', ConfigItem.WebsiteBucket);
 
           try {
             response.data = await putObject(S3Bucket, configFile, S3Key);
@@ -128,6 +122,29 @@ exports.handler = async (event, context) => {
           }
 
           response.data = { Message: message };
+        }
+        break;
+      case 'ConfigureDetectedAnomaliesBucketNotification':
+        if (['Create', 'Update'].includes(event.RequestType)) {
+          try {
+            const { DetectedAnomaliesBucketName, HandleIssuesFunctionArn } = properties;
+            const bucketNotificationConfigParams = {
+              Bucket: DetectedAnomaliesBucketName,
+              NotificationConfiguration: {
+                LambdaFunctionConfigurations: [{
+                  Events: ['s3:ObjectCreated:*'],
+                  LambdaFunctionArn: HandleIssuesFunctionArn
+                }]
+              }
+            };
+
+            console.log('Putting Bucket Notification Configuration', JSON.stringify(bucketNotificationConfigParams, null, 2));
+            await s3.putBucketNotificationConfiguration(bucketNotificationConfigParams).promise();
+            response.data = { Message: 'Bucket Notification Configuration Put Successfully' };
+          } catch (err) {
+            console.error('Error while putting bucket notification configuration for the detected anomalies bucket');
+            throw err;
+          }
         }
         break;
       default:
@@ -166,19 +183,19 @@ async function sleep(retry) {
 function getContentType(filename) {
   let contentType = '';
   if (filename.endsWith('.html')) {
-      contentType = 'text/html';
+    contentType = 'text/html';
   } else if (filename.endsWith('.css')) {
-      contentType = 'text/css';
+    contentType = 'text/css';
   } else if (filename.endsWith('.png')) {
-      contentType = 'image/png';
+    contentType = 'image/png';
   } else if (filename.endsWith('.svg')) {
-      contentType = 'image/svg+xml';
+    contentType = 'image/svg+xml';
   } else if (filename.endsWith('.jpg')) {
-      contentType = 'image/jpeg';
+    contentType = 'image/jpeg';
   } else if (filename.endsWith('.js')) {
-      contentType = 'application/javascript';
+    contentType = 'application/javascript';
   } else {
-      contentType = 'binary/octet-stream';
+    contentType = 'binary/octet-stream';
   }
   return contentType;
 }
@@ -250,9 +267,10 @@ async function sendAnonymousUsage(properties) {
  * @param {string} sourceKey - Source object directory
  * @param {string} sourceManifest - Website manifest
  * @param {string} destinationBucket - Destination bucket name
+ * @param {string} websiteDistributionDomain - CloudFront Distribution Domain for the Web Console
  * @return {Promise} - Promise message object
  */
-async function copyWebsite(sourceBucket, sourceKey, sourceManifest, destinationBucket) {
+async function copyWebsite(sourceBucket, sourceKey, sourceManifest, destinationBucket, websiteDistributionDomain) {
   // In case getting object fails due to asynchronous IAM permission creation, it retries.
   const retryCount = 3;
   let manifest = {};
@@ -309,6 +327,22 @@ async function copyWebsite(sourceBucket, sourceKey, sourceManifest, destinationB
       }
     }
   }
+
+  // Configure CORS for the destination (website) bucket
+  const putCorsParams = {
+    Bucket: destinationBucket,
+    CORSConfiguration: {
+      CORSRules: [{
+        AllowedMethods: ['GET', 'POST', 'PUT'],
+        AllowedOrigins: [websiteDistributionDomain],
+        AllowedHeaders: ['*'],
+        ExposeHeaders: ['ETag']
+      }]
+    }
+  };
+
+  console.log('Putting Bucket CORS', JSON.stringify(putCorsParams, null, 2));
+  await s3.putBucketCors(putCorsParams).promise();
 
   return { Message: 'Copying website assets completed.' };
 }

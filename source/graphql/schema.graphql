@@ -54,9 +54,10 @@ type Mutation {
 		sms: String,
 		email: String,
 		topicArn: String,
-		rootCauses: [String]
+		rootCauses: [String],
+		eventImgKey: String
 	): Event @aws_auth(cognito_groups: ["AdminGroup"])
-	updateEvent(id: ID!, sms: String, email: String, topicArn: String, rootCauses: [String]): Event @aws_auth(cognito_groups: ["AdminGroup"])
+	updateEvent(id: ID!, sms: String, email: String, topicArn: String, rootCauses: [String], eventImgKey: String): Event @aws_auth(cognito_groups: ["AdminGroup"])
 	deleteEvent(id: ID!): Event @aws_auth(cognito_groups: ["AdminGroup"])
 	createStation(id: ID, stationAreaId: ID!, name: String!, description: String!, __typename: String!): Station @aws_auth(cognito_groups: ["AdminGroup"])
 	deleteStation(id: ID!): Station @aws_auth(cognito_groups: ["AdminGroup"])
@@ -125,6 +126,7 @@ type Event {
 	process: Process!
 	version: Int!
 	rootCauses: [String]
+	eventImgKey: String
 }
 
 type EventConnection {
@@ -144,6 +146,7 @@ type Issue @aws_iam @aws_cognito_user_pools {
 	stationName: String
 	deviceName: String
 	created: AWSDateTime!
+	createdAt: AWSDateTime
 	acknowledged: AWSDateTime
 	closed: AWSDateTime
 	resolutionTime: Int
@@ -151,6 +154,8 @@ type Issue @aws_iam @aws_cognito_user_pools {
 	status: Status!
 	version: Int!
 	rootCause: String
+	comment: String
+	issueSource: IssueSource!
 }
 
 type IssueConnection @aws_iam @aws_cognito_user_pools {
@@ -257,6 +262,7 @@ input CreateIssueInput {
 	resolutionTime: Int
 	acknowledgedTime: Int
 	status: Status!
+	issueSource: IssueSource!
 }
 
 input UpdateIssueInput {
@@ -271,6 +277,7 @@ input UpdateIssueInput {
 	stationName: String
 	deviceName: String
 	created: AWSDateTime
+	createdAt: AWSDateTime
 	acknowledged: AWSDateTime
 	closed: AWSDateTime
 	resolutionTime: Int
@@ -278,6 +285,7 @@ input UpdateIssueInput {
 	status: Status
 	expectedVersion: Int!
 	rootCause: String
+	comment: String
 }
 
 input IssueByDeviceCompositeKeyConditionInput {
@@ -321,6 +329,7 @@ input IssueBySiteAreaStatusCompositeKeyInput {
 
 input IssueFilterInput {
 	created: StringInput
+	status: StringInput
 }
 
 input PermissionInput {
@@ -346,6 +355,7 @@ input RootCauseInput {
 
 input StringInput {
 	gt: String
+	eq: String
 }
 
 # Enums
@@ -362,4 +372,9 @@ enum Status {
 	closed
 	inprogress
 	rejected
+}
+
+enum IssueSource {
+	webClient
+	s3File
 }

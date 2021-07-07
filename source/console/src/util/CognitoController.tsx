@@ -1,18 +1,8 @@
-/**********************************************************************************************************************
- *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://www.apache.org/licenses/LICENSE-2.0                                                                    *
- *                                                                                                                    *
- *  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
- // Import Amplify and AWS SDK
- import { I18n } from 'aws-amplify';
+// Import Amplify and AWS SDK
+import { I18n } from 'aws-amplify';
 import { Logger, ICredentials } from '@aws-amplify/core';
 import Auth from '@aws-amplify/auth';
 import AWS from 'aws-sdk';
@@ -55,7 +45,15 @@ class CognitoController {
       region: andon_config.aws_project_region,
       credentials: Auth.essentialCredentials(credentials)
     });
-    this.cognitoIdentityServiceProvider = new AWS.CognitoIdentityServiceProvider({ region: andon_config.aws_project_region });
+
+    const options: any = { region: andon_config.aws_project_region };
+    if (andon_config.solutions_solutionId && andon_config.solutions_version) {
+      if (andon_config.solutions_solutionId.trim() !== '' && andon_config.solutions_version.trim() !== '') {
+        options.customUserAgent = `AwsSolution/${andon_config.solutions_solutionId}/${andon_config.solutions_version}`;
+      }
+    }
+
+    this.cognitoIdentityServiceProvider = new AWS.CognitoIdentityServiceProvider(options);
   }
 
   /**

@@ -1,15 +1,5 @@
-/*********************************************************************************************************************
- *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://www.apache.org/licenses/LICENSE-2.0                                                                    *
- *                                                                                                                    *
- *  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 // Import packages
 const axios = require('axios');
@@ -39,6 +29,8 @@ const context = {
 const mockS3GetObject = jest.fn();
 const mockS3CopyObject = jest.fn();
 const mockS3PutObject = jest.fn();
+const mockS3PutBucketCors = jest.fn();
+const mockS3PutBucketNotificationConfiguration = jest.fn();
 const mockIotDescribeEndpoint = jest.fn();
 const mockIotListTargetForPolicy = jest.fn();
 const mockIotDetachPrincipalPolicy = jest.fn();
@@ -47,7 +39,9 @@ jest.mock('aws-sdk', () => {
     S3: jest.fn(() => ({
       getObject: mockS3GetObject,
       copyObject: mockS3CopyObject,
-      putObject: mockS3PutObject
+      putObject: mockS3PutObject,
+      putBucketCors: mockS3PutBucketCors,
+      putBucketNotificationConfiguration: mockS3PutBucketNotificationConfiguration
     })),
     Iot: jest.fn(() => ({
       describeEndpoint: mockIotDescribeEndpoint,
@@ -74,15 +68,16 @@ const WEB_CONFIG = `const andon_config = {
   "solutions_solutionId": "SOLUTION_ID",
   "solutions_solutionUuId": "mock-uuid",
   "solutions_version": "test-version",
-  "default_language": "English"
+  "default_language": "English",
+  "website_bucket": "website-bucket"
 };`;
 
 // Import index.js
 const index = require('./index.js');
 
 // Unit tests
-describe('index', function() {
-  describe('CreateUuid', function() {
+describe('index', function () {
+  describe('CreateUuid', function () {
     // Mock event data
     const event = {
       "RequestType": "Create",
@@ -97,7 +92,7 @@ describe('index', function() {
       }
     };
 
-    it('should return uuid', async function() {
+    it('should return uuid', async function () {
       const result = await index.handler(event, context);
       expect(result).toEqual({
         status: 'SUCCESS',
@@ -106,7 +101,7 @@ describe('index', function() {
     });
   });
 
-  describe('SendAnonymousUsage', function() {
+  describe('SendAnonymousUsage', function () {
     // Mock event data
     const event = {
       "RequestType": "Create",
@@ -125,7 +120,7 @@ describe('index', function() {
       }
     };
 
-    it('should return success when sending anonymous usage succeeds', async function() {
+    it('should return success when sending anonymous usage succeeds', async function () {
       // Mock axios
       axiosMock.onPost('https://metrics.awssolutionsbuilder.com/generic').reply(200);
 
@@ -135,7 +130,7 @@ describe('index', function() {
         data: { Message: 'Anonymous data was sent successfully.' }
       });
     });
-    it('should return success when sending anonymous usage fails', async function() {
+    it('should return success when sending anonymous usage fails', async function () {
       // Mock axios
       axiosMock.onPost('https://metrics.awssolutionsbuilder.com/generic').reply(500);
 
@@ -147,7 +142,7 @@ describe('index', function() {
     });
   });
 
-  describe('CopyWebsite', function() {
+  describe('CopyWebsite', function () {
     // Mock event data
     const event = {
       "RequestType": "Create",
@@ -162,16 +157,18 @@ describe('index', function() {
         "SourceBucket": "source-bucket",
         "SourceKey": "amazon-virtual-andon/consolemock-uuid",
         "SourceManifest": "site-manifest.json",
-        "DestinationBucket": "destination-bucket"
+        "DestinationBucket": "destination-bucket",
+        "WebsiteDistributionDomain": "https://domain.name"
       }
     };
 
     beforeEach(() => {
       mockS3GetObject.mockReset();
       mockS3CopyObject.mockReset();
+      mockS3PutBucketCors.mockReset();
     });
 
-    it('should return success to copy website', async function() {
+    it('should return success to copy website', async function () {
       // Mock AWS SDK
       mockS3GetObject.mockImplementation(() => {
         return {
@@ -191,6 +188,14 @@ describe('index', function() {
           }
         };
       });
+      mockS3PutBucketCors.mockImplementationOnce(() => {
+        return {
+          promise() {
+            // s3:CopyObject
+            return Promise.resolve({});
+          }
+        };
+      });
 
       const result = await index.handler(event, context);
       expect(result).toEqual({
@@ -199,7 +204,7 @@ describe('index', function() {
       });
     });
 
-    it('should return failed when GetObject fails', async function() {
+    it('should return failed when GetObject fails', async function () {
       // Mock AWS SDK
       mockS3GetObject.mockImplementation(() => {
         return {
@@ -217,7 +222,7 @@ describe('index', function() {
       });
     });
 
-    it('should return failed when CopyObject fails', async function() {
+    it('should return failed when CopyObject fails', async function () {
       // Mock AWS SDK
       mockS3GetObject.mockImplementation(() => {
         return {
@@ -246,7 +251,7 @@ describe('index', function() {
     });
   });
 
-  describe('PutWebsiteConfig', function() {
+  describe('PutWebsiteConfig', function () {
     // Mock event data
     const event = {
       "RequestType": "Create",
@@ -270,7 +275,8 @@ describe('index', function() {
           "SolutionId": "SOLUTION_ID",
           "SolutionUuid": "mock-uuid",
           "SolutionVersion": "test-version",
-          "DefaultLanguage": "English"
+          "DefaultLanguage": "English",
+          "WebsiteBucket": "website-bucket"
         }
       }
     };
@@ -280,7 +286,7 @@ describe('index', function() {
       mockIotDescribeEndpoint.mockReset();
     });
 
-    it('should return success to put website config', async function() {
+    it('should return success to put website config', async function () {
       // Mock AWS SDK
       mockIotDescribeEndpoint.mockImplementation(() => {
         return {
@@ -309,7 +315,7 @@ describe('index', function() {
       });
     });
 
-    it('should return failed when DescribeEndpoint fails', async function() {
+    it('should return failed when DescribeEndpoint fails', async function () {
       // Mock AWS SDK
       mockIotDescribeEndpoint.mockImplementation(() => {
         return {
@@ -327,7 +333,7 @@ describe('index', function() {
       });
     });
 
-    it('should return failed when PutObject fails', async function() {
+    it('should return failed when PutObject fails', async function () {
       // Mock AWS SDK
       mockIotDescribeEndpoint.mockImplementation(() => {
         return {
@@ -354,7 +360,7 @@ describe('index', function() {
     });
   });
 
-  describe('DeleteStack', function() {
+  describe('DeleteStack', function () {
     // Mock event data
     const event = {
       "RequestType": "Delete",
@@ -375,7 +381,7 @@ describe('index', function() {
       mockIotDetachPrincipalPolicy.mockReset();
     });
 
-    it('should return success to detach IoT policy', async function() {
+    it('should return success to detach IoT policy', async function () {
       // Mock AWS SDK
       mockIotListTargetForPolicy.mockImplementation(() => {
         return {
@@ -406,13 +412,13 @@ describe('index', function() {
       });
     });
 
-    it('should return failed when ListTargetForPolicy fails', async function() {
+    it('should return failed when ListTargetForPolicy fails', async function () {
       // Mock AWS SDK
       mockIotListTargetForPolicy.mockImplementation(() => {
         return {
           promise() {
-              // iot:ListTargetsForPolicy
-              return Promise.reject({ message: 'ListTargetForPolicy failed.' });
+            // iot:ListTargetsForPolicy
+            return Promise.reject({ message: 'ListTargetForPolicy failed.' });
           }
         };
       });
@@ -424,26 +430,26 @@ describe('index', function() {
       });
     });
 
-    it('should return failed when DetachPrincipalPolicy fails', async function() {
+    it('should return failed when DetachPrincipalPolicy fails', async function () {
       // Mock AWS SDK
       mockIotListTargetForPolicy.mockImplementation(() => {
         return {
           promise() {
-              // iot:ListTargetsForPolicy
-              return Promise.resolve({
-                targets: [
-                  'arn:target1',
-                  'arn:target2'
-                ]
-              });
+            // iot:ListTargetsForPolicy
+            return Promise.resolve({
+              targets: [
+                'arn:target1',
+                'arn:target2'
+              ]
+            });
           }
         };
       });
       mockIotDetachPrincipalPolicy.mockImplementation(() => {
         return {
           promise() {
-              // iot:DetachPrincipalPolicy
-              return Promise.reject({ message: 'DetachPrincipalPolicy failed.' });
+            // iot:DetachPrincipalPolicy
+            return Promise.reject({ message: 'DetachPrincipalPolicy failed.' });
           }
         };
       });
@@ -456,7 +462,73 @@ describe('index', function() {
     });
   });
 
-  describe('Default', function() {
+  describe('ConfigureDetectedAnomaliesBucketNotification', function () {
+    // Mock event data
+    const event = {
+      "RequestType": "Create",
+      "ServiceToken": "LAMBDA_ARN",
+      "ResponseURL": "/cfn-response",
+      "StackId": "CFN_STACK_ID",
+      "RequestId": "02f6b8db-835e-4a83-b338-520f642e8f97",
+      "LogicalResourceId": "ConfigureDetectedAnomaliesBucketNotification",
+      "ResourceType": "Custom::ConfigureDetectedAnomaliesBucketNotification",
+      "ResourceProperties": {
+        "ServiceToken": "LAMBDA_ARN",
+        "DetectedAnomaliesBucketName": "bucket-name",
+        "HandleIssuesFunctionArn": "arn:of:function"
+      }
+    };
+
+    beforeEach(() => {
+      mockS3PutBucketNotificationConfiguration.mockReset();
+    });
+
+    it('should return success to configure bucket notification', async function () {
+      // Mock AWS SDK
+      mockS3PutBucketNotificationConfiguration.mockImplementationOnce(() => {
+        return {
+          promise() {
+            return Promise.resolve({});
+          }
+        };
+      });
+
+      const result = await index.handler(event, context);
+      expect.assertions(2);
+      expect(mockS3PutBucketNotificationConfiguration).toHaveBeenCalledWith({
+        Bucket: 'bucket-name',
+        NotificationConfiguration: {
+          LambdaFunctionConfigurations: [{
+            Events: ['s3:ObjectCreated:*'],
+            LambdaFunctionArn: 'arn:of:function'
+          }]
+        }
+      });
+      expect(result).toEqual({
+        status: 'SUCCESS',
+        data: { Message: 'Bucket Notification Configuration Put Successfully' }
+      });
+    });
+
+    it('should return failed when configure bucket notification fails', async function () {
+      // Mock AWS SDK
+      mockS3PutBucketNotificationConfiguration.mockImplementationOnce(() => {
+        return {
+          promise() {
+            return Promise.reject({ message: 'Failed to put bucket notification' });
+          }
+        };
+      });
+
+      const result = await index.handler(event, context);
+      expect(result).toEqual({
+        status: 'FAILED',
+        data: { Error: 'Failed to put bucket notification' }
+      });
+    });
+  });
+
+  describe('Default', function () {
     // Mock event data
     const event = {
       "RequestType": "Update",
@@ -471,7 +543,7 @@ describe('index', function() {
       }
     };
 
-    it('should return success for other default custom resource', async function() {
+    it('should return success for other default custom resource', async function () {
       const result = await index.handler(event, context);
       expect(result).toEqual({
         status: 'SUCCESS',

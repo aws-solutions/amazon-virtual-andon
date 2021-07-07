@@ -1,25 +1,11 @@
-/**********************************************************************************************************************
- *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://www.apache.org/licenses/LICENSE-2.0                                                                    *
- *                                                                                                                    *
- *  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 // Import React and Amplify packages
 import React from 'react';
 import { LinkContainer } from 'react-router-bootstrap';
 import { API, graphqlOperation, I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
-
-// MobX packages
-import { observable } from 'mobx';
-import { observer } from 'mobx-react';
 
 // Import React Bootstrap components
 import Container from 'react-bootstrap/Container';
@@ -43,8 +29,8 @@ import { putPermission } from '../graphql/mutations';
 // Import custom setting
 import { LOGGING_LEVEL, sendMetrics, sortByName } from '../util/CustomUtil';
 import GraphQLCommon from '../util/GraphQLCommon';
-import { IPermission, IUser, ISelectedData, IGeneralQueryData } from '../components/Interfaces';
-import { SortBy } from '../components/Enums';
+import { IPermission, IUser, ISelectedData, IGeneralQueryData, ISiteData } from '../components/Interfaces';
+import { SortBy, AVAPermissionTypes } from '../components/Enums';
 import EmptyRow from '../components/EmptyRow';
 import EmptyCol from '../components/EmptyCol';
 
@@ -62,10 +48,10 @@ interface IProps {
  * @interface IState
  */
 interface IState {
-  permissions: IPermission[];
   isLoading: boolean;
   error: string;
   user: { userId: string, username: string, version: number };
+  userPermissions?: IPermission;
   querySites: ISelectedData[];
   isEmailValid: boolean;
 }
@@ -80,7 +66,7 @@ const INIT_USER = { userId: '', username: '', version: 0 };
  * The permission setting page
  * @class PermissionSetting
  */
-@observer
+// @observer
 class PermissionSetting extends React.Component<IProps, IState> {
   // GraphQL common class
   private graphQlCommon: GraphQLCommon;
@@ -93,28 +79,14 @@ class PermissionSetting extends React.Component<IProps, IState> {
   // Sites that are currently loading data
   private loadingSites: string[];
   // Sites that have been loaded
-  @observable private loadedSites: {
-    [key: string]: {
-      siteName: string,
-      areas: ISelectedData[],
-      processes: ISelectedData[],
-      stations: ISelectedData[],
-      devices: ISelectedData[]
-    }
+  private loadedSites: {
+    [key: string]: ISiteData;
   }
-
-  // Private values for MobX
-  @observable private sites: ISelectedData[];
-  @observable private areas: ISelectedData[];
-  @observable private processes: ISelectedData[];
-  @observable private stations: ISelectedData[];
-  @observable private devices: ISelectedData[];
 
   constructor(props: Readonly<IProps>) {
     super(props);
 
     this.state = {
-      permissions: [],
       isLoading: false,
       error: '',
       user: INIT_USER,
@@ -131,11 +103,6 @@ class PermissionSetting extends React.Component<IProps, IState> {
     this.permission = avaPermission ? JSON.parse(avaPermission) : {};
     this.loadingSites = [];
     this.loadedSites = {};
-    this.sites = this.permission.sites ? this.permission.sites : [];
-    this.areas = this.permission.areas ? this.permission.areas : [];
-    this.processes = this.permission.processes ? this.permission.processes : [];
-    this.stations = this.permission.stations ? this.permission.stations : [];
-    this.devices = this.permission.devices ? this.permission.devices : [];
     this.graphQlCommon = new GraphQLCommon();
 
     this.getSites = this.getSites.bind(this);
@@ -147,6 +114,7 @@ class PermissionSetting extends React.Component<IProps, IState> {
     this.handleProcessChange = this.handleProcessChange.bind(this);
     this.handleStationChange = this.handleStationChange.bind(this);
     this.handleDeviceChange = this.handleDeviceChange.bind(this);
+    this.toggleUserPermission = this.toggleUserPermission.bind(this);
   }
 
   /**
@@ -154,7 +122,20 @@ class PermissionSetting extends React.Component<IProps, IState> {
    */
   async componentDidMount() {
     // If this is an edit mode, isEmailValid is true as the previous page sends the E-Mail address.
-    this.setState({ isEmailValid : this.mode === 'edit' });
+    const userId = this.permission.userId ? this.permission.userId : '';
+    if (this.mode === 'edit') {
+      this.setState({
+        isEmailValid: true,
+        user: {
+          userId,
+          username: '',
+          version: 0
+        },
+        userPermissions: await this.getPermissionsForUserId(userId),
+      });
+    } else {
+      this.setState({ isEmailValid: false });
+    }
     await this.getSites();
   }
 
@@ -174,6 +155,12 @@ class PermissionSetting extends React.Component<IProps, IState> {
       const sites: IGeneralQueryData[] = await this.graphQlCommon.listSites();
       querySites = sites.map((site: IGeneralQueryData) => { return { id: site.id, name: site.name } });
       querySites = sortByName(querySites, SortBy.Asc, 'name');
+
+      for (const site of sites) {
+        if (site.id) {
+          await this.getSiteData(site.id, site.name);
+        }
+      }
 
       this.setState({ querySites });
     } catch (error) {
@@ -242,21 +229,18 @@ class PermissionSetting extends React.Component<IProps, IState> {
    * Save permission.
    */
   async savePermission() {
+    if (!this.state.userPermissions) { return; }
     this.setState({ isLoading: true });
 
     try {
-      const { user } = this.state;
-      const userId = this.mode === 'add' ? user.userId : this.permission.userId;
-      const version = this.mode === 'add' ? user.version : this.permission.version;
-
       const input = {
-        userId,
-        sites: this.sites,
-        areas: this.areas,
-        processes: this.processes,
-        stations: this.stations,
-        devices: this.devices,
-        version: version + 1
+        userId: this.state.userPermissions.userId,
+        sites: this.state.userPermissions.sites,
+        areas: this.state.userPermissions.areas,
+        processes: this.state.userPermissions.processes,
+        stations: this.state.userPermissions.stations,
+        devices: this.state.userPermissions.devices,
+        version: this.state.userPermissions.version + 1
       };
 
       // Graphql operation to get permissions
@@ -300,12 +284,50 @@ class PermissionSetting extends React.Component<IProps, IState> {
    * Handle the user E-Mail change.
    * @param {any} event - Event from the E-Mail select
    */
-  handleEmailChange(event: any) {
+  async handleEmailChange(event: any) {
+    this.setState({ isLoading: true });
+
     const userId = event.target.value;
+
+    let userPermissions = await this.getPermissionsForUserId(userId);
+
+    // If the `userId` is valid but no permissions were returned, create a default `userPermissions` object
+    if (!userPermissions && userId && userId.trim() !== '') {
+      userPermissions = {
+        userId,
+        username: '',
+        version: 1,
+        areas: [],
+        devices: [],
+        processes: [],
+        stations: [],
+        sites: [],
+        visible: true
+      };
+    }
+
     this.setState({
       user: { userId, username: '', version: 0 },
-      isEmailValid: userId !== ''
+      isEmailValid: userId !== '',
+      userPermissions,
+      isLoading: false
     });
+  }
+
+  /**
+   * Returns the permissions for the supplied user ID
+   */
+  async getPermissionsForUserId(userId: string): Promise<IPermission | undefined> {
+    try {
+      if (userId && userId.trim() !== '') {
+        const permissions = await this.graphQlCommon.listPermissions();
+        return permissions.find(permission => permission.userId === userId);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+
+    return undefined;
   }
 
   /**
@@ -313,34 +335,20 @@ class PermissionSetting extends React.Component<IProps, IState> {
    * @param {any} event - Event from the site checkbox
    */
   async handleSiteChange(event: any) {
-    const { id, checked } = event.target;
+    const { id } = event.target;
     const checkedSite = JSON.parse(id);
-    const site = this.loadedSites[checkedSite.id];
+    const siteData = this.loadedSites[checkedSite.id];
 
-    if (!this.loadedSites[checkedSite.id]) {
+    if (!siteData) {
       this.props.handleNotification(I18n.get('error.site.not.loaded'), 'warning', 5);
       return;
     }
 
-    if (checked) {
-      this.sites.push(checkedSite);
-      this.areas = [...this.areas, ...site.areas];
-      this.processes = [...this.processes, ...site.processes];
-      this.stations = [...this.stations, ...site.stations];
-      this.devices = [...this.devices, ...site.devices];
-    } else {
-      this.sites = this.sites.filter(filterSite => filterSite.id !== checkedSite.id);
-      this.areas = this.areas.filter(area => area.parentId !== checkedSite.id);
-      this.processes = this.processes.filter(process =>
-        !site.processes.map(siteProcess => { return siteProcess.id }).includes(process.id)
-      );
-      this.stations = this.stations.filter(station =>
-        !site.stations.map(siteStation => { return siteStation.id }).includes(station.id)
-      );
-      this.devices = this.devices.filter(device =>
-        !site.devices.map(siteDevice => { return siteDevice.id }).includes(device.id)
-      );
-    }
+    const userPermissions = this.state.userPermissions;
+    const permissionSiteIdx = userPermissions ? userPermissions.sites.findIndex(s => s.id === checkedSite.id) : -1;
+    const shouldEnablePermission = (permissionSiteIdx === -1);
+
+    this.toggleUserPermission(AVAPermissionTypes.Site, checkedSite.id, shouldEnablePermission, siteData);
   }
 
   /**
@@ -348,31 +356,145 @@ class PermissionSetting extends React.Component<IProps, IState> {
    * @param {any} event - Event from the area checkbox
    */
   async handleAreaChange(event: any) {
-    const { id, checked } = event.target;
+    const { id } = event.target;
     const checkedArea = JSON.parse(id);
-    const site = this.loadedSites[checkedArea.siteId];
+    const siteData = this.loadedSites[checkedArea.siteId];
 
-    if (checked) {
-      this.areas.push({ id: checkedArea.id, name: checkedArea.name, parentId: checkedArea.siteId });
-      this.sites = this.getUniqueArray([...this.sites, { id: checkedArea.siteId, name: site.siteName }]);
-      this.processes = this.getUniqueArray([...this.processes, ...site.processes.filter(process => process.parentId === checkedArea.id)]);
-      this.stations = this.getUniqueArray([...this.stations, ...site.stations.filter(station => station.parentId === checkedArea.id)]);
-      this.devices = this.getUniqueArray([
-        ...this.devices,
-        ...site.devices.filter(device =>
-          this.stations.map(station => { return station.id }).includes(device.parentId)
-        )
-      ]);
-    } else {
-      this.areas = this.areas.filter(area => area.id !== checkedArea.id);
-      this.sites = this.sites.filter(filterSite =>
-        this.areas.map(area => { return area.parentId }).includes(filterSite.id)
-      );
-      this.processes = this.processes.filter(process => process.parentId !== checkedArea.id);
-      this.stations = this.stations.filter(station => station.parentId !== checkedArea.id);
-      this.devices = this.devices.filter(device =>
-        this.stations.map(station => { return station.id }).includes(device.parentId)
-      );
+    const userPermissions = this.state.userPermissions;
+    const permissionIdx = userPermissions ? userPermissions.areas.findIndex(x => x.id === checkedArea.id) : -1;
+    const shouldEnablePermission = (permissionIdx === -1);
+
+    this.toggleUserPermission(AVAPermissionTypes.Area, checkedArea.id, shouldEnablePermission, siteData);
+  }
+
+  toggleUserPermission(type: AVAPermissionTypes, id: string, permissionEnabled: boolean, siteData: ISiteData) {
+    const userPermissions = this.state.userPermissions;
+
+    if (userPermissions) {
+      switch (type) {
+        case AVAPermissionTypes.Site:
+          if (permissionEnabled) {
+            userPermissions.areas.push(...siteData.areas);
+            userPermissions.processes.push(...siteData.processes);
+            userPermissions.stations.push(...siteData.stations);
+            userPermissions.devices.push(...siteData.devices);
+            userPermissions.sites.push({ id, name: siteData.siteName });
+          } else {
+            siteData.areas.forEach(x => userPermissions.areas = userPermissions.areas.filter(y => y.id !== x.id));
+            siteData.processes.forEach(x => userPermissions.processes = userPermissions.processes.filter(y => y.id !== x.id));
+            siteData.stations.forEach(x => userPermissions.stations = userPermissions.stations.filter(y => y.id !== x.id));
+            siteData.devices.forEach(x => userPermissions.devices = userPermissions.devices.filter(y => y.id !== x.id));
+            userPermissions.sites = userPermissions.sites.filter(y => y.id !== id);
+          }
+          break;
+        case AVAPermissionTypes.Area:
+          const area = siteData.areas.find(a => a.id === id)!;
+
+          if (permissionEnabled) {
+            userPermissions.sites.push({ id: area.parentId!, name: siteData.siteName });
+            userPermissions.areas.push(area);
+            userPermissions.processes.push(...siteData.processes.filter(p => p.parentId === id));
+            siteData.stations
+              .filter(s => s.parentId === id)
+              .forEach(s => {
+                userPermissions.stations.push(s);
+                userPermissions.devices.push(...siteData.devices.filter(d => d.parentId === s.id));
+              });
+          } else {
+            userPermissions.areas = userPermissions.areas.filter(a => a.id !== id);
+            userPermissions.processes = userPermissions.processes.filter(p => p.parentId !== id);
+            userPermissions.stations = userPermissions.stations.filter(s => s.parentId !== id);
+
+            // Filter out any device that belongs to a station under the area that was unchecked
+            userPermissions.devices = userPermissions.devices.filter(d => {
+              const stationWithDevice = siteData.stations.find(s => s.id === d.parentId);
+              if (stationWithDevice) {
+                return stationWithDevice.parentId !== id;
+              }
+
+              return true;
+            });
+          }
+          break;
+        case AVAPermissionTypes.Process:
+          const process = siteData.processes.find(p => p.id === id)!;
+          const processArea = siteData.areas.find(a => a.id === process.parentId)!;
+          if (permissionEnabled) {
+            userPermissions.processes.push(process);
+            userPermissions.areas.push(processArea);
+            userPermissions.sites.push({ id: processArea.parentId!, name: siteData.siteName });
+          } else {
+            userPermissions.processes = userPermissions.processes.filter(p => p.id !== id);
+          }
+          break;
+        case AVAPermissionTypes.Station:
+          const station = siteData.stations.find(s => s.id === id)!;
+          const stationArea = siteData.areas.find(a => a.id === station.parentId)!;
+
+          if (permissionEnabled) {
+            userPermissions.stations.push(station);
+            userPermissions.areas.push(stationArea);
+            userPermissions.sites.push({ id: stationArea.parentId!, name: siteData.siteName });
+            userPermissions.devices.push(...siteData.devices.filter(d => d.parentId === id));
+          } else {
+            userPermissions.devices = userPermissions.devices.filter(d => d.parentId !== id);
+            userPermissions.stations = userPermissions.stations.filter(s => s.id !== id);
+          }
+          break;
+        case AVAPermissionTypes.Device:
+          const device = siteData.devices.find(d => d.id === id)!;
+          const deviceStation = siteData.stations.find(s => s.id === device.parentId)!;
+          const deviceArea = siteData.areas.find(a => a.id === deviceStation.parentId)!;
+          if (permissionEnabled) {
+            userPermissions.devices.push(device);
+            userPermissions.stations.push(deviceStation);
+            userPermissions.areas.push(deviceArea);
+            userPermissions.sites.push({ id: deviceArea.parentId!, name: siteData.siteName });
+          } else {
+            userPermissions.devices = userPermissions.devices.filter(d => d.id !== id);
+          }
+          break;
+      }
+
+      // Remove a station permission if there are no devices enabled
+      const stationsIdsToRemove = userPermissions.stations.filter(s => {
+        return !userPermissions.devices.some(d => d.parentId === s.id);
+      }).map(s => s.id);
+
+      stationsIdsToRemove.forEach(stationId => {
+        userPermissions.stations = userPermissions.stations.filter(s => s.id !== stationId);
+      });
+
+      // Remove an area permission if there are no stations or processes enabled
+      const areaIdsToRemove = userPermissions.areas.filter(a => {
+        return ![...userPermissions.stations, ...userPermissions.processes].some(x => x.parentId === a.id);
+      }).map(a => a.id);
+
+      areaIdsToRemove.forEach(areaId => {
+        userPermissions.areas = userPermissions.areas.filter(a => a.id !== areaId);
+      });
+
+      // Remove a site permission if there are no areas enabled
+      const siteIdsToRemove = userPermissions.sites.filter(s => {
+        return !userPermissions.areas.some(a => a.parentId === s.id);
+      }).map(s => s.id);
+
+      siteIdsToRemove.forEach(siteId => {
+        userPermissions.sites = userPermissions.sites.filter(s => s.id !== siteId);
+      });
+
+      this.setState({
+        userPermissions: {
+          userId: userPermissions.userId,
+          username: userPermissions.username,
+          sites: this.getUniqueArray(userPermissions.sites),
+          areas: this.getUniqueArray(userPermissions.areas),
+          processes: this.getUniqueArray(userPermissions.processes),
+          stations: this.getUniqueArray(userPermissions.stations),
+          devices: this.getUniqueArray(userPermissions.devices),
+          version: userPermissions.version
+        }
+      });
     }
   }
 
@@ -381,24 +503,15 @@ class PermissionSetting extends React.Component<IProps, IState> {
    * @param {any} event - Event from the process checkbox
    */
   handleProcessChange(event: any) {
-    const { id, checked } = event.target;
+    const { id } = event.target;
     const checkedProcess = JSON.parse(id);
-    const site = this.loadedSites[checkedProcess.siteId];
+    const siteData = this.loadedSites[checkedProcess.siteId];
 
-    if (checked) {
-      this.processes.push({ id: checkedProcess.id, name: checkedProcess.name, parentId: checkedProcess.areaId });
-      this.sites = this.getUniqueArray([...this.sites, { id: checkedProcess.siteId, name: site.siteName }]);
-      this.areas = this.getUniqueArray([...this.areas, ...site.areas.filter(area => area.id === checkedProcess.areaId)]);
-    } else {
-      this.processes = this.processes.filter(process => process.id !== checkedProcess.id);
-      this.areas = this.areas.filter(area =>
-        this.processes.map(process => { return process.parentId }).includes(area.id) ||
-        this.stations.map(station => { return station.parentId }).includes(area.id)
-      );
-      this.sites = this.sites.filter(filterSite =>
-        this.areas.map(area => { return area.parentId }).includes(filterSite.id)
-      );
-    }
+    const userPermissions = this.state.userPermissions;
+    const permissionIdx = userPermissions ? userPermissions.processes.findIndex(x => x.id === checkedProcess.id) : -1;
+    const shouldEnablePermission = (permissionIdx === -1);
+
+    this.toggleUserPermission(AVAPermissionTypes.Process, checkedProcess.id, shouldEnablePermission, siteData);
   }
 
   /**
@@ -406,29 +519,15 @@ class PermissionSetting extends React.Component<IProps, IState> {
    * @param {any} event - Event from the station checkbox
    */
   async handleStationChange(event: any) {
-    const { id, checked } = event.target;
+    const { id } = event.target;
     const checkedStation = JSON.parse(id);
-    const site = this.loadedSites[checkedStation.siteId];
+    const siteData = this.loadedSites[checkedStation.siteId];
 
-    if (checked) {
-      this.stations.push({ id: checkedStation.id, name: checkedStation.name, parentId: checkedStation.areaId });
-      this.sites = this.getUniqueArray([...this.sites, { id: checkedStation.siteId, name: site.siteName }]);
-      this.areas = this.getUniqueArray([...this.areas, ...site.areas.filter(area => area.id === checkedStation.areaId)]);
-      this.devices = this.getUniqueArray([
-        ...this.devices,
-        ...site.devices.filter(device => device.parentId === checkedStation.id)
-      ]);
-    } else {
-      this.stations = this.stations.filter(station => station.id !== checkedStation.id);
-      this.areas = this.areas.filter(area =>
-        this.processes.map(process => { return process.parentId }).includes(area.id) ||
-        this.stations.map(station => { return station.parentId }).includes(area.id)
-      );
-      this.sites = this.sites.filter(filterSite =>
-        this.areas.map(area => { return area.parentId }).includes(filterSite.id)
-      );
-      this.devices = this.devices.filter(device => device.parentId !== checkedStation.id);
-    }
+    const userPermissions = this.state.userPermissions;
+    const permissionIdx = userPermissions ? userPermissions.stations.findIndex(x => x.id === checkedStation.id) : -1;
+    const shouldEnablePermission = (permissionIdx === -1);
+
+    this.toggleUserPermission(AVAPermissionTypes.Station, checkedStation.id, shouldEnablePermission, siteData);
   }
 
   /**
@@ -436,28 +535,15 @@ class PermissionSetting extends React.Component<IProps, IState> {
    * @param {any} event - Event from the device checkbox
    */
   handleDeviceChange(event: any) {
-    const { id, checked } = event.target;
+    const { id } = event.target;
     const checkedDevice = JSON.parse(id);
-    const site = this.loadedSites[checkedDevice.siteId];
+    const siteData = this.loadedSites[checkedDevice.siteId];
 
-    if (checked) {
-      this.devices.push({ id: checkedDevice.id, name: checkedDevice.name, parentId: checkedDevice.stationId });
-      this.sites = this.getUniqueArray([...this.sites, { id: checkedDevice.siteId, name: site.siteName }]);
-      this.areas = this.getUniqueArray([...this.areas, ...site.areas.filter(area => area.id === checkedDevice.areaId)]);
-      this.stations = this.getUniqueArray([...this.stations, ...site.stations.filter(station => station.id === checkedDevice.stationId)]);
-    } else {
-      this.devices = this.devices.filter(device => device.id !== checkedDevice.id);
-      this.stations = this.stations.filter(station =>
-        this.devices.map(device => { return device.parentId }).includes(station.id)
-      );
-      this.areas = this.areas.filter(area =>
-        this.processes.map(process => { return process.parentId }).includes(area.id) ||
-        this.stations.map(station => { return station.parentId }).includes(area.id)
-      );
-      this.sites = this.sites.filter(filterSite =>
-        this.areas.map(area => { return area.parentId }).includes(filterSite.id)
-      );
-    }
+    const userPermissions = this.state.userPermissions;
+    const permissionIdx = userPermissions ? userPermissions.devices.findIndex(x => x.id === checkedDevice.id) : -1;
+    const shouldEnablePermission = (permissionIdx === -1);
+
+    this.toggleUserPermission(AVAPermissionTypes.Device, checkedDevice.id, shouldEnablePermission, siteData);
   }
 
   /**
@@ -471,9 +557,9 @@ class PermissionSetting extends React.Component<IProps, IState> {
             <Col>
               <Breadcrumb>
                 <LinkContainer to="/permissions" exact>
-                  <Breadcrumb.Item>{ I18n.get('text.permissions') }</Breadcrumb.Item>
+                  <Breadcrumb.Item>{I18n.get('text.permissions')}</Breadcrumb.Item>
                 </LinkContainer>
-                <Breadcrumb.Item active>{ I18n.get('text.permissions.setting') }</Breadcrumb.Item>
+                <Breadcrumb.Item active>{I18n.get('text.permissions.setting')}</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -481,9 +567,9 @@ class PermissionSetting extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <Button size="sm" variant="secondary" onClick={() => this.props.history.push('/permissions')}>{ I18n.get('button.cancel') }</Button>
+                  <Button size="sm" variant="secondary" onClick={() => this.props.history.push('/permissions')}>{I18n.get('button.cancel')}</Button>
                   <EmptyCol />
-                  <Button size="sm" variant="primary" onClick={this.savePermission} disabled={this.state.isLoading || !this.state.isEmailValid}>{ I18n.get('button.save') }</Button>
+                  <Button size="sm" variant="primary" onClick={this.savePermission} disabled={this.state.isLoading || !this.state.isEmailValid}>{I18n.get('button.save')}</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -495,26 +581,25 @@ class PermissionSetting extends React.Component<IProps, IState> {
                 <Card.Body>
                   <Form>
                     <Form.Group controlId="username" as={Row}>
-                      <Form.Label column md={2}>{ I18n.get('text.email') } <span className="required-field">*</span></Form.Label>
+                      <Form.Label column md={2}>{I18n.get('text.email')} <span className="required-field">*</span></Form.Label>
                       <Col md={10}>
-                      {
-                        this.mode === 'add' &&
-                        <Form.Control as="select" defaultValue="" onChange={this.handleEmailChange}>
-                          <option key="chooseUser" value="">{ I18n.get('text.choose.user') }</option>
-                          {
-                            this.users.filter((user: IUser) => user.visible)
-                              .map((user: IUser) => {
+                        {
+                          this.mode === 'add' &&
+                          <Form.Control as="select" defaultValue="" onChange={this.handleEmailChange}>
+                            <option key="chooseUser" value="">{I18n.get('text.choose.user')}</option>
+                            {
+                              this.users.map((user: IUser) => {
                                 return (
                                   <option key={user.userId} value={user.userId}>{user.username}</option>
                                 )
                               })
-                          }
-                        </Form.Control>
-                      }
-                      {
-                        this.mode === 'edit' &&
-                        <Form.Control type="text" defaultValue={this.permission.username} disabled />
-                      }
+                            }
+                          </Form.Control>
+                        }
+                        {
+                          this.mode === 'edit' &&
+                          <Form.Control type="text" defaultValue={this.permission.username} disabled />
+                        }
                       </Col>
                     </Form.Group>
                   </Form>
@@ -525,135 +610,148 @@ class PermissionSetting extends React.Component<IProps, IState> {
           <EmptyRow />
           <Row>
             <Col>
-            {
-              this.state.querySites.length === 0 && !this.state.isLoading &&
-              <Jumbotron>
-                <p>{ I18n.get('text.no.permission') }</p>
-              </Jumbotron>
-            }
-            {
-              this.state.querySites.length > 0 &&
-              <Card className="custom-card-big">
-                <Card.Body>
-                  <Tab.Container id="site-tabs">
-                    <Row>
-                      <Col sm={3}>
-                        <ListGroup as="ul">
-                        {
-                          this.state.querySites.map((site: ISelectedData) => {
-                            const isSiteChecked: boolean = this.sites.map(mapSite => { return mapSite.id }).includes(site.id as string);
-                            const siteId = JSON.stringify({ id: site.id, name: site.name });
+              {
+                this.state.querySites.length === 0 && !this.state.isLoading &&
+                <Jumbotron>
+                  <p>{I18n.get('text.no.permission')}</p>
+                </Jumbotron>
+              }
+              {
+                this.state.querySites.length > 0 &&
+                <Card className="custom-card-big">
+                  <Card.Body>
+                    <Tab.Container id="site-tabs">
+                      <Row>
+                        <Col sm={3}>
+                          <ListGroup as="ul">
+                            {
+                              this.state.querySites.map((site: ISelectedData) => {
+                                let hasSitePermission = false;
+                                if (this.state.userPermissions) {
+                                  hasSitePermission = this.state.userPermissions.sites.some(s => s.id === site.id);
+                                }
 
-                            return (
-                              <ListGroup.Item as="li" key={site.id} eventKey={site.id} onClick={() => this.getSiteData(site.id as string, site.name)}>
-                                <Form.Check key={site.id} id={siteId} type="checkbox" label={site.name} onChange={this.handleSiteChange} checked={isSiteChecked} />
-                              </ListGroup.Item>
-                            );
-                          })
-                        }
-                        </ListGroup>
-                      </Col>
-                      <Col sm={9}>
-                        <Tab.Content>
-                        {
-                          this.state.querySites.map((site: ISelectedData) => {
-                            const loadedSite = this.loadedSites[site.id as string];
-                            const isSiteLoaded: boolean = loadedSite !== undefined;
+                                return (
+                                  <ListGroup.Item as="li" key={site.id} eventKey={site.id}>
+                                    <Form.Check key={site.id} id={JSON.stringify({ id: site.id, name: site.name })} type="checkbox" label={site.name} onChange={this.handleSiteChange} checked={hasSitePermission} />
+                                  </ListGroup.Item>
+                                );
+                              })
+                            }
+                          </ListGroup>
+                        </Col>
+                        <Col sm={9}>
+                          <Tab.Content>
+                            {
+                              this.state.querySites.map((site: ISelectedData) => {
+                                const loadedSite = this.loadedSites[site.id as string];
+                                const isSiteLoaded: boolean = loadedSite !== undefined;
 
-                            return (
-                              <Tab.Pane key={site.id} eventKey={site.id}>
-                              {
-                                !isSiteLoaded &&
-                                <Spinner animation="border" />
-                              }
-                              {
-                                isSiteLoaded && loadedSite.areas.length === 0 &&
-                                <Jumbotron>
-                                  <p>{ I18n.get('text.no.area') }</p>
-                                </Jumbotron>
-                              }
-                              {
-                                isSiteLoaded && loadedSite.areas.map((area: ISelectedData) => {
-                                  const isAreaChecked = this.areas.map(mapArea => { return mapArea.id }).includes(area.id as string);
-                                  const areaId = JSON.stringify({ id: area.id, name: area.name, siteId: site.id });
+                                return (
+                                  <Tab.Pane key={site.id} eventKey={site.id}>
+                                    {
+                                      !isSiteLoaded &&
+                                      <Spinner animation="border" />
+                                    }
+                                    {
+                                      isSiteLoaded && loadedSite.areas.length === 0 &&
+                                      <Jumbotron>
+                                        <p>{I18n.get('text.no.area')}</p>
+                                      </Jumbotron>
+                                    }
+                                    {
+                                      isSiteLoaded && loadedSite.areas.map((area: ISelectedData) => {
+                                        let hasPermission = false;
+                                        if (this.state.userPermissions) {
+                                          hasPermission = this.state.userPermissions.areas.some(x => x.id === area.id);
+                                        }
 
-                                  return (
-                                    <div key={area.id}>
-                                      <Form.Check key={area.id} id={areaId} type="checkbox" label={ `${I18n.get('text.area')}: ${area.name}`} onChange={this.handleAreaChange} checked={isAreaChecked} />
-                                      <Table>
-                                        <thead>
-                                          <tr>
-                                            <th>{ I18n.get('info.processes') }</th>
-                                            <th>{ I18n.get('text.stations') }</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          <tr>
-                                            <td className="table-align-top">
-                                            {
-                                              loadedSite.processes.filter((process: ISelectedData) => process.parentId === area.id)
-                                                .map((process: ISelectedData) => {
-                                                  const isProcessChecked = this.processes.map(mapProcess => { return mapProcess.id }).includes(process.id as string);
-                                                  const processId = JSON.stringify({ id: process.id, name: process.name, siteId: site.id, areaId: area.id });
+                                        return (
+                                          <div key={area.id}>
+                                            <Form.Check key={area.id} id={JSON.stringify({ id: area.id, name: area.name, siteId: site.id })} type="checkbox" label={`${I18n.get('text.area')}: ${area.name}`} onChange={this.handleAreaChange} checked={hasPermission} />
+                                            <Table>
+                                              <thead>
+                                                <tr>
+                                                  <th>{I18n.get('info.processes')}</th>
+                                                  <th>{I18n.get('text.stations')}</th>
+                                                </tr>
+                                              </thead>
+                                              <tbody>
+                                                <tr>
+                                                  <td className="table-align-top">
+                                                    {
+                                                      loadedSite.processes.filter((process: ISelectedData) => process.parentId === area.id)
+                                                        .map((process: ISelectedData) => {
+                                                          const processId = JSON.stringify({ id: process.id, name: process.name, siteId: site.id, areaId: area.id });
+                                                          let hasProcessPermission = false;
+                                                          if (this.state.userPermissions) {
+                                                            hasProcessPermission = this.state.userPermissions.processes.some(x => x.id === process.id);
+                                                          }
 
-                                                  return (
-                                                    <Form.Check key={process.id} id={processId} type="checkbox" label={process.name} onChange={this.handleProcessChange} checked={isProcessChecked} />
-                                                  );
-                                                })
-                                            }
-                                            </td>
-                                            <td className="table-align-top">
-                                            {
-                                              loadedSite.stations.filter((station: ISelectedData) => station.parentId === area.id)
-                                                .map((station: ISelectedData) => {
-                                                  const isStationChecked = this.stations.map(mapStation => { return mapStation.id }).includes(station.id as string);
-                                                  const stationId = JSON.stringify({ id: station.id, name: station.name, siteId: site.id, areaId: area.id });
+                                                          return (
+                                                            <Form.Check key={process.id} id={processId} type="checkbox" label={process.name} onChange={this.handleProcessChange} checked={hasProcessPermission} />
+                                                          );
+                                                        })
+                                                    }
+                                                  </td>
+                                                  <td className="table-align-top">
+                                                    {
+                                                      loadedSite.stations.filter((station: ISelectedData) => station.parentId === area.id)
+                                                        .map((station: ISelectedData) => {
+                                                          const stationId = JSON.stringify({ id: station.id, name: station.name, siteId: site.id, areaId: area.id });
+                                                          let hasStationPermission = false;
+                                                          if (this.state.userPermissions) {
+                                                            hasStationPermission = this.state.userPermissions.stations.some(x => x.id === station.id);
+                                                          }
 
-                                                  return (
-                                                    <div key={station.id}>
-                                                      <Form.Check key={station.id} id={stationId} type="checkbox" label={station.name} onChange={this.handleStationChange} checked={isStationChecked} />
-                                                      <Table>
-                                                        <tbody>
-                                                          <tr>
-                                                            <td className="table-align-top">
-                                                            {
-                                                              loadedSite.devices.filter((device: ISelectedData) => device.parentId === station.id)
-                                                                .map((device: ISelectedData) => {
-                                                                  const isDeviceChecked = this.devices.map(mapDevice => { return mapDevice.id }).includes(device.id as string);
-                                                                  const deviceId = JSON.stringify({ id: device.id, name: device.name, siteId: site.id, areaId: area.id, stationId: station.id });
+                                                          return (
+                                                            <div key={station.id}>
+                                                              <Form.Check key={station.id} id={stationId} type="checkbox" label={station.name} onChange={this.handleStationChange} checked={hasStationPermission} />
+                                                              <Table>
+                                                                <tbody>
+                                                                  <tr>
+                                                                    <td className="table-align-top">
+                                                                      {
+                                                                        loadedSite.devices.filter((device: ISelectedData) => device.parentId === station.id)
+                                                                          .map((device: ISelectedData) => {
+                                                                            const deviceId = JSON.stringify({ id: device.id, name: device.name, siteId: site.id, areaId: area.id, stationId: station.id });
+                                                                            let hasDevicePermission = false;
+                                                                            if (this.state.userPermissions) {
+                                                                              hasDevicePermission = this.state.userPermissions.devices.some(x => x.id === device.id);
+                                                                            }
 
-                                                                  return (
-                                                                    <Form.Check key={device.id} id={deviceId} type="checkbox" label={device.name} onChange={this.handleDeviceChange} checked={isDeviceChecked} />
-                                                                  );
-                                                                })
-                                                              }
-                                                            </td>
-                                                          </tr>
-                                                        </tbody>
-                                                      </Table>
-                                                    </div>
-                                                  );
-                                                })
-                                            }
-                                            </td>
-                                          </tr>
-                                        </tbody>
-                                      </Table>
-                                    </div>
-                                  );
-                                })
-                              }
-                              </Tab.Pane>
-                            );
-                          })
-                        }
-                        </Tab.Content>
-                      </Col>
-                    </Row>
-                  </Tab.Container>
-                </Card.Body>
-              </Card>
-            }
+                                                                            return (
+                                                                              <Form.Check key={device.id} id={deviceId} type="checkbox" label={device.name} onChange={this.handleDeviceChange} checked={hasDevicePermission} />
+                                                                            );
+                                                                          })
+                                                                      }
+                                                                    </td>
+                                                                  </tr>
+                                                                </tbody>
+                                                              </Table>
+                                                            </div>
+                                                          );
+                                                        })
+                                                    }
+                                                  </td>
+                                                </tr>
+                                              </tbody>
+                                            </Table>
+                                          </div>
+                                        );
+                                      })
+                                    }
+                                  </Tab.Pane>
+                                );
+                              })
+                            }
+                          </Tab.Content>
+                        </Col>
+                      </Row>
+                    </Tab.Container>
+                  </Card.Body>
+                </Card>
+              }
             </Col>
           </Row>
           {
@@ -669,7 +767,7 @@ class PermissionSetting extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ I18n.get('error') }:</strong><br />
+                  <strong>{I18n.get('error')}:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>

@@ -1,15 +1,5 @@
-/**********************************************************************************************************************
- *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://www.apache.org/licenses/LICENSE-2.0                                                                    *
- *                                                                                                                    *
- *  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 // Import React and Amplify packages
 import React from 'react';
@@ -176,7 +166,7 @@ class Device extends React.Component<IProps, IState> {
       });
     } catch (error) {
       LOGGER.error('Error while getting station', error);
-      this.setState({ error: I18n.get('error.get.station')});
+      this.setState({ error: I18n.get('error.get.station') });
     }
 
     this.setState({ isLoading: false });
@@ -381,15 +371,15 @@ class Device extends React.Component<IProps, IState> {
             <Col>
               <Breadcrumb>
                 <LinkContainer to="/sites" exact>
-                  <Breadcrumb.Item>{ I18n.get('text.sites') }</Breadcrumb.Item>
+                  <Breadcrumb.Item>{I18n.get('text.sites')}</Breadcrumb.Item>
                 </LinkContainer>
                 <LinkContainer to={`/sites/${this.state.siteId}`} exact>
-                  <Breadcrumb.Item>{ I18n.get('text.areas') }{this.state.siteName}</Breadcrumb.Item>
+                  <Breadcrumb.Item>{I18n.get('text.areas')}{this.state.siteName}</Breadcrumb.Item>
                 </LinkContainer>
                 <LinkContainer to={`/areas/${this.state.areaId}/stations`} exact>
-                  <Breadcrumb.Item>{ I18n.get('text.stations') }{this.state.areaName}</Breadcrumb.Item>
+                  <Breadcrumb.Item>{I18n.get('text.stations')}{this.state.areaName}</Breadcrumb.Item>
                 </LinkContainer>
-                <Breadcrumb.Item active>{ I18n.get('text.devices') }{this.state.stationName}</Breadcrumb.Item>
+                <Breadcrumb.Item active>{I18n.get('text.devices')}{this.state.stationName}</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -397,7 +387,7 @@ class Device extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ I18n.get('button.add.device') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{I18n.get('button.add.device')}</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -411,11 +401,11 @@ class Device extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={4} controlId="searchKeyword">
-                        <Form.Label>{ I18n.get('text.search.keyword') }</Form.Label>
-                        <Form.Control type="text" placeholder={ I18n.get('text.search.device.name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
+                        <Form.Label>{I18n.get('text.search.keyword')}</Form.Label>
+                        <Form.Control type="text" placeholder={I18n.get('text.search.device.name')} defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
                       </Form.Group>
                       <Form.Group as={Col} md={4} controlId="sortBy">
-                        <Form.Label>{ I18n.get('text.sort.by') }</Form.Label>
+                        <Form.Label>{I18n.get('text.sort.by')}</Form.Label>
                         <Form.Control as="select" defaultValue={this.state.sort} onChange={this.handleSort}>
                           <option value={SortBy.Asc}>A-Z</option>
                           <option value={SortBy.Desc}>Z-A</option>
@@ -433,7 +423,7 @@ class Device extends React.Component<IProps, IState> {
               this.state.devices.length === 0 && !this.state.isLoading &&
               <Col>
                 <Jumbotron>
-                  <p>{ I18n.get('text.no.device') }</p>
+                  <p>{I18n.get('text.no.device')}</p>
                 </Jumbotron>
               </Col>
             }
@@ -448,15 +438,19 @@ class Device extends React.Component<IProps, IState> {
                           <Table striped bordered>
                             <tbody>
                               <tr>
-                                <td>{ I18n.get('text.description') }</td>
+                                <td>{I18n.get('text.description')}</td>
                                 <td>{device.description}</td>
+                              </tr>
+                              <tr>
+                                <td>{I18n.get('text.device.id')}</td>
+                                <td>{device.id}</td>
                               </tr>
                             </tbody>
                           </Table>
                           <Form>
                             <Form.Row className="justify-content-between">
                               <Button size="sm" variant="danger"
-                                onClick={() => this.openModal(ModalType.Delete, device.id, device.name)}>{ I18n.get('button.delete') }</Button>
+                                onClick={() => this.openModal(ModalType.Delete, device.id, device.name)}>{I18n.get('button.delete')}</Button>
                             </Form.Row>
                           </Form>
                         </Card.Body>
@@ -479,7 +473,7 @@ class Device extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ I18n.get('error') }:</strong><br />
+                  <strong>{I18n.get('error')}:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -496,22 +490,22 @@ class Device extends React.Component<IProps, IState> {
               <Modal.Body>
                 <Form>
                   <Form.Group controlId="deviceName">
-                    <Form.Label>{ I18n.get('text.device.name') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ I18n.get('input.device.name') }
-                      defaultValue="" onChange={this.handleDeviceNameChange} className={ getInputFormValidationClassName(this.state.deviceName, this.state.isDeviceNameValid) } />
-                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
+                    <Form.Label>{I18n.get('text.device.name')} <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={I18n.get('input.device.name')}
+                      defaultValue="" onChange={this.handleDeviceNameChange} className={getInputFormValidationClassName(this.state.deviceName, this.state.isDeviceNameValid)} />
+                    <Form.Text className="text-muted">{`(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}`}</Form.Text>
                   </Form.Group>
                   <Form.Group controlId="deviceDescription">
-                    <Form.Label>{ I18n.get('text.device.description') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ I18n.get('input.device.description') }
-                      defaultValue="" onChange={this.handleDeviceDescriptionChange} className={ getInputFormValidationClassName(this.state.deviceDescription, this.state.isDeviceDescriptionValid) } />
-                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
+                    <Form.Label>{I18n.get('text.device.description')} <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={I18n.get('input.device.description')}
+                      defaultValue="" onChange={this.handleDeviceDescriptionChange} className={getInputFormValidationClassName(this.state.deviceDescription, this.state.isDeviceDescriptionValid)} />
+                    <Form.Text className="text-muted">{`(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}`}</Form.Text>
                   </Form.Group>
                 </Form>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
-                <Button variant="primary" onClick={this.addDevice} disabled={this.state.isModalProcessing || !this.state.isDeviceNameValid || !this.state.isDeviceDescriptionValid}>{ I18n.get('button.register') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
+                <Button variant="primary" onClick={this.addDevice} disabled={this.state.isModalProcessing || !this.state.isDeviceNameValid || !this.state.isDeviceDescriptionValid}>{I18n.get('button.register')}</Button>
               </Modal.Footer>
             </div>
           }
@@ -519,11 +513,11 @@ class Device extends React.Component<IProps, IState> {
             this.state.modalType === ModalType.Delete &&
             <div>
               <Modal.Body>
-                { I18n.get('text.confirm.delete.device') }: <strong>{this.state.deviceName}</strong>?
+                {I18n.get('text.confirm.delete.device')}: <strong>{this.state.deviceName}</strong>?
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
-                <Button variant="danger" onClick={this.deleteDevice} disabled={this.state.isModalProcessing}>{ I18n.get('button.delete') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
+                <Button variant="danger" onClick={this.deleteDevice} disabled={this.state.isModalProcessing}>{I18n.get('button.delete')}</Button>
               </Modal.Footer>
             </div>
           }

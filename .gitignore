@@ -25,9 +25,12 @@
 **/console_backup
 **/coverage
 **/andon_config.js
+deployment/create-stack.sh
+source/console/public/assets/andon_config.js
 
 # System Files
 **/.DS_Store
+source/test
 
 # viperlight
 **viperlight**

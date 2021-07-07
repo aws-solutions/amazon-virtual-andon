@@ -1,15 +1,5 @@
-/**********************************************************************************************************************
- *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://www.apache.org/licenses/LICENSE-2.0                                                                    *
- *                                                                                                                    *
- *  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 // Import React, Amplify, and AWS SDK packages
 import React from 'react';
@@ -28,7 +18,7 @@ import CustomRequireNewPassword from './components/amplify-authentication/Custom
 import CustomForgotPassword from './components/amplify-authentication/CustomForgotPassword';
 import CustomVerifyContact from './components/amplify-authentication/CustomVerifyContact';
 import Footer from './components/Footer';
-import { LOGGING_LEVEL, getAmplifyCustomErrorMessage } from './util/CustomUtil';
+import { LOGGING_LEVEL, getAmplifyCustomErrorMessage, handleSubscriptionError } from './util/CustomUtil';
 import { adminRoutes, managerRoutes, engineerRoutes, associateRoutes } from './components/Routes';
 import { IRoute } from './components/Interfaces';
 
@@ -51,6 +41,13 @@ interface IState {
   routes: IRoute[];
 }
 
+/**
+ * Types of subscriptions that will be maintained by the main App class
+ */
+export enum AppSubscriptionTypes {
+  GROUP
+}
+
 // Logging
 const LOGGER = new Logger('App', LOGGING_LEVEL);
 
@@ -61,6 +58,12 @@ Amplify.addPluggable(new AWSIoTProvider({
   aws_pubsub_endpoint: andon_config.aws_iot_endpoint + '/mqtt'
 }));
 PubSub.configure(andon_config);
+Amplify.configure({
+  Storage: {
+    bucket: andon_config.website_bucket,
+    region: andon_config.aws_project_region
+  }
+});
 
 /**
  * The default application
@@ -83,6 +86,7 @@ class App extends React.Component<IProps, IState> {
 
     this.handleNotification = this.handleNotification.bind(this);
     this.handleAuthStateChange = this.handleAuthStateChange.bind(this);
+    this.configureSubscription = this.configureSubscription.bind(this);
   }
 
   /**
@@ -102,7 +106,7 @@ class App extends React.Component<IProps, IState> {
     const notification = this.notificationSystem.current;
 
     notification.addNotification({
-      message: ( <div>{message}</div> ),
+      message: (<div>{message}</div>),
       level,
       position: 'tr',
       autoDismiss
@@ -117,7 +121,6 @@ class App extends React.Component<IProps, IState> {
     if (state === 'signedIn') {
       const user = await Auth.currentAuthenticatedUser();
       const groups = user.signInUserSession.idToken.payload['cognito:groups'];
-      const userId = user.signInUserSession.idToken.payload.sub;
 
       if (!groups) {
         this.setState({ routes: [] });
@@ -148,6 +151,25 @@ class App extends React.Component<IProps, IState> {
 
       try {
         await new AWS.Iot().attachPrincipalPolicy(params).promise();
+        await this.configureSubscription(AppSubscriptionTypes.GROUP);
+      } catch (error) {
+        LOGGER.error('Error occurred while attaching princial policy', error);
+      }
+    }
+  }
+
+  /**
+   * Configures the subscription for the supplied `subscriptionType`
+   * @param subscriptionType The type of subscription to configure
+   * @param delayMS (Optional) This value will be used to set a delay for reestablishing the subscription if the socket connection is lost
+   */
+  async configureSubscription(subscriptionType: AppSubscriptionTypes, delayMS: number = 10): Promise<void> {
+    try {
+      if (subscriptionType === AppSubscriptionTypes.GROUP) {
+        const user = await Auth.currentAuthenticatedUser();
+        const userId = user.signInUserSession.idToken.payload.sub;
+
+        if (this.groupSubscription) { this.groupSubscription.unsubscribe(); }
 
         // Subscribe user group change for the user
         this.groupSubscription = PubSub.subscribe(`ava/groups/${userId}`).subscribe({
@@ -157,14 +179,13 @@ class App extends React.Component<IProps, IState> {
             Auth.signOut();
             this.groupSubscription.unsubscribe();
           },
-          error: () => {
-            // If there's an error (e.g. connection closed), reload the window.
-            window.location.reload();
+          error: async (e: any) => {
+            await handleSubscriptionError(e, subscriptionType, this.configureSubscription, delayMS);
           }
         });
-      } catch (error) {
-        LOGGER.error('Error occurred while attaching princial policy', error);
       }
+    } catch (err) {
+      console.error('Unable to configure subscription', err);
     }
   }
 

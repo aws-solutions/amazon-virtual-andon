@@ -1,21 +1,12 @@
-/**********************************************************************************************************************
- *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://www.apache.org/licenses/LICENSE-2.0                                                                    *
- *                                                                                                                    *
- *  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 // Import React and Amplify packages
 import React from 'react';
 import { API, graphqlOperation, I18n } from 'aws-amplify';
 import { GraphQLResult } from '@aws-amplify/api-graphql';
 import { Logger } from '@aws-amplify/core';
+import { RouteComponentProps } from 'react-router';
 
 // Import React Bootstrap components
 import Container from 'react-bootstrap/Container';
@@ -36,7 +27,7 @@ import { getEvent } from '../graphql/queries';
 import { updateIssue } from '../graphql/mutations';
 
 // Import custom setting
-import { LOGGING_LEVEL, addISOTimeOffset, makeAllVisible } from '../util/CustomUtil';
+import { LOGGING_LEVEL, addISOTimeOffset, convertSecondsToHms, makeAllVisible, handleSubscriptionError } from '../util/CustomUtil';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IGeneralQueryData, IIssue, ISelectedData } from '../components/Interfaces';
 import EmptyRow from '../components/EmptyRow';
@@ -48,6 +39,7 @@ import EmptyRow from '../components/EmptyRow';
 interface IProps {
   history?: any;
   handleNotification: Function;
+  location?: any;
 }
 
 /**
@@ -67,6 +59,15 @@ interface IState {
   showModal: boolean;
   rootCauses: string[];
   rootCause: string;
+  comment: string;
+}
+
+/**
+ * Types of subscriptions that will be maintained by the main Observer class
+ */
+export enum ObserverSubscriptionTypes {
+  CREATE_ISSUE,
+  UPDATE_ISSUE
 }
 
 // Logging
@@ -76,7 +77,7 @@ const LOGGER = new Logger('Observer', LOGGING_LEVEL);
  * The observer page
  * @class Observer
  */
-class Observer extends React.Component<IProps, IState> {
+class Observer extends React.Component<IProps, IState, RouteComponentProps> {
   // GraphQL common class
   private graphQlCommon: GraphQLCommon;
   // Create issue subscription
@@ -98,7 +99,8 @@ class Observer extends React.Component<IProps, IState> {
       showIssue: false,
       showModal: false,
       rootCauses: [],
-      rootCause: ''
+      rootCause: '',
+      comment: ''
     };
 
     this.graphQlCommon = new GraphQLCommon();
@@ -110,6 +112,8 @@ class Observer extends React.Component<IProps, IState> {
     this.handleUpdateIssue = this.handleUpdateIssue.bind(this);
     this.handleClose = this.handleClose.bind(this);
     this.handleModalClose = this.handleModalClose.bind(this);
+    this.calculateTimeSinceIssueCreated = this.calculateTimeSinceIssueCreated.bind(this);
+    this.configureSubscription = this.configureSubscription.bind(this);
   }
 
   /**
@@ -119,52 +123,92 @@ class Observer extends React.Component<IProps, IState> {
     // Get sites at page load
     this.getSites();
 
-    // Subscribe to new issues
-    // @ts-ignore
-    this.createIssueSubscription = API.graphql(graphqlOperation(onCreateIssue)).subscribe({
-      next: (response: any) => {
-        const { issues, selectedSite, selectedArea, showIssue } = this.state;
-        const newIssue = response.value.data.onCreateIssue;
-        newIssue.visible = true;
+    // Configure subscriptions
+    await this.configureSubscription(ObserverSubscriptionTypes.CREATE_ISSUE);
+    await this.configureSubscription(ObserverSubscriptionTypes.UPDATE_ISSUE);
+  }
 
-        if (showIssue && selectedSite.name === newIssue.siteName && selectedArea.name === newIssue.areaName) {
-          const updatedIssues = [...issues, newIssue];
-          this.setState({ issues: updatedIssues });
+  /**
+   * Configures the subscription for the supplied `subscriptionType`
+   * @param subscriptionType The type of subscription to configure
+   * @param delayMS (Optional) This value will be used to set a delay for reestablishing the subscription if the socket connection is lost
+   */
+  async configureSubscription(subscriptionType: ObserverSubscriptionTypes, delayMS: number = 10): Promise<void> {
+    try {
+      switch (subscriptionType) {
+        case ObserverSubscriptionTypes.CREATE_ISSUE:
+          if (this.createIssueSubscription) { this.createIssueSubscription.unsubscribe(); }
 
-          this.props.handleNotification(`${I18n.get('text.issue')}: ${newIssue.deviceName}`, 'info', 5);
-        }
-      },
-      error: () => {
-        // If there's an error (e.g. connection closed), reload the window.
-        window.location.reload();
+          // @ts-ignore
+          this.createIssueSubscription = API.graphql(graphqlOperation(onCreateIssue)).subscribe({
+            next: (response: any) => {
+              const { issues, selectedSite, selectedArea, showIssue } = this.state;
+              const newIssue = response.value.data.onCreateIssue;
+              newIssue.visible = true;
+
+              if (showIssue && selectedSite.name === newIssue.siteName && (selectedArea.name === newIssue.areaName || selectedArea.name === "all")) {
+                const updatedIssues = [...issues, newIssue];
+                this.setState({ issues: updatedIssues });
+
+                this.props.handleNotification(`${I18n.get('text.issue')}: ${newIssue.deviceName}`, 'info', 5);
+              }
+            },
+            error: async (e: any) => {
+              await handleSubscriptionError(e, subscriptionType, this.configureSubscription, delayMS);
+            }
+          });
+          break;
+        case ObserverSubscriptionTypes.UPDATE_ISSUE:
+          if (this.updateIssueSubscription) { this.updateIssueSubscription.unsubscribe(); }
+
+          // @ts-ignore
+          this.updateIssueSubscription = API.graphql(graphqlOperation(onUpdateIssue)).subscribe({
+            next: (response: any) => {
+              const { issues, selectedSite, selectedArea, showIssue } = this.state;
+              let updatedIssue = response.value.data.onUpdateIssue;
+
+              if (showIssue && selectedSite.name === updatedIssue.siteName && (selectedArea.name === updatedIssue.areaName || selectedArea.name === 'all')) {
+                updatedIssue.visible = ('acknowledged' === updatedIssue.status);
+
+                const issueIndex = issues.findIndex(issue => issue.id === updatedIssue.id);
+                const updatedIssues = [
+                  ...issues.slice(0, issueIndex),
+                  updatedIssue,
+                  ...issues.slice(issueIndex + 1)
+                ];
+
+                this.setState({ issues: updatedIssues });
+              }
+            },
+            error: async (e: any) => {
+              await handleSubscriptionError(e, subscriptionType, this.configureSubscription, delayMS);
+            }
+          })
+          break;
       }
-    });
+    } catch (err) {
+      console.error('Unable to configure subscription', err);
+    }
+  }
 
-    // Subscribe to update issues
-    // @ts-ignore
-    this.updateIssueSubscription = API.graphql(graphqlOperation(onUpdateIssue)).subscribe({
-      next: (response: any) => {
-        const { issues, selectedSite, selectedArea, showIssue } = this.state;
-        let updatedIssue = response.value.data.onUpdateIssue;
+  componentDidUpdate(prevProps: IProps, prevState: IState) {
+    const queryParams = new URLSearchParams(this.props.location.search);
+    let newQueryValue;
+    let queryKeyToUpdate = "";
+    let selectKeysPrefix = "selected"
+    let key: keyof IState
 
-        if (showIssue && selectedSite.name === updatedIssue.siteName && selectedArea.name === updatedIssue.areaName) {
-          updatedIssue.visible = ('acknowledged' === updatedIssue.status);
-
-          const issueIndex = issues.findIndex(issue => issue.id === updatedIssue.id);
-          const updatedIssues = [
-            ...issues.slice(0, issueIndex),
-            updatedIssue,
-            ...issues.slice(issueIndex + 1)
-          ];
-
-          this.setState({ issues: updatedIssues });
-        }
-      },
-      error: () => {
-        // If there's an error (e.g. connection closed), reload the window.
-        window.location.reload();
+    for (key in this.state) {
+      if (key.startsWith(selectKeysPrefix) && prevState[key] !== this.state[key]) {
+        newQueryValue = (this.state[key] as ISelectedData).id;
+        queryKeyToUpdate = key.slice(selectKeysPrefix.length, key.length).toLowerCase();
       }
-    })
+    }
+
+    if (queryKeyToUpdate !== "" && newQueryValue !== undefined) {
+      queryParams.set(queryKeyToUpdate, newQueryValue);
+      this.props.history.replace({ search: `?${queryParams.toString()}` });
+    }
   }
 
   /**
@@ -181,12 +225,16 @@ class Observer extends React.Component<IProps, IState> {
   async getSites() {
     try {
       const sites: IGeneralQueryData[] = await this.graphQlCommon.listSites();
+      const search = new URLSearchParams(this.props.location.search);
+      const searchedSiteId = search.get("site");
 
-      if (sites.length === 1) {
+      if (sites.length === 1 || searchedSiteId) {
+        const searchedSite = sites.filter((site) => site.id === searchedSiteId);
+
         const selectedSite = {
-          id: sites[0].id,
-          name: sites[0].name
-        };
+          id: searchedSite.length > 0 ? searchedSite[0].id : sites[0].id,
+          name: searchedSite.length > 0 ? searchedSite[0].name : sites[0].name
+        }
 
         this.setState({
           selectedSite,
@@ -212,16 +260,15 @@ class Observer extends React.Component<IProps, IState> {
       // Graphql operation to get areas
       const siteId = selectedSite.id;
       const areas: IGeneralQueryData[] = await this.graphQlCommon.listAreas(siteId as string);
+      const search = new URLSearchParams(this.props.location.search);
+      const searchedAreaId = search.get("area");
+      const searchedArea = areas.filter((area) => area.id === searchedAreaId);
 
-      if (areas.length === 1) {
-        const selectedArea = {
-          id: areas[0].id,
-          name: areas[0].name
-        };
+      const selectedArea = searchedArea.length > 0 ? { id: searchedArea[0].id, name: searchedArea[0].name } : { id: "all", name: "all" };
 
-        this.setState({ selectedArea });
-        this.getIssues(selectedSite, selectedArea);
-      }
+      this.setState({ selectedArea });
+      this.getIssues(selectedSite, selectedArea);
+
 
       areas.sort((a, b) => a.name.localeCompare(b.name));
       this.setState({ areas });
@@ -251,6 +298,7 @@ class Observer extends React.Component<IProps, IState> {
       const selectedAreaName = selectedArea.name;
 
       // Get open issues
+      let filter = selectedAreaName === "all" && { filter: { status: { eq: "open" } } }
       const input = {
         siteName: selectedSiteName,
         areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated: {
@@ -259,10 +307,11 @@ class Observer extends React.Component<IProps, IState> {
             status: 'open'
           }
         },
-        limit: 20
+        limit: 20,
+        ...filter
       };
       let issues: IIssue[] = await this.graphQlCommon.listIssuesBySiteAreaStatus(input);
-
+      if (input.filter) input.filter.status.eq = "acknowledged";
       // Get acknowledged issues
       input.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.status = 'acknowledged';
       issues = [
@@ -297,9 +346,10 @@ class Observer extends React.Component<IProps, IState> {
       rootCauses: []
     }, async () => {
       if (issue) {
-        const { rootCause } = this.state;
+        const { rootCause, comment } = this.state;
         if (rootCause && rootCause !== '') {
           issue.rootCause = rootCause;
+          if (comment && comment !== '') issue.comment = comment;
         }
 
         await this.handleUpdateIssue(issue, 'closed');
@@ -320,7 +370,6 @@ class Observer extends React.Component<IProps, IState> {
 
     this.setState({
       selectedSite,
-      selectedArea: { id: '', name: ''},
       issues: [],
       showIssue: false
     });
@@ -440,6 +489,22 @@ class Observer extends React.Component<IProps, IState> {
   }
 
   /**
+ * Calculate time passed since the issue was created
+ * @param {string} issueCreatedTime - The time the issue was created in UTC
+ * @return {string} the hours passed since the issue was created.
+ */
+  calculateTimeSinceIssueCreated(issueCreatedTime: string) {
+    const currentTime = new Date().getTime();
+    const timeElapsedInMilliseconds = currentTime - new Date(issueCreatedTime).getTime();
+    const timeElapsedInSeconds = timeElapsedInMilliseconds / 1000;
+    const timeElapsedAsString = convertSecondsToHms(timeElapsedInSeconds);
+    let [largestUnitOfTimeValue, largestUnitOfTimeLabel] = timeElapsedAsString.split(' ');
+    if (Number(largestUnitOfTimeValue) < 1) largestUnitOfTimeValue = "< 1";
+
+    return `${largestUnitOfTimeValue} ${largestUnitOfTimeLabel}`;
+  }
+
+  /**
    * Render this page.
    */
   render() {
@@ -449,7 +514,7 @@ class Observer extends React.Component<IProps, IState> {
           <Row>
             <Col>
               <Breadcrumb>
-                <Breadcrumb.Item active>{ I18n.get('menu.observer') }</Breadcrumb.Item>
+                <Breadcrumb.Item active>{I18n.get('menu.observer')}</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -460,9 +525,9 @@ class Observer extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={6} controlId="siteSelect">
-                        <Form.Label>{ I18n.get('text.select.site.issues') }</Form.Label>
+                        <Form.Label>{I18n.get('text.select.site.issues')}</Form.Label>
                         <Form.Control as="select" value={this.state.selectedSite.name} onChange={this.handleSiteChange}>
-                          <option data-key="" key="none-site" value="">{ I18n.get('text.select.site') }</option>
+                          <option data-key="" key="none-site" value="" disabled>{I18n.get('text.select.site')}</option>
                           {
                             this.state.sites.map((site: IGeneralQueryData) => {
                               return (
@@ -473,9 +538,12 @@ class Observer extends React.Component<IProps, IState> {
                         </Form.Control>
                       </Form.Group>
                       <Form.Group as={Col} md={6} controlId="areaSelect">
-                        <Form.Label>{ I18n.get('text.select.area.issues') }</Form.Label>
+                        <Form.Label>{I18n.get('text.select.area.issues')}</Form.Label>
                         <Form.Control as="select" value={this.state.selectedArea.name} onChange={this.handleAreaChange}>
-                          <option data-key="" key="none-area" value="">{ I18n.get('text.select.area') }</option>
+                          <option data-key="" key="none-area" value="" disabled>{I18n.get('text.select.area')}</option>
+                          {
+                            this.state.selectedSite.name !== "" && <option data-key="all" key="all" value="all">{I18n.get('text.select.area.all')}</option>
+                          }
                           {
                             this.state.areas.map((area: IGeneralQueryData) => {
                               return (
@@ -494,52 +562,53 @@ class Observer extends React.Component<IProps, IState> {
           <EmptyRow />
           <Row>
             <Col>
-            {
-              this.state.showIssue && this.state.issues.filter(issue => issue.visible).length === 0 && !this.state.isLoading &&
-              <Jumbotron>
-                <p>{ I18n.get('text.no.issues.currently') }</p>
-              </Jumbotron>
-            }
-            {
-              this.state.issues.filter(issue => issue.visible).length > 0 &&
-              <Card className="custom-card-big">
-                <Row>
-                {
-                  this.state.issues.filter((issue: IIssue) => issue.visible)
-                    .map((issue: IIssue) => {
-                      return (
-                        <Col xs={6} sm={4} md={4} key={issue.id}>
-                          <Card className="custom-card-issue">
-                            <Card.Header>
-                              <p><strong>{issue.eventDescription}</strong></p>
-                              <p>{issue.deviceName} - {issue.stationName}</p>
-                            </Card.Header>
-                            <Card.Body>
-                              <Card.Title>
-                                <h6>{ I18n.get('text.process.name') } - {issue.processName}</h6>
-                              </Card.Title>
-                              <Form>
-                                {
-                                  issue.status === 'open' &&
-                                  <Form.Row className="justify-content-between">
-                                    <Button variant="success" size="sm" onClick={async () => this.handleUpdateIssue(issue, 'acknowledged')}>{ I18n.get('button.acknowledge') }</Button>
-                                    <Button variant="secondary" size="sm" onClick={async () => this.handleUpdateIssue(issue, 'rejected')}>{ I18n.get('button.reject') }</Button>
-                                  </Form.Row>
-                                }
-                                {
-                                  issue.status === 'acknowledged' &&
-                                  <Button variant="warning" size="sm" onClick={async () => this.handleClose(issue)}>{ I18n.get('button.close') }</Button>
-                                }
-                              </Form>
-                            </Card.Body>
-                          </Card>
-                        </Col>
-                      );
-                    })
-                }
-                </Row>
-              </Card>
-            }
+              {
+                this.state.showIssue && this.state.issues.filter(issue => issue.visible).length === 0 && !this.state.isLoading &&
+                <Jumbotron>
+                  <p>{I18n.get('text.no.issues.currently')}</p>
+                </Jumbotron>
+              }
+              {
+                this.state.issues.filter(issue => issue.visible).length > 0 &&
+                <Card className="custom-card-big">
+                  <Row>
+                    {
+                      this.state.issues.filter((issue: IIssue) => issue.visible)
+                        .map((issue: IIssue) => {
+                          return (
+                            <Col xs={6} sm={4} md={4} key={issue.id}>
+                              <Card className="custom-card-issue">
+                                <Card.Header>
+                                  <p><strong>{issue.eventDescription}</strong></p>
+                                  <p>{issue.deviceName} - {issue.stationName}</p>
+                                  <p>{this.calculateTimeSinceIssueCreated(issue.createdAt)}</p>
+                                </Card.Header>
+                                <Card.Body>
+                                  <Card.Title>
+                                    <h6>{I18n.get('text.process.name')} - {issue.processName}</h6>
+                                  </Card.Title>
+                                  <Form>
+                                    {
+                                      issue.status === 'open' &&
+                                      <Form.Row className="justify-content-between">
+                                        <Button variant="success" size="sm" onClick={async () => this.handleUpdateIssue(issue, 'acknowledged')}>{I18n.get('button.acknowledge')}</Button>
+                                        <Button variant="secondary" size="sm" onClick={async () => this.handleUpdateIssue(issue, 'rejected')}>{I18n.get('button.reject')}</Button>
+                                      </Form.Row>
+                                    }
+                                    {
+                                      issue.status === 'acknowledged' &&
+                                      <Button variant="warning" size="sm" onClick={async () => this.handleClose(issue)}>{I18n.get('button.close')}</Button>
+                                    }
+                                  </Form>
+                                </Card.Body>
+                              </Card>
+                            </Col>
+                          );
+                        })
+                    }
+                  </Row>
+                </Card>
+              }
             </Col>
           </Row>
           {
@@ -555,7 +624,7 @@ class Observer extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ I18n.get('error') }:</strong><br />
+                  <strong>{I18n.get('error')}:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -564,28 +633,40 @@ class Observer extends React.Component<IProps, IState> {
         </Container>
         <Modal show={this.state.showModal} onHide={this.handleModalClose}>
           <Modal.Header>
-            <Modal.Title>{ I18n.get('text.closing.issue') }</Modal.Title>
+            <Modal.Title>{I18n.get('text.closing.issue')}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
             <Form>
               <Form.Group controlId="rootCause">
-                <Form.Label>{ I18n.get('text.rootcause') }</Form.Label>
+                <Form.Label>{I18n.get('text.rootcause')}</Form.Label>
                 <Form.Control as="select" defaultValue={this.state.rootCause} onChange={this.handleRootCauseChange}>
-                  <option value="">{ I18n.get('text.choose.rootcause') }</option>
+                  <option value="">{I18n.get('text.choose.rootcause')}</option>
                   {
                     this.state.rootCauses && this.state.rootCauses.map((rootCause: string) => {
-                      return(
+                      return (
                         <option key={rootCause} value={rootCause}>{rootCause}</option>
                       );
                     })
                   }
                 </Form.Control>
               </Form.Group>
+              {this.state.rootCause !== "" &&
+                <Form.Group>
+                  <Form.Label>{I18n.get('text.choose.rootcause.comment')}</Form.Label>
+                  <Form.Control as='textarea' rows={3} name="comment" maxLength={500}
+                    onChange={(event) => this.setState({ comment: event.target.value })}
+                  >
+                  </Form.Control>
+                  <Form.Text className="text-muted">
+                    {this.state.comment.length}/500
+                    </Form.Text>
+                </Form.Group>
+              }
             </Form>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
-            <Button variant="primary" onClick={this.closeIssue}>{ I18n.get('button.submit') }</Button>
+            <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
+            <Button variant="primary" onClick={this.closeIssue}>{I18n.get('button.submit')}</Button>
           </Modal.Footer>
         </Modal>
       </div>

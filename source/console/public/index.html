@@ -1,16 +1,6 @@
 <!--
-/*********************************************************************************************************************
- *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://www.apache.org/licenses/LICENSE-2.0                                                                    *
- *                                                                                                                    *
- *  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -19,9 +9,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
   <meta name="theme-color" content="#000000" />
+  <meta name="description" content="Amazon Virtual Andon" />
+  <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+  <meta http-equiv="Referrer-Policy" content="same-origin" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'self'; img-src 'self' https://*.amazonaws.com data:; script-src 'self';
+        style-src 'self' 'unsafe-inline' https:; object-src 'none'; font-src 'self' https:;
+        manifest-src 'self'; connect-src 'self' wss://*.amazonaws.com https://*.amazonaws.com https://metrics.awssolutionsbuilder.com" />
   <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-  <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico" />
-  <link rel="apple-touch-icon" sizes="76x76" href="%PUBLIC_URL%/apple-icon.png" />
   <title>Amazon Virtual Andon</title>
 </head>
 
@@ -30,4 +24,5 @@
   <script src="%PUBLIC_URL%/assets/andon_config.js"></script>
   <div id="root"></div>
 </body>
+
 </html>

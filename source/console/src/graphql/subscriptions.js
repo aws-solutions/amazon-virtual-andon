@@ -14,6 +14,7 @@ export const onCreateIssue = `subscription OnCreateIssue {
     stationName
     deviceName
     created
+    createdAt
     acknowledged
     closed
     resolutionTime
@@ -36,6 +37,7 @@ export const onUpdateIssue = `subscription OnUpdateIssue {
     stationName
     deviceName
     created
+    createdAt
     acknowledged
     closed
     resolutionTime
@@ -43,6 +45,7 @@ export const onUpdateIssue = `subscription OnUpdateIssue {
     status
     version
     rootCause
+    comment
   }
 }
 `;

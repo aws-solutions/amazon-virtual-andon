@@ -1,5 +1,24 @@
 {
-  "moduleFileExtensions": [ "js", "json", "node" ],
-  "coveragePathIgnorePatterns": [ "/node_modules/", "/build" ],
-  "modulePathIgnorePatterns": [ "/node_modules/", "/build" ]
+  "moduleFileExtensions": [
+    "js",
+    "json",
+    "node"
+  ],
+  "coveragePathIgnorePatterns": [
+    "/node_modules/",
+    "/build"
+  ],
+  "modulePathIgnorePatterns": [
+    "/node_modules/",
+    "/build"
+  ],
+  "coverageReporters": [
+    "text",
+    [
+      "lcov",
+      {
+        "projectRoot": "../"
+      }
+    ]
+  ]
 }

@@ -1,5 +1,5 @@
 Amazon Virtual Andon
-Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -38,9 +38,10 @@ react-chartist under the Massachusetts Institute of Technology (MIT) license
 react-cookie under the Massachusetts Institute of Technology (MIT) license
 react-csv under the Massachusetts Institute of Technology (MIT) license
 react-dom under the Massachusetts Institute of Technology (MIT) license
-react-icons/go under the Massachusetts Institute of Technology (MIT) license
+react-icons under the Massachusetts Institute of Technology (MIT) license
 react-notification-system under the Massachusetts Institute of Technology (MIT) license
 react-router-bootstrap under the Apache License Version 2.0
 react-router-dom under the Massachusetts Institute of Technology (MIT) license
 react-scripts under the Massachusetts Institute of Technology (MIT) license
+typescript under the Apache License Version 2.0
 uuid under the Massachusetts Institute of Technology (MIT) license

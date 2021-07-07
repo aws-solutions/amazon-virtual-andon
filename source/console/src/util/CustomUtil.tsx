@@ -1,15 +1,5 @@
-/**********************************************************************************************************************
- *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://www.apache.org/licenses/LICENSE-2.0                                                                    *
- *                                                                                                                    *
- *  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 /* eslint-disable */
 // Import Amplify packages
@@ -21,6 +11,13 @@ import axios from 'axios';
 
 // Import custom setting
 import { SortBy } from '../components/Enums';
+
+// Import Subscription types for the application and various views
+import { AppSubscriptionTypes } from '../App';
+import { ClientSubscriptionTypes } from '../views/Client';
+import { EventSubscriptionTypes } from '../views/Event';
+import { HistorySubscriptionTypes } from '../views/History';
+import { ObserverSubscriptionTypes } from '../views/Observer';
 
 // Declare Amazon Virtual Andon console configuration
 declare var andon_config: any;
@@ -41,7 +38,7 @@ export const FILE_SIZE_LIMIT = 10 * 1024;
 export class CustomError extends Error {
   errorType: string;
 
-  constructor(error: {errorType: string, message: string}) {
+  constructor(error: { errorType: string, message: string }) {
     super(error.message);
     this.errorType = error.errorType;
   }
@@ -118,7 +115,7 @@ export function validateGeneralInput(input: string, minLength: number, maxLength
  * @return {boolean} Validated result
  */
 export function validatePhoneNumber(phoneNumber: string): boolean {
-  const regex = /^(\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/;
+  const regex = /^(\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/;  // NOSONAR: typescript:S4784 - Valid regex for phone number
   return regex.test(phoneNumber);
 }
 
@@ -128,7 +125,7 @@ export function validatePhoneNumber(phoneNumber: string): boolean {
  * @return {boolean} Validated result
  */
 export function validateEmailAddress(emailAddress: string): boolean {
-  const regex = /^[_a-z0-9-]+(\.[_a-z0-9-]+)*(\+[a-z0-9-]+)?@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+  const regex = /^[_a-z0-9-]+(\.[_a-z0-9-]+)*(\+[a-z0-9-]+)?@\w+([\.-]?\w+)*(\.\w{2,3})+$/; // NOSONAR: typescript:S4784 - Valid regex for email
   return regex.test(emailAddress);
 }
 
@@ -168,6 +165,7 @@ export function getPreviousDays(date: Date, day: number, hours: number, minutes:
  * @return {string} Converted format string
  */
 export function convertSecondsToHms(seconds: number): string {
+  if (seconds < 1) { return 'Just now'; }
   const hour = Math.floor(seconds / 3600);
   const minute = Math.floor(seconds % 3600 / 60);
   const second = Math.floor(seconds % 3600 % 60);
@@ -210,14 +208,14 @@ export function sortByName(data: any[], sortBy: SortBy, sortKey: string, keyType
  */
 export function getAmplifyCustomErrorMessage(message: string): string {
   if (
-    /Invalid.*password.*format/i.test(message) // Invalid password format
-    || /validation.*error.*password.*constraint/i.test(message) // 1 validation error detected: Value at 'password' failed to satisfy constraint: Member must have length greater than or equal to 6
+    /Invalid.*password.*format/i.test(message) // NOSONAR: typescript:S4784 - Invalid password format
+    || /validation.*error.*password.*constraint/i.test(message) // NOSONAR: typescript:S4784 - 1 validation error detected: Value at 'password' failed to satisfy constraint: Member must have length greater than or equal to 6
     || /Password.*policy/i.test(message) // Password does not conform to policy: Password not long enough
   ) {
     message = 'error.cognito.password.policy';
   } else if (
-    /Only.*radix.*supported/i.test(message) // Only radix 2, 4, 8, 16, 32 are supported
-    || /validation.*error.*userName.*constraint/i.test(message) // 2 validation errors detected: Value '' at 'userName' failed to satisfy constraint: Member must satisfy regular expression pattern: [\p{L}\p{M}\p{S}\p{N}\p{P}]+; Value '' at 'userAlias' failed to satisfy constraint: Member must satisfy regular expression pattern: [\p{L}\p{M}\p{S}\p{N}\p{P}]+
+    /Only.*radix.*supported/i.test(message) // NOSONAR: typescript:S4784 - Only radix 2, 4, 8, 16, 32 are supported
+    || /validation.*error.*userName.*constraint/i.test(message) // NOSONAR: typescript:S4784 - 2 validation errors detected: Value '' at 'userName' failed to satisfy constraint: Member must satisfy regular expression pattern: [\p{L}\p{M}\p{S}\p{N}\p{P}]+; Value '' at 'userAlias' failed to satisfy constraint: Member must satisfy regular expression pattern: [\p{L}\p{M}\p{S}\p{N}\p{P}]+
   ) {
     message = 'error.cognito.incorrect.username.password';
   }
@@ -261,5 +259,34 @@ export function makeVisibleBySearchKeyword(data: any[], searchKey: string, searc
     } else {
       datum.visible = false;
     }
+  }
+}
+
+type SubscriptionTypes = AppSubscriptionTypes | ClientSubscriptionTypes | EventSubscriptionTypes | HistorySubscriptionTypes | ObserverSubscriptionTypes;
+type ConfigureSubscriptionFn = (subscriptionType: any, delayMS: number) => Promise<void>;
+
+/**
+ * Will attempt to reestablish the subscription if the error was due to a socket closing. If the max delay (1000ms) is reached or there was a different error, the page will be reloaded
+ * @param err The error that was caught from the subscription
+ * @param subscriptionType The type of subscription
+ * @param configureSubscriptionFn The function from within the App/View that will handle configuring the subscription
+ * @param delayMS Amount of time to wait before reestablishing the subscription if the socket connection is lost
+ */
+export async function handleSubscriptionError(err: any, subscriptionType: SubscriptionTypes, configureSubscriptionFn: ConfigureSubscriptionFn, delayMS: number) {
+  console.error(err);
+
+  const MAX_DELAY_MS = 1000;
+  if (delayMS > MAX_DELAY_MS) {
+    // Exponential backoff has reached the limit we've defined; reload the page
+    window.location.reload();
+  } else if (err.error && err.error.errors && err.error.errors[0] && err.error.errors[0].message === 'Connection closed') {
+    // An AppSync subscription has lost its connection
+    setTimeout(async () => { await configureSubscriptionFn(subscriptionType, delayMS * 2) }, delayMS);
+  } else if (delayMS <= MAX_DELAY_MS && err.error && typeof err.error === 'string' && err.error.toLowerCase().includes('disconnected')) {
+    // An IoT subscription has lost its connection
+    setTimeout(async () => { await configureSubscriptionFn(subscriptionType, delayMS * 2) }, delayMS);
+  } else {
+    // Otherwise, reload the page
+    window.location.reload();
   }
 }

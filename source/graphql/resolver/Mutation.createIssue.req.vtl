@@ -91,6 +91,7 @@ $util.qr($ctx.args.input.put("version", 1))
 ## [Start] Prepare DynamoDB PutItem Request. **
 $util.qr($context.args.input.put("createdAt", $util.defaultIfNull($ctx.args.input.createdAt, $util.time.nowISO8601())))
 $util.qr($context.args.input.put("updatedAt", $util.defaultIfNull($ctx.args.input.updatedAt, $util.time.nowISO8601())))
+$util.qr($context.args.input.put("deviceName#eventId", "${ctx.args.input.deviceName}#${ctx.args.input.eventId}"))
 $util.qr($context.args.input.put("__typename", "Issue"))
 #set( $condition = {
   "expression": "attribute_not_exists(#id)",

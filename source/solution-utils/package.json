@@ -1,0 +1,22 @@
+{
+  "name": "solution-utils",
+  "version": "2.2.0",
+  "author": "AWS Solutions",
+  "license": "Apache-2.0",
+  "private": true,
+  "description": "Utility functions to be used within this solution",
+  "main": "index",
+  "typings": "index",
+  "scripts": {
+    "build:init": "rm -rf package-lock.json dist node_modules coverage",
+    "pretest": "npm run build:init && npm install",
+    "posttest": "rm -rf package-lock.json dist node_modules && npm install --production",
+    "test": "CI=true jest --config jestconfig.json --coverage --silent"
+  },
+  "files": [
+    "index.js"
+  ],
+  "devDependencies": {
+    "jest": "^27.0.4"
+  }
+}

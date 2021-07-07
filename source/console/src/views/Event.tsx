@@ -1,24 +1,16 @@
-/**********************************************************************************************************************
- *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://www.apache.org/licenses/LICENSE-2.0                                                                    *
- *                                                                                                                    *
- *  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 // Import React, Amplify, and AWS SDK packages
 import React from 'react';
 import { LinkContainer } from 'react-router-bootstrap';
-import { API, graphqlOperation, I18n } from 'aws-amplify';
+import { API, graphqlOperation, I18n, Storage } from 'aws-amplify';
 import { GraphQLResult } from '@aws-amplify/api-graphql';
 import { Logger } from '@aws-amplify/core';
 import Auth from "@aws-amplify/auth";
 import SNS from 'aws-sdk/clients/sns';
+// @ts-ignore
+import { S3Image } from 'aws-amplify-react';
 
 // MobX packages
 import { observable } from 'mobx';
@@ -47,7 +39,7 @@ import { onCreateRootCause, onDeleteRootCause } from '../graphql/subscriptions';
 import * as uuid from 'uuid';
 
 // Import custom setting
-import { LOGGING_LEVEL, sendMetrics, validateGeneralInput, validatePhoneNumber, validateEmailAddress, sortByName, getInputFormValidationClassName, makeAllVisible, makeVisibleBySearchKeyword } from '../util/CustomUtil';
+import { LOGGING_LEVEL, sendMetrics, validateGeneralInput, validatePhoneNumber, validateEmailAddress, sortByName, getInputFormValidationClassName, makeAllVisible, makeVisibleBySearchKeyword, handleSubscriptionError } from '../util/CustomUtil';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IEvent, IEventUpdate, IRootCause } from '../components/Interfaces';
 import { ModalType, EventPriority, SortBy } from '../components/Enums';
@@ -100,6 +92,18 @@ interface IState {
   isEventEmailValid: boolean;
   isEventTypeValid: boolean;
   selectAllRootCauses: boolean;
+  eventImgKeys: string[];
+  eventImgKey: string;
+  eventModalError: string;
+  showEventImageLibrary: boolean;
+}
+
+/**
+ * Types of subscriptions that will be maintained by the main Event class
+ */
+export enum EventSubscriptionTypes {
+  CREATE_ROOT_CAUSE,
+  DELETE_ROOT_CAUSE
 }
 
 // Declare Amazon Virtual Andon console configuration
@@ -160,7 +164,11 @@ class Event extends React.Component<IProps, IState> {
       isEventSmsValid: true,
       isEventEmailValid: true,
       isEventTypeValid: true,
-      selectAllRootCauses: false
+      selectAllRootCauses: false,
+      eventImgKeys: [],
+      eventImgKey: '',
+      eventModalError: '',
+      showEventImageLibrary: false
     };
 
     this.graphQlCommon = new GraphQLCommon();
@@ -182,6 +190,11 @@ class Event extends React.Component<IProps, IState> {
     this.handleEventPriorityChange = this.handleEventPriorityChange.bind(this);
     this.handleEventTypeChange = this.handleEventTypeChange.bind(this);
     this.handleCheckboxChange = this.handleCheckboxChange.bind(this);
+    this.loadEventImages = this.loadEventImages.bind(this);
+    this.toggleEventImageLibrary = this.toggleEventImageLibrary.bind(this);
+    this.onPickImageToUpload = this.onPickImageToUpload.bind(this);
+    this.onSelectEventImage = this.onSelectEventImage.bind(this);
+    this.configureSubscription = this.configureSubscription.bind(this);
   }
 
   /**
@@ -192,47 +205,67 @@ class Event extends React.Component<IProps, IState> {
     await this.getProcess();
     await this.getRootCauses();
 
-    // Subscribe to create root cause
-    // @ts-ignore
-    this.createRootCauseSubscription = API.graphql(graphqlOperation(onCreateRootCause)).subscribe({
-      next: (response: any) => {
-        const { rootCauses } = this.state;
-        const newRootCause = response.value.data.onCreateRootCause;
-        newRootCause.visible = true;
+    // Configure subscriptions
+    await this.configureSubscription(EventSubscriptionTypes.CREATE_ROOT_CAUSE);
+    await this.configureSubscription(EventSubscriptionTypes.DELETE_ROOT_CAUSE);
+  }
 
-        const newRootCauses = sortByName([...rootCauses, newRootCause], SortBy.Asc, 'rootCause');
-        this.setState({ rootCauses: newRootCauses });
+  /**
+   * Configures the subscription for the supplied `subscriptionType`
+   * @param subscriptionType The type of subscription to configure
+   * @param delayMS (Optional) This value will be used to set a delay for reestablishing the subscription if the socket connection is lost
+   */
+  async configureSubscription(subscriptionType: EventSubscriptionTypes, delayMS: number = 10): Promise<void> {
+    try {
+      switch (subscriptionType) {
+        case EventSubscriptionTypes.CREATE_ROOT_CAUSE:
+          if (this.createRootCauseSubscription) { this.createRootCauseSubscription.unsubscribe(); }
 
-        // To prevent unwanted root cause while editing, saved root causes consist of themselves and new one.
-        this.savedRootCauses = sortByName([...this.savedRootCauses, newRootCause], SortBy.Asc, 'rootCause');
-      },
-      error: () => {
-        // If there's an error (e.g. connection closed), reload the window.
-        window.location.reload();
+          // @ts-ignore
+          this.createRootCauseSubscription = API.graphql(graphqlOperation(onCreateRootCause)).subscribe({
+            next: (response: any) => {
+              const { rootCauses } = this.state;
+              const newRootCause = response.value.data.onCreateRootCause;
+              newRootCause.visible = true;
+
+              const newRootCauses = sortByName([...rootCauses, newRootCause], SortBy.Asc, 'rootCause');
+              this.setState({ rootCauses: newRootCauses });
+
+              // To prevent unwanted root cause while editing, saved root causes consist of themselves and new one.
+              this.savedRootCauses = sortByName([...this.savedRootCauses, newRootCause], SortBy.Asc, 'rootCause');
+            },
+            error: async (e: any) => {
+              await handleSubscriptionError(e, subscriptionType, this.configureSubscription, delayMS);
+            }
+          });
+          break;
+        case EventSubscriptionTypes.DELETE_ROOT_CAUSE:
+          if (this.deleteRootCauseSubscription) { this.deleteRootCauseSubscription.unsubscribe(); }
+
+          // @ts-ignore
+          this.deleteRootCauseSubscription = API.graphql(graphqlOperation(onDeleteRootCause)).subscribe({
+            next: (response: any) => {
+              const { rootCauses } = this.state;
+              const deletedRootCause = response.value.data.onDeleteRootCause;
+              const index = this.savedRootCauses.findIndex((rootCause: IRootCause) => rootCause.id === deletedRootCause.id);
+              deletedRootCause.visible = true;
+              deletedRootCause.deleted = true;
+
+              this.setState({
+                rootCauses: [...rootCauses.slice(0, index), deletedRootCause, ...rootCauses.slice(index + 1)]
+              });
+
+              this.savedRootCauses = [...this.savedRootCauses.slice(0, index), ...this.savedRootCauses.slice(index + 1)];
+            },
+            error: async (e: any) => {
+              await handleSubscriptionError(e, subscriptionType, this.configureSubscription, delayMS);
+            }
+          });
+          break;
       }
-    });
-
-    // Subscribe to delete root cause
-    // @ts-ignore
-    this.deleteRootCauseSubscription = API.graphql(graphqlOperation(onDeleteRootCause)).subscribe({
-      next: (response: any) => {
-        const { rootCauses } = this.state;
-        const deletedRootCause = response.value.data.onDeleteRootCause;
-        const index = this.savedRootCauses.findIndex((rootCause: IRootCause) => rootCause.id === deletedRootCause.id);
-        deletedRootCause.visible = true;
-        deletedRootCause.deleted = true;
-
-        this.setState({
-          rootCauses: [...rootCauses.slice(0, index), deletedRootCause, ...rootCauses.slice(index + 1)]
-        });
-
-        this.savedRootCauses = [...this.savedRootCauses.slice(0, index), ...this.savedRootCauses.slice(index + 1)];
-      },
-      error: () => {
-        // If there's an error (e.g. connection closed), reload the window.
-        window.location.reload();
-      }
-    });
+    } catch (err) {
+      console.error('Unable to configure subscription', err);
+    }
   }
 
   /**
@@ -241,6 +274,20 @@ class Event extends React.Component<IProps, IState> {
   componentWillUnmount() {
     if (this.createRootCauseSubscription) this.createRootCauseSubscription.unsubscribe();
     if (this.deleteRootCauseSubscription) this.deleteRootCauseSubscription.unsubscribe();
+  }
+
+  async loadEventImages() {
+    this.setState({ isModalProcessing: true });
+    try {
+      const eventImgs = await Storage.list('event-images/', { level: 'public' });
+      this.setState({
+        eventImgKeys: eventImgs.map((img: any) => img.key)
+      });
+    } catch (err) {
+      console.error(err);
+    }
+
+    this.setState({ isModalProcessing: false });
   }
 
   /**
@@ -360,7 +407,7 @@ class Event extends React.Component<IProps, IState> {
 
     try {
       // Graphql operation to list events
-      const { processId, events, eventName, eventDescription, eventSms, eventEmail, eventPriority, eventType, searchKeyword, sort } = this.state;
+      const { processId, events, eventName, eventDescription, eventSms, eventEmail, eventPriority, eventType, searchKeyword, sort, eventImgKey } = this.state;
       const queryEvents: IEvent[] = await this.graphQlCommon.listEvents(processId);
 
       // Check if the same event name exists in the process
@@ -400,6 +447,10 @@ class Event extends React.Component<IProps, IState> {
           input.type = eventType;
         }
 
+        if (eventImgKey !== '') {
+          input.eventImgKey = eventImgKey;
+        }
+
         const response = await API.graphql(graphqlOperation(createEvent, input)) as GraphQLResult;
         const data: any = response.data;
         let newEvent: IEvent = data.createEvent;
@@ -426,7 +477,8 @@ class Event extends React.Component<IProps, IState> {
           selectAllRootCauses: false,
           showModal: false,
           modalTitle: '',
-          modalType: ModalType.None
+          modalType: ModalType.None,
+          eventImgKey: ''
         });
 
         this.rootCauses = [];
@@ -471,7 +523,7 @@ class Event extends React.Component<IProps, IState> {
 
     try {
       // Graphql operation to list events
-      const { events, eventId, eventSms, eventEmail, searchKeyword, eventTopicArn } = this.state;
+      const { events, eventId, eventSms, eventEmail, searchKeyword, eventTopicArn, eventImgKey } = this.state;
 
       if (eventTopicArn === '') {
         // Create topic if there is no topic and SMS or E-Mail is provided.
@@ -507,6 +559,10 @@ class Event extends React.Component<IProps, IState> {
         input.email = eventEmail;
       }
 
+      if (eventImgKey !== '') {
+        input.eventImgKey = eventImgKey;
+      }
+
       const response = await API.graphql(graphqlOperation(updateEvent, input)) as GraphQLResult;
       const data: any = response.data;
       let updatedEvent: IEvent = data.updateEvent;
@@ -534,7 +590,8 @@ class Event extends React.Component<IProps, IState> {
         selectAllRootCauses: false,
         showModal: false,
         modalTitle: '',
-        modalType: ModalType.None
+        modalType: ModalType.None,
+        eventImgKey: ''
       });
 
       this.rootCauses = [];
@@ -598,7 +655,7 @@ class Event extends React.Component<IProps, IState> {
 
       return response.TopicArn as string;
     } catch (error) {
-      throw new Error (error.message);
+      throw new Error(error.message);
     }
   }
 
@@ -668,10 +725,10 @@ class Event extends React.Component<IProps, IState> {
 
   /**
    * Open modal based on type input.
-   * @param {ModalType} modalType- Moddal type
+   * @param {ModalType} modalType- Modal type
    * @param {IEvent | undefined} event - Event
    */
-  openModal(modalType: ModalType, event?: IEvent) {
+  async openModal(modalType: ModalType, event?: IEvent) {
     let modalTitle = '';
     const { rootCauses } = this.state;
 
@@ -693,14 +750,16 @@ class Event extends React.Component<IProps, IState> {
     let eventEmail = '';
     let eventTopicArn = '';
     let eventPriority = EventPriority.Low;
+    let eventImgKey = '';
 
     if (event) {
       eventId = event.id ? event.id : '';
       eventName = event.name;
       eventDescription = event.description;
-      eventSms= event.sms ? event.sms : '';
+      eventSms = event.sms ? event.sms : '';
       eventEmail = event.email ? event.email : '';
       eventTopicArn = event.topicArn ? event.topicArn : '';
+      eventImgKey = event.eventImgKey ? event.eventImgKey : '';
 
       for (const priority in EventPriority) {
         if (priority === event.priority) {
@@ -726,6 +785,8 @@ class Event extends React.Component<IProps, IState> {
       }
     }
 
+    await this.loadEventImages();
+
     this.setState({
       modalType,
       modalTitle,
@@ -736,9 +797,12 @@ class Event extends React.Component<IProps, IState> {
       eventSms,
       eventEmail,
       eventTopicArn,
+      eventImgKey,
       rootCauses: sortByName(rootCauses, SortBy.Asc, 'rootCause'),
       selectAllRootCauses: rootCauses.length > 0 && rootCauses.length === this.rootCauses.length,
-      showModal: true
+      showModal: true,
+      eventModalError: '',
+      showEventImageLibrary: false
     });
   }
 
@@ -915,7 +979,7 @@ class Event extends React.Component<IProps, IState> {
    * Handle the root cause change.
    * @param {any} event - Event from the root cause checkbox
    */
-  handleCheckboxChange(event: any, ) {
+  handleCheckboxChange(event: any,) {
     const { id, checked } = event.target;
 
     if (id === 'all') {
@@ -937,7 +1001,7 @@ class Event extends React.Component<IProps, IState> {
         }
       }
 
-      this.setState({ selectAllRootCauses : checked });
+      this.setState({ selectAllRootCauses: checked });
     } else {
       // When individual checkbox is clicked
       const checkedRootCause = JSON.parse(id);
@@ -960,6 +1024,108 @@ class Event extends React.Component<IProps, IState> {
     }
   }
 
+  async toggleEventImageLibrary() {
+    this.setState({
+      showEventImageLibrary: !this.state.showEventImageLibrary
+    });
+  }
+
+  /**
+   * Use magic number to validate the file is an image
+   * https://en.wikipedia.org/wiki/Magic_number_(programming)#In_files
+   * @param file The file to inspect
+   * @returns Promise<string>
+   */
+  async getFileType(file: File): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      try {
+        const reader = new FileReader();
+        reader.onloadend = (evt) => {
+          try {
+            if (evt && evt.target && evt.target.readyState === FileReader.DONE) {
+              const bytes: string[] = [];
+              new Uint8Array(evt.target.result as ArrayBuffer).forEach((byte) => bytes.push(byte.toString(16)));
+
+              switch (bytes.join('').toUpperCase()) {
+                case 'FFD8FFDB':
+                case 'FFD8FFE0':
+                  resolve('image/jpeg');
+                  break;
+                case '47494638':
+                  resolve('image/gif');
+                  break;
+                case '89504E47':
+                  resolve('image/png');
+                  break;
+                default:
+                  reject('Unsupported file type');
+                  break;
+              }
+            }
+          } catch (err) {
+            reject(err);
+          }
+        };
+
+        reader.readAsArrayBuffer(file.slice(0, 4));
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  async onPickImageToUpload(e: any) {
+    this.setState({ eventModalError: '' });
+    if (!e.target || !e.target.files || !e.target.files[0]) {
+      return;
+    }
+
+    const file = e.target.files[0];
+    const { size } = file;
+    const IMAGE_FILE_SIZE_LIMIT = 5000000; // 5MB
+    if (size > IMAGE_FILE_SIZE_LIMIT) {
+      this.setState({ eventModalError: I18n.get('error.limit.image.size') });
+      return;
+    }
+
+    let fileType: string | undefined;
+
+    try {
+      fileType = await this.getFileType(file);
+    } catch (err) {
+      console.error(err);
+    }
+
+    if (!fileType) {
+      this.setState({ eventModalError: I18n.get('error.image.type') });
+      return;
+    }
+
+    this.setState({ isModalProcessing: true });
+
+    try {
+      const imgKey = uuid.v4();
+
+      const resp: any = await Storage.put(`event-images/${imgKey}`, file, { level: 'public', contentType: fileType });
+
+      if (resp && resp.key) {
+        this.setState({ eventImgKey: resp.key });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+
+    await this.loadEventImages();
+  }
+
+  async onSelectEventImage(imgKey: string) {
+    if (this.state.eventImgKey === imgKey) {
+      this.setState({ eventImgKey: '' });
+    } else {
+      this.setState({ eventImgKey: imgKey });
+    }
+  }
+
   /**
    * Render this page.
    */
@@ -971,15 +1137,15 @@ class Event extends React.Component<IProps, IState> {
             <Col>
               <Breadcrumb>
                 <LinkContainer to="/sites" exact>
-                  <Breadcrumb.Item>{ I18n.get('text.sites') }</Breadcrumb.Item>
+                  <Breadcrumb.Item>{I18n.get('text.sites')}</Breadcrumb.Item>
                 </LinkContainer>
                 <LinkContainer to={`/sites/${this.state.siteId}`} exact>
-                  <Breadcrumb.Item>{ I18n.get('text.areas') }{this.state.siteName}</Breadcrumb.Item>
+                  <Breadcrumb.Item>{I18n.get('text.areas')}{this.state.siteName}</Breadcrumb.Item>
                 </LinkContainer>
                 <LinkContainer to={`/areas/${this.state.areaId}/processes`} exact>
-                  <Breadcrumb.Item>{ I18n.get('info.processes') }{this.state.areaName}</Breadcrumb.Item>
+                  <Breadcrumb.Item>{I18n.get('info.processes')}{this.state.areaName}</Breadcrumb.Item>
                 </LinkContainer>
-                <Breadcrumb.Item active>{ I18n.get('text.events') }{this.state.processName}</Breadcrumb.Item>
+                <Breadcrumb.Item active>{I18n.get('text.events')}{this.state.processName}</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -987,7 +1153,7 @@ class Event extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ I18n.get('button.add.event') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{I18n.get('button.add.event')}</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -1001,11 +1167,11 @@ class Event extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={4} controlId="searchKeyword">
-                        <Form.Label>{ I18n.get('text.search.keyword') }</Form.Label>
-                        <Form.Control type="text" placeholder={ I18n.get('text.search.event.name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
+                        <Form.Label>{I18n.get('text.search.keyword')}</Form.Label>
+                        <Form.Control type="text" placeholder={I18n.get('text.search.event.name')} defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
                       </Form.Group>
                       <Form.Group as={Col} md={4} controlId="sortBy">
-                        <Form.Label>{ I18n.get('text.sort.by') }</Form.Label>
+                        <Form.Label>{I18n.get('text.sort.by')}</Form.Label>
                         <Form.Control as="select" defaultValue={this.state.sort} onChange={this.handleSort}>
                           <option value={SortBy.Asc}>A-Z</option>
                           <option value={SortBy.Desc}>Z-A</option>
@@ -1023,7 +1189,7 @@ class Event extends React.Component<IProps, IState> {
               this.state.events.length === 0 && !this.state.isLoading &&
               <Col>
                 <Jumbotron>
-                  <p>{ I18n.get('text.no.event') }</p>
+                  <p>{I18n.get('text.no.event')}</p>
                 </Jumbotron>
               </Col>
             }
@@ -1037,48 +1203,72 @@ class Event extends React.Component<IProps, IState> {
                     priority = I18n.get('text.not.found');
                   }
 
+                  let eventImg;
+                  if (event.eventImgKey) {
+                    eventImg = (
+                      <div className="event-image-thumbnail-container">
+                        <S3Image
+                          key="event-image"
+                          className="event-image-thumbnail"
+                          imgKey={event.eventImgKey} />
+                      </div>
+                    );
+                  } else {
+                    eventImg = '';
+                  }
+
                   return (
                     <Col md={4} key={event.id}>
                       <Card className="custom-card">
                         <Card.Body>
-                          <Card.Title>{event.name}</Card.Title>
+                          <Card.Title>
+                            {event.name}
+                          </Card.Title>
                           <Table striped bordered>
                             <tbody>
                               <tr>
-                                <td>{ I18n.get('text.description') }</td>
+                                <td>{I18n.get('text.description')}</td>
                                 <td>{event.description}</td>
                               </tr>
                               <tr>
-                                <td>{ I18n.get('text.sms') }</td>
+                                <td>{I18n.get('text.sms')}</td>
                                 <td>{event.sms}</td>
                               </tr>
                               <tr>
-                                <td>{ I18n.get('text.email') }</td>
+                                <td>{I18n.get('text.email')}</td>
                                 <td>{event.email}</td>
                               </tr>
                               <tr>
-                                <td>{ I18n.get('text.priority') }</td>
+                                <td>{I18n.get('text.priority')}</td>
                                 <td>{priority}</td>
                               </tr>
                               <tr>
-                                <td>{ I18n.get('text.type') }</td>
+                                <td>{I18n.get('text.type')}</td>
                                 <td>{event.type}</td>
                               </tr>
                               <tr>
-                                <td>{ I18n.get('text.rootcauses') }</td>
+                                <td>{I18n.get('text.rootcauses')}</td>
                                 <td>
-                                {
-                                  event.rootCauses ? `${event.rootCauses.length} ${I18n.get('text.attached.rootcause')}` : ''
-                                }
+                                  {
+                                    event.rootCauses ? `${event.rootCauses.length} ${I18n.get('text.attached.rootcause')}` : ''
+                                  }
                                 </td>
+                              </tr>
+                              <tr>
+                                <td>{I18n.get('text.event.id')}</td>
+                                <td>{event.id}</td>
+                              </tr>
+                              <tr>
+                                <td>{I18n.get('text.event.image')}</td>
+                                <td>{eventImg}</td>
                               </tr>
                             </tbody>
                           </Table>
                           <Form>
                             <Form.Row className="justify-content-between">
                               <Button size="sm" variant="danger"
-                                onClick={() => this.openModal(ModalType.Delete, event)}>{ I18n.get('button.delete') }</Button>
-                              <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Edit, event)}>{ I18n.get('button.edit') }</Button>
+                                onClick={() => this.openModal(ModalType.Delete, event)}>{I18n.get('button.delete')}</Button>
+                              <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Edit, event)}>{I18n.get('button.edit')}</Button>
                             </Form.Row>
                           </Form>
                         </Card.Body>
@@ -1101,7 +1291,7 @@ class Event extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ I18n.get('error') }:</strong><br />
+                  <strong>{I18n.get('error')}:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -1117,41 +1307,41 @@ class Event extends React.Component<IProps, IState> {
             <div>
               <Modal.Body>
                 <Alert variant="warning">
-                  <span className="required-field">*</span> { I18n.get('info.create.event') }
+                  <span className="required-field">*</span> {I18n.get('info.create.event')}
                 </Alert>
                 <Form>
                   <Form.Row>
                     <Form.Group as={Col} md={6} controlId="eventName">
-                      <Form.Label>{ I18n.get('text.event.name') } <span className="required-field">*</span></Form.Label>
-                      <Form.Control required type="text" placeholder={ I18n.get('input.event.nat') }
-                        defaultValue={this.state.eventName} onChange={this.handleEventNameChange} className={ this.state.modalType === ModalType.Add ? getInputFormValidationClassName(this.state.eventName, this.state.isEventNameValid) : '' } disabled={this.state.modalType === ModalType.Edit} />
+                      <Form.Label>{I18n.get('text.event.name')} <span className="required-field">*</span></Form.Label>
+                      <Form.Control required type="text" placeholder={I18n.get('input.event.nat')}
+                        defaultValue={this.state.eventName} onChange={this.handleEventNameChange} className={this.state.modalType === ModalType.Add ? getInputFormValidationClassName(this.state.eventName, this.state.isEventNameValid) : ''} disabled={this.state.modalType === ModalType.Edit} />
                       {
                         this.state.modalType === ModalType.Add &&
-                        <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
+                        <Form.Text className="text-muted">{`(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}`}</Form.Text>
                       }
                     </Form.Group>
                     <Form.Group as={Col} md={6} controlId="eventDescription">
-                      <Form.Label>{ I18n.get('text.event.description') } <span className="required-field">*</span></Form.Label>
-                      <Form.Control required type="text" placeholder={ I18n.get('input.event.description') }
-                        defaultValue="" onChange={this.handleEventDescriptionChange} className={ this.state.modalType === ModalType.Add ? getInputFormValidationClassName(this.state.eventDescription, this.state.isEventDescriptionValid) : ''  } disabled={this.state.modalType === ModalType.Edit} />
+                      <Form.Label>{I18n.get('text.event.description')} <span className="required-field">*</span></Form.Label>
+                      <Form.Control required type="text" placeholder={I18n.get('input.event.description')}
+                        defaultValue="" onChange={this.handleEventDescriptionChange} className={this.state.modalType === ModalType.Add ? getInputFormValidationClassName(this.state.eventDescription, this.state.isEventDescriptionValid) : ''} disabled={this.state.modalType === ModalType.Edit} />
                       {
                         this.state.modalType === ModalType.Add &&
-                        <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
+                        <Form.Text className="text-muted">{`(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}`}</Form.Text>
                       }
                     </Form.Group>
                   </Form.Row>
                   <Form.Row>
                     <Form.Group as={Col} md={6} controlId="eventSms">
-                      <Form.Label>{ I18n.get('text.sms.no') }</Form.Label>
-                      <Form.Control type="text" placeholder={ I18n.get('input.sms') }
-                        defaultValue={this.state.eventSms} onChange={this.handleEventSmsChange} className={ getInputFormValidationClassName(this.state.eventSms, this.state.isEventSmsValid) } />
-                      <Form.Text className="text-muted">{ `(${I18n.get('text.optional')}) ${I18n.get('info.valid.phone.number')}` }</Form.Text>
+                      <Form.Label>{I18n.get('text.sms.no')}</Form.Label>
+                      <Form.Control type="text" placeholder={I18n.get('input.sms')}
+                        defaultValue={this.state.eventSms} onChange={this.handleEventSmsChange} className={getInputFormValidationClassName(this.state.eventSms, this.state.isEventSmsValid)} />
+                      <Form.Text className="text-muted">{`(${I18n.get('text.optional')}) ${I18n.get('info.valid.phone.number')}`}</Form.Text>
                     </Form.Group>
                     <Form.Group as={Col} md={6} controlId="eventEmail">
-                      <Form.Label>{ I18n.get('text.email') }</Form.Label>
-                      <Form.Control type="text" placeholder={ I18n.get('input.group.email') }
-                        defaultValue={this.state.eventEmail} onChange={this.handleEventEmailChange} className={ getInputFormValidationClassName(this.state.eventEmail, this.state.isEventEmailValid) } />
-                      <Form.Text className="text-muted">{ `(${I18n.get('text.optional')}) ${I18n.get('info.valid.email')}` }</Form.Text>
+                      <Form.Label>{I18n.get('text.email')}</Form.Label>
+                      <Form.Control type="text" placeholder={I18n.get('input.group.email')}
+                        defaultValue={this.state.eventEmail} onChange={this.handleEventEmailChange} className={getInputFormValidationClassName(this.state.eventEmail, this.state.isEventEmailValid)} />
+                      <Form.Text className="text-muted">{`(${I18n.get('text.optional')}) ${I18n.get('info.valid.email')}`}</Form.Text>
                     </Form.Group>
                   </Form.Row>
                   {
@@ -1159,25 +1349,25 @@ class Event extends React.Component<IProps, IState> {
                     <div>
                       <Form.Row>
                         <Form.Group as={Col} md={6} controlId="eventPriority">
-                          <Form.Label>{ I18n.get('text.event.priority') } <span className="required-field">*</span></Form.Label>
+                          <Form.Label>{I18n.get('text.event.priority')} <span className="required-field">*</span></Form.Label>
                           <Form.Control as="select" defaultValue={this.state.eventPriority} onChange={this.handleEventPriorityChange}>
-                            <option value={EventPriority.Low}>{ I18n.get('text.priority.low') }</option>
-                            <option value={EventPriority.Medium}>{ I18n.get('text.priority.medium') }</option>
-                            <option value={EventPriority.High}>{ I18n.get('text.priority.high') }</option>
-                            <option value={EventPriority.Critical}>{ I18n.get('text.priority.critical') }</option>
+                            <option value={EventPriority.Low}>{I18n.get('text.priority.low')}</option>
+                            <option value={EventPriority.Medium}>{I18n.get('text.priority.medium')}</option>
+                            <option value={EventPriority.High}>{I18n.get('text.priority.high')}</option>
+                            <option value={EventPriority.Critical}>{I18n.get('text.priority.critical')}</option>
                           </Form.Control>
                         </Form.Group>
                         <Form.Group as={Col} md={6} controlId="eventType">
-                          <Form.Label>{ I18n.get('text.event.type') }</Form.Label>
-                          <Form.Control required type="text" placeholder={ I18n.get('input.event.type') }
-                            defaultValue="" onChange={this.handleEventTypeChange} className={ getInputFormValidationClassName(this.state.eventType, this.state.isEventTypeValid) } />
-                          <Form.Text className="text-muted">{ `(${I18n.get('text.optional')}) ${I18n.get('info.valid.event.type')}` }</Form.Text>
+                          <Form.Label>{I18n.get('text.event.type')}</Form.Label>
+                          <Form.Control required type="text" placeholder={I18n.get('input.event.type')}
+                            defaultValue="" onChange={this.handleEventTypeChange} className={getInputFormValidationClassName(this.state.eventType, this.state.isEventTypeValid)} />
+                          <Form.Text className="text-muted">{`(${I18n.get('text.optional')}) ${I18n.get('info.valid.event.type')}`}</Form.Text>
                         </Form.Group>
                       </Form.Row>
                     </div>
                   }
                   <Form.Row>
-                    <Form.Label>{ I18n.get('text.rootcauses') }</Form.Label>
+                    <Form.Label>{I18n.get('text.rootcauses')}</Form.Label>
                     <Table striped bordered>
                       <thead>
                         <tr>
@@ -1186,35 +1376,98 @@ class Event extends React.Component<IProps, IState> {
                           </th>
                           <th>
                             <Form.Group className="form-group-no-margin">
-                              <Form.Control size="sm" type="text" placeholder={ I18n.get('text.search.rootcause') } onChange={this.handleRootCauseSearchKeywordChange} />
+                              <Form.Control size="sm" type="text" placeholder={I18n.get('text.search.rootcause')} onChange={this.handleRootCauseSearchKeywordChange} />
                             </Form.Group>
                           </th>
                         </tr>
                       </thead>
                       <tbody>
-                      {
-                        this.state.rootCauses.filter((rootCause: IRootCause) => rootCause.visible)
-                          .map((rootCause: IRootCause) => {
-                            const rootCauseId = JSON.stringify({ id: rootCause.id, rootCause: rootCause.rootCause });
-                            const isRootCauseChecked: boolean = this.rootCauses.findIndex((checkedRootCause: string) => checkedRootCause === rootCause.rootCause) > -1;
+                        {
+                          this.state.rootCauses.filter((rootCause: IRootCause) => rootCause.visible)
+                            .map((rootCause: IRootCause) => {
+                              const rootCauseId = JSON.stringify({ id: rootCause.id, rootCause: rootCause.rootCause });
+                              const isRootCauseChecked: boolean = this.rootCauses.findIndex((checkedRootCause: string) => checkedRootCause === rootCause.rootCause) > -1;
 
-                            return (
-                              <tr key={rootCause.id}>
-                                <td>
-                                  <Form.Check type="checkbox" id={rootCauseId} checked={isRootCauseChecked} onChange={this.handleCheckboxChange} />
-                                </td>
-                                <td>{rootCause.rootCause}{rootCause.deleted ? ` (${I18n.get('text.deleted')})` : ''}</td>
-                              </tr>
-                            );
-                          })
-                      }
+                              return (
+                                <tr key={rootCause.id}>
+                                  <td>
+                                    <Form.Check type="checkbox" id={rootCauseId} checked={isRootCauseChecked} onChange={this.handleCheckboxChange} />
+                                  </td>
+                                  <td>{rootCause.rootCause}{rootCause.deleted ? ` (${I18n.get('text.deleted')})` : ''}</td>
+                                </tr>
+                              );
+                            })
+                        }
                       </tbody>
                     </Table>
                   </Form.Row>
+                  <Form.Row>
+                    <Form.Label>{I18n.get('text.event.image')}</Form.Label>
+                    <Table striped bordered>
+                      <thead>
+                        <tr>
+                          <th className="fixed-th-150">
+                            {
+                              this.state.eventImgKey
+                                ? <S3Image key="event-image" className="event-image" imgKey={this.state.eventImgKey}></S3Image>
+                                : <div key="empty-event-image"></div>
+                            }
+                          </th>
+                          <th>
+                            <div className="div-select-from-image-library-button" key="div-select-from-image-library-button">
+                              <Button
+                                variant="primary"
+                                onClick={this.toggleEventImageLibrary}
+                                disabled={this.state.isModalProcessing || this.state.isLoading || (this.state.eventImgKeys && this.state.eventImgKeys.length === 0)}>
+                                {I18n.get('text.event.image.select')}
+                              </Button>
+                            </div>
+                            <div className="div-upload-new-image-button" key="div-upload-new-image-button">
+                              <Button variant="primary" disabled={this.state.isModalProcessing || this.state.isLoading}>{I18n.get('text.event.image.upload')}</Button>
+                              <input
+                                title={I18n.get('text.event.image.upload')}
+                                type="file"
+                                accept="image/*"
+                                onChange={this.onPickImageToUpload}
+                                disabled={this.state.isLoading || this.state.isModalProcessing}
+                              />
+                            </div>
+                          </th>
+                        </tr>
+                      </thead>
+                    </Table>
+                  </Form.Row>
+                  <Form.Row>
+                    {
+                      this.state.showEventImageLibrary
+                        ?
+                        this.state.eventImgKeys.map(imgKey => {
+                          return (
+                            <S3Image
+                              key={`library-img-${imgKey}`}
+                              className={`event-image ${imgKey === this.state.eventImgKey ? 'selected' : ''}`}
+                              imgKey={imgKey}
+                              onClick={() => this.onSelectEventImage(imgKey)}>
+                            </S3Image>
+                          )
+                        })
+                        : <div key="empty-event-image-library"></div>
+                    }
+                  </Form.Row>
                 </Form>
+                {
+                  this.state.eventModalError && this.state.eventModalError.trim() !== ''
+                    ?
+                    <Alert variant="danger">
+                      <strong>{I18n.get('error')}:</strong><br />
+                      {this.state.eventModalError}
+                    </Alert>
+                    :
+                    <></>
+                }
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
                 {
                   this.state.modalType === ModalType.Add &&
                   <Button variant="primary" onClick={this.addEvent}
@@ -1225,7 +1478,7 @@ class Event extends React.Component<IProps, IState> {
                       !this.state.isEventSmsValid ||
                       !this.state.isEventEmailValid ||
                       !this.state.isEventTypeValid
-                    }>{ I18n.get('button.register') }</Button>
+                    }>{I18n.get('button.register')}</Button>
                 }
                 {
                   this.state.modalType === ModalType.Edit &&
@@ -1234,7 +1487,7 @@ class Event extends React.Component<IProps, IState> {
                       this.state.isModalProcessing ||
                       !this.state.isEventSmsValid ||
                       !this.state.isEventEmailValid
-                    }>{ I18n.get('button.save') }</Button>
+                    }>{I18n.get('button.save')}</Button>
                 }
               </Modal.Footer>
             </div>
@@ -1243,11 +1496,11 @@ class Event extends React.Component<IProps, IState> {
             this.state.modalType === ModalType.Delete &&
             <div>
               <Modal.Body>
-                { I18n.get('text.confirm.delete.event') }: <strong>{this.state.eventName}</strong>?
+                {I18n.get('text.confirm.delete.event')}: <strong>{this.state.eventName}</strong>?
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
-                <Button variant="danger" onClick={this.deleteEvent} disabled={this.state.isModalProcessing}>{ I18n.get('button.delete') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
+                <Button variant="danger" onClick={this.deleteEvent} disabled={this.state.isModalProcessing}>{I18n.get('button.delete')}</Button>
               </Modal.Footer>
             </div>
           }

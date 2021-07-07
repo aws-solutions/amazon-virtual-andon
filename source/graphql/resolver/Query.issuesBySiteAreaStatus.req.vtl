@@ -103,7 +103,7 @@
 ## [Start] Applying Key Condition **
 #set( $sortKeyValue = "" )
 #set( $sortKeyValue2 = "" )
-#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated) && !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith) )
+#if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated) && !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith) &&  $ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.areaName != "all")
 #if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.areaName) ) #set( $sortKeyValue = "$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.areaName" ) #end
 #if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.status) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.status" ) #end
 #if( !$util.isNull($ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.processName) ) #set( $sortKeyValue = "$sortKeyValue#$ctx.args.areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated.beginsWith.processName" ) #end

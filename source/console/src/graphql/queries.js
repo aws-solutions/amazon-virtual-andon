@@ -120,6 +120,7 @@ export const getProcess = `query GetProcess($id: ID!) {
         topicArn
         rootCauses
         version
+        eventImgKey
       }
       nextToken
     }
@@ -166,6 +167,7 @@ export const getEvent = `query GetEvent($id: ID!) {
       }
     }
     rootCauses
+    eventImgKey
   }
 }
 `;
@@ -186,6 +188,7 @@ export const listEvents = `query ListEvents(
       topicArn
       rootCauses
       version
+      eventImgKey
     }
     nextToken
   }
@@ -282,6 +285,7 @@ export const issuesBySiteAreaStatus = `query IssuesBySiteAreaStatus(
       stationName
       deviceName
       created
+      createdAt
       acknowledged
       closed
       resolutionTime
@@ -289,6 +293,7 @@ export const issuesBySiteAreaStatus = `query IssuesBySiteAreaStatus(
       status
       version
       rootCause
+      comment
     }
     nextToken
   }
@@ -318,6 +323,7 @@ export const issuesByDevice = `query IssuesByDevice(
       stationName
       deviceName
       created
+      createdAt
       acknowledged
       closed
       resolutionTime

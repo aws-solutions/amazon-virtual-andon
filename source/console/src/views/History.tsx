@@ -1,15 +1,5 @@
-/**********************************************************************************************************************
- *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://www.apache.org/licenses/LICENSE-2.0                                                                    *
- *                                                                                                                    *
- *  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 // Import React and Amplify packages
 import React from 'react';
@@ -32,7 +22,7 @@ import ProgressBar from 'react-bootstrap/ProgressBar';
 import { onCreateIssue, onUpdateIssue } from '../graphql/subscriptions';
 
 // Import custom setting
-import { LOGGING_LEVEL, addISOTimeOffset, convertSecondsToHms } from '../util/CustomUtil';
+import { LOGGING_LEVEL, addISOTimeOffset, convertSecondsToHms, handleSubscriptionError } from '../util/CustomUtil';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IGeneralQueryData, IIssue, ISelectedData } from '../components/Interfaces';
 import EmptyRow from '../components/EmptyRow';
@@ -61,6 +51,14 @@ interface IState {
   error: string;
   showIssue: boolean;
   dataVersion: number;
+}
+
+/**
+ * Types of subscriptions that will be maintained by the main History class
+ */
+export enum HistorySubscriptionTypes {
+  CREATE_ISSUE,
+  UPDATE_ISSUE
 }
 
 // Logging
@@ -97,6 +95,7 @@ class History extends React.Component<IProps, IState> {
 
     this.handleSiteChange = this.handleSiteChange.bind(this);
     this.handleAreaChange = this.handleAreaChange.bind(this);
+    this.configureSubscription = this.configureSubscription.bind(this);
   }
 
   /**
@@ -106,48 +105,68 @@ class History extends React.Component<IProps, IState> {
     // Get sites at page load
     this.getSites();
 
-    // Subscribe to new issues
-    // @ts-ignore
-    this.createIssueSubscription = API.graphql(graphqlOperation(onCreateIssue)).subscribe({
-      next: (response: any) => {
-        const newIssue = response.value.data.onCreateIssue;
-        const { issues } = this.state;
-        const updatedIssues = [...issues, newIssue];
+    // Configure subscriptions
+    await this.configureSubscription(HistorySubscriptionTypes.CREATE_ISSUE);
+    await this.configureSubscription(HistorySubscriptionTypes.UPDATE_ISSUE);
+  }
 
-        this.setState((prevState) => ({
-          issues: updatedIssues,
-          dataVersion: prevState.dataVersion + 1
-        }));
-      },
-      error: () => {
-        // If there's an error (e.g. connection closed), reload the window.
-        window.location.reload();
+  /**
+   * Configures the subscription for the supplied `subscriptionType`
+   * @param subscriptionType The type of subscription to configure
+   * @param delayMS (Optional) This value will be used to set a delay for reestablishing the subscription if the socket connection is lost
+   */
+  async configureSubscription(subscriptionType: HistorySubscriptionTypes, delayMS: number = 10): Promise<void> {
+    try {
+      switch (subscriptionType) {
+        case HistorySubscriptionTypes.CREATE_ISSUE:
+          if (this.createIssueSubscription) { this.createIssueSubscription.unsubscribe(); }
+
+          // @ts-ignore
+          this.createIssueSubscription = API.graphql(graphqlOperation(onCreateIssue)).subscribe({
+            next: (response: any) => {
+              const newIssue = response.value.data.onCreateIssue;
+              const { issues } = this.state;
+              const updatedIssues = [...issues, newIssue];
+
+              this.setState((prevState) => ({
+                issues: updatedIssues,
+                dataVersion: prevState.dataVersion + 1
+              }));
+            },
+            error: async (e: any) => {
+              await handleSubscriptionError(e, subscriptionType, this.configureSubscription, delayMS);
+            }
+          });
+          break;
+        case HistorySubscriptionTypes.UPDATE_ISSUE:
+          if (this.updateIssuesubscription) { this.updateIssuesubscription.unsubscribe(); }
+
+          // @ts-ignore
+          this.updateIssuesubscription = API.graphql(graphqlOperation(onUpdateIssue)).subscribe({
+            next: (response: any) => {
+              const { issues } = this.state;
+              const updatedIssue = response.value.data.onUpdateIssue;
+              const index = issues.findIndex(issue => issue.id === updatedIssue.id);
+              const updatedIssues = [
+                ...issues.slice(0, index),
+                updatedIssue,
+                ...issues.slice(index + 1)
+              ];
+
+              this.setState((prevState) => ({
+                issues: updatedIssues,
+                dataVersion: prevState.dataVersion + 1
+              }));
+            },
+            error: async (e: any) => {
+              await handleSubscriptionError(e, subscriptionType, this.configureSubscription, delayMS);
+            }
+          });
+          break;
       }
-    });
-
-    // Subscribe to update issues
-    // @ts-ignore
-    this.updateIssuesubscription = API.graphql(graphqlOperation(onUpdateIssue)).subscribe({
-      next: (response: any) => {
-        const { issues } = this.state;
-        const updatedIssue = response.value.data.onUpdateIssue;
-        const index = issues.findIndex(issue => issue.id === updatedIssue.id);
-        const updatedIssues = [
-          ...issues.slice(0, index),
-          updatedIssue,
-          ...issues.slice(index + 1)
-        ];
-
-        this.setState((prevState) => ({
-          issues: updatedIssues,
-          dataVersion: prevState.dataVersion + 1
-        }));
-      },
-      error: () => {
-        // If there's an error (e.g. connection closed), reload the window.
-        window.location.reload();
-      }
-    });
+    } catch (err) {
+      console.error('Unable to configure subscription', err);
+    }
   }
 
   /**
@@ -300,6 +319,7 @@ class History extends React.Component<IProps, IState> {
       { name: I18n.get('text.device.name'), key: 'deviceName' },
       { name: I18n.get('text.status'), key: 'status' },
       { name: I18n.get('text.rootcause'), key: 'rootCause' },
+      { name: I18n.get('text.comment'), key: 'comment' },
       { name: I18n.get('text.created.at'), key: 'created' },
       { name: I18n.get('text.closed.at'), key: 'closed' },
       { name: I18n.get('text.resolution.time'), key: 'resolutionTime', callFunction: convertSecondsToHms, keyType: 'number' }
@@ -311,7 +331,7 @@ class History extends React.Component<IProps, IState> {
           <Row>
             <Col>
               <Breadcrumb>
-                <Breadcrumb.Item active>{ I18n.get('text.history') }</Breadcrumb.Item>
+                <Breadcrumb.Item active>{I18n.get('text.history')}</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -322,9 +342,9 @@ class History extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={6} controlId="siteSelect">
-                        <Form.Label>{ I18n.get('text.select.site.issues') }</Form.Label>
+                        <Form.Label>{I18n.get('text.select.site.issues')}</Form.Label>
                         <Form.Control as="select" value={this.state.selectedSite.name} onChange={this.handleSiteChange}>
-                          <option data-key="" key="none-site" value="">{ I18n.get('text.select.site') }</option>
+                          <option data-key="" key="none-site" value="" disabled>{I18n.get('text.select.site')}</option>
                           {
                             this.state.sites.map((site: IGeneralQueryData) => {
                               return (
@@ -335,9 +355,9 @@ class History extends React.Component<IProps, IState> {
                         </Form.Control>
                       </Form.Group>
                       <Form.Group as={Col} md={6} controlId="areaSelect">
-                        <Form.Label>{ I18n.get('text.select.area.issues') }</Form.Label>
+                        <Form.Label>{I18n.get('text.select.area.issues')}</Form.Label>
                         <Form.Control as="select" value={this.state.selectedArea.name} onChange={this.handleAreaChange}>
-                          <option data-key="" key="none-area" value="">{ I18n.get('text.select.area') }</option>
+                          <option data-key="" key="none-area" value="" disabled>{I18n.get('text.select.area')}</option>
                           {
                             this.state.areas.map((area: IGeneralQueryData) => {
                               return (
@@ -361,7 +381,7 @@ class History extends React.Component<IProps, IState> {
                 <Col>
                   <Form>
                     <Form.Row className="justify-content-end">
-                      <CSVLink data={this.state.issues} className="btn btn-primary btn-sm">{ I18n.get('button.download.csv.data') }</CSVLink>
+                      <CSVLink data={this.state.issues} className="btn btn-primary btn-sm">{I18n.get('button.download.csv.data')}</CSVLink>
                     </Form.Row>
                   </Form>
                 </Col>
@@ -371,21 +391,21 @@ class History extends React.Component<IProps, IState> {
           <EmptyRow />
           <Row>
             <Col>
-            {
-              this.state.showIssue && this.state.issues.length === 0 && !this.state.isLoading &&
-              <Jumbotron>
-                <p>{ I18n.get('text.no.issues.seven.days') }</p>
-              </Jumbotron>
-            }
-            {
-              this.state.issues.length > 0 && !this.state.isLoading &&
-              <Card className="custom-card-big custom-card-header-warning">
-                <Card.Header><strong>{ I18n.get('text.history.last.seven.days') }</strong></Card.Header>
-                <Card.Body>
-                  <DataTable headers={headers} data={this.state.issues} initialSort={{ key: 'created', order: SortBy.Asc }} dataVersion={this.state.dataVersion} />
-                </Card.Body>
-              </Card>
-            }
+              {
+                this.state.showIssue && this.state.issues.length === 0 && !this.state.isLoading &&
+                <Jumbotron>
+                  <p>{I18n.get('text.no.issues.seven.days')}</p>
+                </Jumbotron>
+              }
+              {
+                this.state.issues.length > 0 && !this.state.isLoading &&
+                <Card className="custom-card-big custom-card-header-warning">
+                  <Card.Header><strong>{I18n.get('text.history.last.seven.days')}</strong></Card.Header>
+                  <Card.Body>
+                    <DataTable headers={headers} data={this.state.issues} initialSort={{ key: 'created', order: SortBy.Asc }} dataVersion={this.state.dataVersion} />
+                  </Card.Body>
+                </Card>
+              }
             </Col>
           </Row>
           {
@@ -401,7 +421,7 @@ class History extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ I18n.get('error') }:</strong><br />
+                  <strong>{I18n.get('error')}:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>

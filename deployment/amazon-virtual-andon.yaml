@@ -1,15 +1,5 @@
-# Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-#
-# Licensed under the Amazon Software License (the "License").
-# You may not use this file except in compliance with the License.
-# A copy of the License is located at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# or in the "license" file accompanying this file. This file is distributed
-# on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
-# express or implied. See the License for the specific language governing
-# permissions and limitations under the License.
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 Description: "(SO0071) - The AWS CloudFormation template for deployment of the SOLUTION_NAME_PLACEHOLDER. Version VERSION_PLACEHOLDER"
 
@@ -360,6 +350,8 @@ Resources:
           AttributeType: S
         - AttributeName: "areaName#status#processName#eventDescription#stationName#deviceName#created"
           AttributeType: S
+        - AttributeName: "deviceName#eventId"
+          AttributeType: S
       KeySchema:
         - AttributeName: id
           KeyType: HASH
@@ -379,6 +371,14 @@ Resources:
             - AttributeName: siteName
               KeyType: HASH
             - AttributeName: "areaName#status#processName#eventDescription#stationName#deviceName#created"
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: ByDeviceEvent-index
+          KeySchema:
+            - AttributeName: "deviceName#eventId"
+              KeyType: HASH
+            - AttributeName: id
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
@@ -634,6 +634,26 @@ Resources:
                   - cognito-idp:AdminRemoveUserFromGroup
                 Resource:
                   - !GetAtt UserPool.Arn
+        - PolicyName: AVAEventImagePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource:
+                  - !Join ["/", [!GetAtt WebsiteBucket.Arn, "public", "event-images", "*"]]
+        - PolicyName: AVAListEventImagePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt WebsiteBucket.Arn
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -657,13 +677,22 @@ Resources:
         S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "ava-issue-handler.zip"]]
       Handler: index.handler
       Role: !GetAtt HandleIssuesRole.Arn
-      Runtime: nodejs12.x
+      Runtime: nodejs14.x
       Timeout: 60
       MemorySize: 128
       Environment:
         Variables:
           API_ENDPOINT: !GetAtt GraphQLStack.Outputs.GraphQLEndpoint
           ACCOUNT_ID: !Ref "AWS::AccountId"
+          ISSUE_TABLE: !Ref IssueTable
+          EVENT_TABLE: !Ref EventTable
+          DEVICE_TABLE: !Ref DeviceTable
+          STATION_TABLE: !Ref StationTable
+          AREA_TABLE: !Ref AreaTable
+          SITE_TABLE: !Ref SiteTable
+          PROCESS_TABLE: !Ref ProcessTable
+          SOLUTION_ID: !FindInMap ["Solution", "Data", "Id"]
+          SOLUTION_VERSION: !FindInMap ["Solution", "Data", "Version"]
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -695,6 +724,11 @@ Resources:
 
   HandleIssuesRole:
     Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W76
+            reason: All permissions are required for this Lambda function
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -729,6 +763,26 @@ Resources:
                   - sns:Publish
                 Resource:
                   - !Sub arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:andon-*
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource:
+                  - !Sub arn:${AWS::Partition}:s3:::${DetectedAnomaliesBucket}/*
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                Resource:
+                  - !GetAtt EventTable.Arn
+                  - !GetAtt DeviceTable.Arn
+                  - !GetAtt StationTable.Arn
+                  - !GetAtt AreaTable.Arn
+                  - !GetAtt SiteTable.Arn
+                  - !GetAtt ProcessTable.Arn
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                Resource:
+                  - !Sub ${IssueTable.Arn}/index/ByDeviceEvent-index
 
   IoTResourcePolicy:
     Type: AWS::IoT::Policy
@@ -758,6 +812,51 @@ Resources:
             Resource:
               - !Sub arn:${AWS::Partition}:iot:${AWS::Region}:${AWS::AccountId}:client/*
 
+  # Anomalies
+  DetectedAnomaliesBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LoggingConfiguration:
+        DestinationBucketName: !Ref LogsBucket
+        LogFilePrefix: detected-anomalies/
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+    
+  DetectedAnomaliesLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt HandleIssuesFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub arn:${AWS::Partition}:s3:::${DetectedAnomaliesBucket}
+      SourceAccount: !Ref AWS::AccountId
+
+  DetectedAnomaliesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        !Ref DetectedAnomaliesBucket
+      PolicyDocument:
+        Statement:
+            - Effect: Deny
+              Action: s3:*
+              Resource:
+                - !GetAtt DetectedAnomaliesBucket.Arn
+                - !Sub ${DetectedAnomaliesBucket.Arn}/*
+              Condition:
+                Bool:
+                  aws:SecureTransport: False
+              Principal: "*"
+
   # Custom Resource
   CustomResourceFunction:
     Type: AWS::Lambda::Function
@@ -768,12 +867,14 @@ Resources:
         S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "ava-custom-resource.zip"]]
       Handler: index.handler
       Role: !GetAtt CustomResourceRole.Arn
-      Runtime: nodejs12.x
+      Runtime: nodejs14.x
       Timeout: 60
       MemorySize: 128
       Environment:
         Variables:
           RetrySeconds: 5
+          SOLUTION_ID: !FindInMap ["Solution", "Data", "Id"]
+          SOLUTION_VERSION: !FindInMap ["Solution", "Data", "Version"]
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -840,6 +941,16 @@ Resources:
                   - s3:PutObject
                 Resource:
                   - !Join ["/", [!GetAtt WebsiteBucket.Arn, "*"]]
+              - Effect: Allow
+                Action:
+                  - s3:PutBucketNotification
+                Resource:
+                  - !GetAtt DetectedAnomaliesBucket.Arn
+              - Effect: Allow
+                Action:
+                  - s3:PutBucketCors
+                Resource:
+                  - !GetAtt WebsiteBucket.Arn
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -869,6 +980,7 @@ Resources:
       SourceKey: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "console"]]
       SourceManifest: "site-manifest.json"
       DestinationBucket: !Ref WebsiteBucket
+      WebsiteDistributionDomain: !Sub https://${CloudFrontDistribution.DomainName}
 
   PutWebsiteConfig:
     Type: Custom::PutWebsiteConfig
@@ -887,12 +999,20 @@ Resources:
         SolutionUuid: !GetAtt CreateUuid.UUID
         SolutionVersion: !FindInMap ["Solution", "Data", "Version"]
         DefaultLanguage: !Ref DefaultLanguage
+        WebsiteBucket: !Ref WebsiteBucket
 
   DeleteStack:
     Type: Custom::DeleteStack
     Properties:
       ServiceToken: !GetAtt CustomResourceFunction.Arn
       IotPolicyName: !Ref IoTResourcePolicy
+
+  ConfigureDetectedAnomaliesBucketNotification:
+    Type: Custom::ConfigureDetectedAnomaliesBucketNotification
+    Properties:
+      ServiceToken: !GetAtt CustomResourceFunction.Arn
+      DetectedAnomaliesBucketName: !Ref DetectedAnomaliesBucket
+      HandleIssuesFunctionArn: !GetAtt HandleIssuesFunction.Arn
 
 Outputs:
   AmazonVirtualAndonConsole:

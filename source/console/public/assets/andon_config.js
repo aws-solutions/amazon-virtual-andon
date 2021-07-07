@@ -1,3 +1,0 @@
-const andon_config = {
-
-}

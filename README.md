@@ -3,14 +3,14 @@ Amazon Virtual Andon is a self-service, cloud based andon system that makes it e
 any business to deploy andon in their factory. It is based on the same technology used
 by the Amazon Fulfillment centers built on AWS.
 
-The events occurring on the factory floor are captured either using a web-interface or connecting the machines to AWS IoT core that publish the events to a topic. These events are then stored in Dynamo DB. Using the IoT Rule Engine, the events are integrated with other AWS services such as SNS to send notifications about the events.
+The events occurring on the factory floor are captured either using a web-interface or connecting the machines to AWS IoT core that publish the events to a topic. These events are then stored in DynamoDB. Using the IoT Rule Engine, the events are integrated with other AWS services such as SNS to send notifications about the events.
 
 The solution comes with 4 different user personas, Admin, Manager, Engineer and Associate.
 
 For more information and a detailed deployment guide visit the Amazon Virtual Andon solution at https://aws.amazon.com/solutions/implementations/amazon-virtual-andon/.
 
 ## Architecture Overview
-![Architecture](architecture.png)
+![Architecture](architecture.jpg)
 
 ## Running unit tests for customization
 * Clone the repository, then make the desired code changes
@@ -24,10 +24,12 @@ chmod +x ./run-unit-tests.sh
 ## Building distributable for customization
 * Configure the bucket name of your target Amazon S3 distribution bucket
 ```
-export DIST_OUTPUT_BUCKET=my-bucket-name # bucket where customized code will reside
+export REGION=aws-region-code # the AWS region to launch the solution (e.g. us-east-1)
+export DIST_OUTPUT_BUCKET=bucket-name-prefix # prefix for the bucket where customized code will reside
+export SOLUTION_NAME=amazon-virtual-andon
 export VERSION=my-version # version number for the customized code
 ```
-_Note:_ You would have to create an S3 bucket with the prefix 'my-bucket-name-<aws_region>'; aws_region is where you are testing the customized solution. Also, the assets in bucket should be publicly accessible.
+_Note:_ You would have to create an S3 bucket with the name `<bucket-name-prefix>-<aws_region>`. We recommend using a randomized value for `bucket-name-prefix`. `aws_region` is where you are testing the customized solution. We also recommend that you ensure this bucket is not public.
 
 * Now build the distributable:
 ```bash
@@ -37,42 +39,14 @@ chmod +x ./build-s3-dist.sh
 
 * Deploy the distributable to an Amazon S3 bucket in your account. _Note:_ you must have the AWS Command Line Interface installed.
 ```bash
-aws s3 cp ./regional-s3-assets/ s3://my-bucket-name-<aws_region>/amazon-virtual-andon/<my-version>/ --recursive --acl bucket-owner-full-control --profile aws-cred-profile-name
+aws s3 cp ./regional-s3-assets/ s3://$DIST_OUTPUT_BUCKET-$REGION/$SOLUTION_NAME/$VERSION/ --recursive --acl bucket-owner-full-control --profile aws-cred-profile-name
 ```
 
 * Get the link of the amazon-virtual-andon.template uploaded to your Amazon S3 bucket.
 * Deploy the Amazon Virtual Andon solution to your account by launching a new AWS CloudFormation stack using the link of the amazon-virtual-andon.template.
 
-## File Structure
-The Amzon Virtual Andon solution consists of a management and owner console, IoT integrations and API microservices that facilitate the functional areas of the solution.
-
-```
-|- deployment/
-  |- amazon-virtual-andon.yaml            [ solution CloudFormation deployment template ]
-  |- amazon-virtual-andon-graphql.yaml    [ solution CloudFormation deployment template for cognito resources ]
-  |- amazon-virtual-andon-migration.yaml  [ DynamoDB migration CloudFormation deployment template ]
-  |- build-s3-dist.sh                     [ shell script for packaging distribution assets ]
-  |- run-unit-tests.sh                    [ shell script for executing unit tests ]
-|- source/
-  |- ava-issue-handler                    [ Issue handler microservice to handle issues occuring on Andon platform ]
-  |- console/
-    |- public/                            [ Solution console React public files ]
-    |- src/                               [ Solution console React source files ]
-      |- assets                           [ Console asset files (e.g. css) ]
-      |- components                       [ Console components ]
-      |- graphql                          [ Console GraphQL resources ]
-      |- types                            [ Console TypeScript types ]
-      |- util                             [ Console common util ]
-        |- lang                           [ Console language JSON files ]
-      |- views                            [ Console views ]
-  |- custom-resource                      [ Solution custom resource ]
-  |- graphql/                             [ GraphQL resources ]
-    |- resolver                           [ GraphQL resolver files ]
-  |- migration                            [ Migration template custom resource Lambda function ]
-```
-
 ## Collection of operational metrics
-This solution collects anonymous operational metrics to help AWS improve the quality and features of the solution. For more information, including how to disable this capability, please see the [implementation guide](https://docs.aws.amazon.com/solutions/latest/amazon-virtual-andon/appendix-g-collection-of-operational-metrics.html).
+This solution collects anonymous operational metrics to help AWS improve the quality and features of the solution. For more information, including how to disable this capability, please see the [implementation guide](https://docs.aws.amazon.com/solutions/latest/amazon-virtual-andon/collection-of-operational-metrics.html).
 
 ***
 

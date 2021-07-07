@@ -1,15 +1,5 @@
-/**********************************************************************************************************************
- *  Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://www.apache.org/licenses/LICENSE-2.0                                                                    *
- *                                                                                                                    *
- *  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 // Import React packages
 import React from 'react';
@@ -26,6 +16,7 @@ export interface IRoute {
   component: typeof React.Component;
   icon?: IconType;
   visible: boolean;
+  search?: string;
 }
 
 /**
@@ -61,6 +52,7 @@ export interface IEvent extends IGeneralQueryData {
   activeIssueId?: string;
   updateIssueVersion?: number;
   createIssueTime?: string;
+  eventImgKey?: string;
 }
 
 /**
@@ -73,6 +65,7 @@ export interface IEventUpdate {
   email?: string;
   topicArn?: string;
   rootCauses: string[];
+  eventImgKey?: string;
 }
 
 /**
@@ -91,6 +84,7 @@ export interface IIssue {
   stationName: string;
   deviceName: string;
   created: string;
+  createdAt: string;
   acknowledged: string;
   closed: string;
   resolutionTime: number;
@@ -100,6 +94,7 @@ export interface IIssue {
   visible?: boolean;
   expectedVersion?: number;
   rootCause?: string;
+  comment?: string
 }
 
 /**
@@ -179,4 +174,16 @@ export interface IRootCause {
   rootCause: string;
   visible?: boolean;
   deleted?: boolean;
+}
+
+/**
+ * Represents all aspects of a site
+ * @interface ISiteData
+ */
+export interface ISiteData {
+  siteName: string;
+  areas: ISelectedData[];
+  processes: ISelectedData[];
+  stations: ISelectedData[];
+  devices: ISelectedData[];
 }
