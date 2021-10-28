@@ -5,20 +5,16 @@
 import React from 'react';
 import NotificationSystem from 'react-notification-system';
 import Amplify from 'aws-amplify';
-import { Authenticator } from 'aws-amplify-react';
+import { withAuthenticator } from '@aws-amplify/ui-react';
+import { AuthState } from "@aws-amplify/ui-components";
 import { Logger } from '@aws-amplify/core';
 import Auth from '@aws-amplify/auth';
 import PubSub from '@aws-amplify/pubsub';
 import { AWSIoTProvider } from '@aws-amplify/pubsub/lib/Providers';
 import AWS from 'aws-sdk';
 
-// Import custom setting including customized Amplify, footer, and util
-import CustomSignIn from './components/amplify-authentication/CustomSignIn';
-import CustomRequireNewPassword from './components/amplify-authentication/CustomRequireNewPassword';
-import CustomForgotPassword from './components/amplify-authentication/CustomForgotPassword';
-import CustomVerifyContact from './components/amplify-authentication/CustomVerifyContact';
 import Footer from './components/Footer';
-import { LOGGING_LEVEL, getAmplifyCustomErrorMessage, handleSubscriptionError } from './util/CustomUtil';
+import { LOGGING_LEVEL, handleSubscriptionError } from './util/CustomUtil';
 import { adminRoutes, managerRoutes, engineerRoutes, associateRoutes } from './components/Routes';
 import { IRoute } from './components/Interfaces';
 
@@ -58,6 +54,7 @@ Amplify.addPluggable(new AWSIoTProvider({
   aws_pubsub_endpoint: andon_config.aws_iot_endpoint + '/mqtt'
 }));
 PubSub.configure(andon_config);
+Amplify.configure(andon_config);
 Amplify.configure({
   Storage: {
     bucket: andon_config.website_bucket,
@@ -90,6 +87,13 @@ class App extends React.Component<IProps, IState> {
   }
 
   /**
+   * React componentDidMount function
+   */
+   async componentDidMount() {
+    await this.handleAuthStateChange(AuthState.SignedIn)
+  }
+
+  /**
    * React componentWillUnmount function
    */
   componentWillUnmount() {
@@ -118,7 +122,7 @@ class App extends React.Component<IProps, IState> {
    * @param {string} state - Amplify auth state
    */
   async handleAuthStateChange(state: string) {
-    if (state === 'signedIn') {
+    if (state === 'signedin') {
       const user = await Auth.currentAuthenticatedUser();
       const groups = user.signInUserSession.idToken.payload['cognito:groups'];
 
@@ -153,7 +157,7 @@ class App extends React.Component<IProps, IState> {
         await new AWS.Iot().attachPrincipalPolicy(params).promise();
         await this.configureSubscription(AppSubscriptionTypes.GROUP);
       } catch (error) {
-        LOGGER.error('Error occurred while attaching princial policy', error);
+        LOGGER.error('Error occurred while attaching principal policy', error);
       }
     }
   }
@@ -194,17 +198,13 @@ class App extends React.Component<IProps, IState> {
    */
   render() {
     return (
-      <Authenticator hideDefault={true} amplifyConfig={andon_config} onStateChange={this.handleAuthStateChange} errorMessage={getAmplifyCustomErrorMessage}>
+      <div>
         <NotificationSystem ref={this.notificationSystem} />
-        <CustomSignIn />
-        <CustomRequireNewPassword />
-        <CustomForgotPassword />
-        <CustomVerifyContact />
-        <Main routes={this.state.routes} handleNotification={this.handleNotification} />
+        <Main authState= {AuthState.SignedIn} routes={this.state.routes} handleNotification={this.handleNotification} />
         <Footer />
-      </Authenticator>
+      </div>
     );
   }
 }
 
-export default App;
+export default withAuthenticator(App);

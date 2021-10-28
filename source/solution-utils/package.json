@@ -1,22 +1,36 @@
 {
   "name": "solution-utils",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "author": "AWS Solutions",
   "license": "Apache-2.0",
   "private": true,
-  "description": "Utility functions to be used within this solution",
-  "main": "index",
+  "description": "Utilities to be used within this solution",
+  "main": "get-options",
   "typings": "index",
   "scripts": {
-    "build:init": "rm -rf package-lock.json dist node_modules coverage",
-    "pretest": "npm run build:init && npm install",
-    "posttest": "rm -rf package-lock.json dist node_modules && npm install --production",
-    "test": "CI=true jest --config jestconfig.json --coverage --silent"
+    "clean": "rm -rf node_modules/ dist/ coverage/ package-lock.json",
+    "build:tsc": "tsc --project tsconfig.json",
+    "build": "npm run clean && npm install && npm run build:tsc",
+    "package": "npm run build && npm prune --production && rsync -avrq ./node_modules ./dist",
+    "pretest": "npm run clean && npm install",
+    "test": "jest --coverage --silent"
   },
   "files": [
-    "index.js"
+    "get-options.js",
+    "logger.js",
+    "metrics.js"
   ],
   "devDependencies": {
-    "jest": "^27.0.4"
+    "@types/jest": "^26.0.24",
+    "@types/node": "^16.4.5",
+    "@types/uuid": "^8.3.1",
+    "jest": "^27.0.4",
+    "ts-jest": "^27.0.4",
+    "ts-node": "^10.1.0",
+    "typescript": "^3.9.7"
+  },
+  "dependencies": {
+    "axios": "^0.21.1",
+    "moment": "^2.29.1"
   }
 }

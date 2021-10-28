@@ -5,19 +5,14 @@
 import { API, graphqlOperation } from 'aws-amplify';
 import { GraphQLResult } from '@aws-amplify/api-graphql';
 import { Logger } from '@aws-amplify/core';
-import Auth from "@aws-amplify/auth";
-import SNS from 'aws-sdk/clients/sns';
 
 // Import graphql
-import { listSites, listAreas, listStations, listDevices, listProcesses, listEvents, listPermissions, issuesBySiteAreaStatus, issuesByDevice, listRootCauses } from '../graphql/queries';
+import { getPrevDayIssuesStats, listSites, listAreas, listStations, listDevices, listProcesses, listEvents, listPermissions, issuesBySiteAreaStatus, issuesByDevice, listRootCauses } from '../graphql/queries';
 import { deleteSite, deleteArea, deleteStation, deleteDevice, deleteProcess, deleteEvent, deletePermission, deleteRootCause } from '../graphql/mutations';
 
 // Import custom setting
 import { LOGGING_LEVEL } from '../util/CustomUtil';
 import { IGeneralQueryData, IEvent, IPermission, IIssue, IRootCause } from '../components/Interfaces';
-
-// Declare Amazon Virtual Andon console configuration
-declare var andon_config: any;
 
 // Logging
 const LOGGER = new Logger('GraphQLCommon', LOGGING_LEVEL);
@@ -65,90 +60,119 @@ class GraphQLCommon {
   }
 
   /**
+   * This returns the issue stats from the last 24 hours.
+   * @return {Object} Returns an object of issues reported in the last 24 hours
+   */
+  async getPrevDayIssuesStats(): Promise<IGeneralQueryData[]> {
+    let queryName = 'getPrevDayIssuesStats'
+    let query = getPrevDayIssuesStats
+
+    try {
+      let result: any[] = [];
+      let response = await API.graphql(graphqlOperation(query)) as GraphQLResult;
+      let data: any = response.data;
+      result = data[queryName];
+      return result
+    } catch (error) {
+      LOGGER.error(error);
+      throw error;
+    }
+  }
+
+  /**
    * This returns the list of sites.
-   * @return {Proimse<IGeneralQueryData[]} The list of sites
+   * @return {Promise<IGeneralQueryData[]>} The list of sites
    */
   async listSites(): Promise<IGeneralQueryData[]> {
-    return await this.list('listSites', listSites, { limit: 50 });
+    return this.list('listSites', listSites, { limit: 50 });
   }
 
   /**
    * This returns the list of areas.
    * @param {string} areaSiteId - The area's site ID
-   * @return {Proimse<IGeneralQueryData[]} The list of areas
+   * @return {Promise<IGeneralQueryData[]>} The list of areas
    */
   async listAreas(areaSiteId: string): Promise<IGeneralQueryData[]> {
-    return await this.list('listAreas', listAreas, { areaSiteId });
+    return this.list('listAreas', listAreas, { areaSiteId });
   }
 
   /**
    * This returns the list of stations.
    * @param {string} stationAreaId - The station's area ID
-   * @return {Proimse<IGeneralQueryData[]} The list of stations
+   * @return {Promise<IGeneralQueryData[]>} The list of stations
    */
   async listStations(stationAreaId: string): Promise<IGeneralQueryData[]> {
-    return await this.list('listStations', listStations, { stationAreaId });
+    return this.list('listStations', listStations, { stationAreaId });
   }
 
   /**
    * This returns the list of devices.
    * @param {string} deviceStationId - The devices's station ID
-   * @return {Proimse<IGeneralQueryData[]} The list of devices
+   * @return {Promise<IGeneralQueryData[]>} The list of devices
    */
   async listDevices(deviceStationId: string): Promise<IGeneralQueryData[]> {
-    return await this.list('listDevices', listDevices, { deviceStationId });
+    return this.list('listDevices', listDevices, { deviceStationId });
   }
 
   /**
    * This returns the list of processes.
    * @param {string} processAreaId - The process's area ID
-   * @return {Proimse<IGeneralQueryData[]} The list of processes
+   * @return {Promise<IGeneralQueryData[]>} The list of processes
    */
   async listProcesses(processAreaId: string): Promise<IGeneralQueryData[]> {
-    return await this.list('listProcesses', listProcesses, { processAreaId });
+    return this.list('listProcesses', listProcesses, { processAreaId });
   }
 
   /**
-   * This returns the list of events.
-   * @param {string} eventProcessId - The event's process ID
-   * @return {Proimse<IEvent[]} The list of events
+   * This returns the list of events with the supplied parent ID
+   * @param parentId The parent ID to search by
+   * @returns The list of events
    */
-  async listEvents(eventProcessId: string): Promise<IEvent[]> {
-    return await this.list('listEvents', listEvents, { eventProcessId });
+  async listEvents(parentId: string): Promise<IEvent[]> {
+    return this.list('listEvents', listEvents, { parentId });
+  }
+
+  /**
+   * This returns the list of events for the supplied eventProcessId
+   * @param eventProcessId The parent ID to search by
+   * @returns The list of events
+   */
+  async listEventsInProcess(eventProcessId: string): Promise<IEvent[]> {
+    return this.list('listEvents', listEvents, { eventProcessId });
   }
 
   /**
    * This returns the list of permissions.
-   * @return {Proimse<IPermission[]} The list of permissions
+   * @return {Promise<IPermission[]>} The list of permissions
    */
   async listPermissions(): Promise<IPermission[]> {
-    return await this.list('listPermissions', listPermissions, { limit: 50 });
+    return this.list('listPermissions', listPermissions, { limit: 50 });
   }
 
   /**
    * This returns the list of issues by site, area, and status.
    * @param {any} variables - The GraphQL variables
-   * @return {Proimse<IIssue[]} The list of issues
+   * @return {Promise<IIssue[]>} The list of issues
    */
   async listIssuesBySiteAreaStatus(variables: any): Promise<IIssue[]> {
-    return await this.list('issuesBySiteAreaStatus', issuesBySiteAreaStatus, variables);
+    return this.list('issuesBySiteAreaStatus', issuesBySiteAreaStatus, variables);
   }
 
   /**
    * This returns the list of issues by device.
    * @param {any} variables - The GraphQL variables
-   * @return {Proimse<IIssue[]} The list of issues
+   * @return {Promise<IIssue[]>} The list of issues
    */
   async listIssueByDevice(variables: any): Promise<IIssue[]> {
-    return await this.list('issuesByDevice', issuesByDevice, variables);
+    return this.list('issuesByDevice', issuesByDevice, variables);
   }
 
   /**
    * This returns the list of root causes.
-   * @return {Proimse<IRootCause[]} The list of root causes
+   * @return {Promise<IRootCause[]>} The list of root causes
    */
   async listRootCauses(): Promise<IRootCause[]> {
-    return await this.list('listRootCauses', listRootCauses, { limit: 50 });
+    return this.list('listRootCauses', listRootCauses, { limit: 50 });
   }
 
   /**
@@ -172,11 +196,11 @@ class GraphQLCommon {
 
   /**
    * Delete a permission.
-   * @param {string} userId - User ID to delete the permission
+   * @param {string} id - User ID to delete the permission
    * @return {Promise<any>} The return value by GraphQL after deletion
    */
-  async deletePermission(userId: string): Promise<any> {
-    return await this.delete('deletePermission', deletePermission, { userId });
+  async deletePermission(id: string): Promise<any> {
+    return this.delete('deletePermission', deletePermission, { id });
   }
 
   /**
@@ -194,7 +218,7 @@ class GraphQLCommon {
     }
 
     await Promise.all(promises);
-    return await this.delete('deleteSite', deleteSite, { siteId });
+    return this.delete('deleteSite', deleteSite, { siteId });
   }
 
   /**
@@ -217,7 +241,7 @@ class GraphQLCommon {
     }
 
     await Promise.all(promises);
-    return await this.delete('deleteArea', deleteArea, { areaId });
+    return this.delete('deleteArea', deleteArea, { areaId });
   }
 
   /**
@@ -235,7 +259,7 @@ class GraphQLCommon {
     }
 
     await Promise.all(promises);
-    return await this.delete('deleteStation', deleteStation, { stationId });
+    return this.delete('deleteStation', deleteStation, { stationId });
   }
 
   /**
@@ -244,7 +268,7 @@ class GraphQLCommon {
    * @return {Promise<any>} The return value by GraphQL after deletion
    */
   async deleteDevice(deviceId: string): Promise<any> {
-    return await this.delete('deleteDevice', deleteDevice, { deviceId });
+    return this.delete('deleteDevice', deleteDevice, { deviceId });
   }
 
   /**
@@ -256,13 +280,13 @@ class GraphQLCommon {
     const promises = [];
 
     // Get the list of events belonged to the process, and delete them.
-    const events = await this.listEvents(processId);
+    const events = await this.listEventsInProcess(processId);
     for (let event of events) {
       promises.push(this.deleteEvent(event.id as string));
     }
 
     await Promise.all(promises);
-    return await this.delete('deleteProcess', deleteProcess, { processId });
+    return this.delete('deleteProcess', deleteProcess, { processId });
   }
 
   /**
@@ -271,33 +295,7 @@ class GraphQLCommon {
    * @return {Promise<any>} The return value by GraphQL after deletion
    */
   async deleteEvent(eventId: string): Promise<any> {
-    const response = await this.delete('deleteEvent', deleteEvent, { eventId });
-
-    // Delete Amazon SNS topic if the event has one.
-    if (response.topicArn && response.topicArn !== '') {
-      await this.deleteSns(response.topicArn);
-    }
-
-    return response;
-  }
-
-  /**
-   * Delete the Amazon SNS topic.
-   * @param {string} topicArn - SNS Topic ARN
-   */
-  async deleteSns(topicArn: string) {
-    const credentials = await Auth.currentCredentials();
-    const sns = new SNS({
-      apiVersion: '2010-03-31',
-      region: andon_config.aws_project_region,
-      credentials: Auth.essentialCredentials(credentials)
-    });
-
-    try {
-      await sns.deleteTopic({ TopicArn: topicArn }).promise();
-    } catch (error) {
-      throw new Error (error.message);
-    }
+    return this.delete('deleteEvent', deleteEvent, { eventId });
   }
 
   /**
@@ -306,7 +304,7 @@ class GraphQLCommon {
    * @return {Promise<any>} The return value by GraphQL after deletion
    */
   async deleteRootCause(id: string): Promise<any> {
-    return await this.delete('deleteRootCause', deleteRootCause, { id });
+    return this.delete('deleteRootCause', deleteRootCause, { id });
   }
 }
 

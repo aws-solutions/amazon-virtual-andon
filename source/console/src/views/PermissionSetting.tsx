@@ -122,7 +122,7 @@ class PermissionSetting extends React.Component<IProps, IState> {
    */
   async componentDidMount() {
     // If this is an edit mode, isEmailValid is true as the previous page sends the E-Mail address.
-    const userId = this.permission.userId ? this.permission.userId : '';
+    const userId = this.permission.id ? this.permission.id : '';
     if (this.mode === 'edit') {
       this.setState({
         isEmailValid: true,
@@ -234,7 +234,7 @@ class PermissionSetting extends React.Component<IProps, IState> {
 
     try {
       const input = {
-        userId: this.state.userPermissions.userId,
+        id: this.state.userPermissions.id,
         sites: this.state.userPermissions.sites,
         areas: this.state.userPermissions.areas,
         processes: this.state.userPermissions.processes,
@@ -294,7 +294,7 @@ class PermissionSetting extends React.Component<IProps, IState> {
     // If the `userId` is valid but no permissions were returned, create a default `userPermissions` object
     if (!userPermissions && userId && userId.trim() !== '') {
       userPermissions = {
-        userId,
+        id: userId,
         username: '',
         version: 1,
         areas: [],
@@ -321,7 +321,7 @@ class PermissionSetting extends React.Component<IProps, IState> {
     try {
       if (userId && userId.trim() !== '') {
         const permissions = await this.graphQlCommon.listPermissions();
-        return permissions.find(permission => permission.userId === userId);
+        return permissions.find(permission => permission.id === userId);
       }
     } catch (err) {
       console.error(err);
@@ -485,7 +485,7 @@ class PermissionSetting extends React.Component<IProps, IState> {
 
       this.setState({
         userPermissions: {
-          userId: userPermissions.userId,
+          id: userPermissions.id,
           username: userPermissions.username,
           sites: this.getUniqueArray(userPermissions.sites),
           areas: this.getUniqueArray(userPermissions.areas),

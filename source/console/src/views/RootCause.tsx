@@ -138,7 +138,7 @@ class RootCause extends React.Component<IProps, IState> {
 
       // Adds visible key/value for filter
       for (let rootCause of rootCauses) {
-        rootCause.visible = searchKeyword === '' || rootCause.rootCause.includes(searchKeyword);
+        rootCause.visible = searchKeyword === '' || rootCause.name.includes(searchKeyword);
       }
 
       this.setState({
@@ -166,7 +166,7 @@ class RootCause extends React.Component<IProps, IState> {
       const response = await API.graphql(graphqlOperation(createRootCause, { rootCause })) as GraphQLResult;
       const data: any = response.data;
       const newRootCause: IRootCause = data.createRootCause;
-      newRootCause.visible = searchKeyword === '' || newRootCause.rootCause.toLowerCase().includes(searchKeyword.toLowerCase());
+      newRootCause.visible = searchKeyword === '' || newRootCause.name.toLowerCase().includes(searchKeyword.toLowerCase());
 
       const newRootCauses = [...rootCauses, newRootCause];
       this.setState({
@@ -458,7 +458,7 @@ class RootCause extends React.Component<IProps, IState> {
           <Row>
             <Col>
               <Breadcrumb>
-                <Breadcrumb.Item active>{ I18n.get('text.rootcauses') }</Breadcrumb.Item>
+                <Breadcrumb.Item active>{I18n.get('text.rootcauses')}</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -470,11 +470,11 @@ class RootCause extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={4} controlId="searchKeyword">
-                        <Form.Label>{ I18n.get('text.search.keyword') }</Form.Label>
-                        <Form.Control type="text" placeholder={ I18n.get('text.search.rootcause') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
+                        <Form.Label>{I18n.get('text.search.keyword')}</Form.Label>
+                        <Form.Control type="text" placeholder={I18n.get('text.search.rootcause')} defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
                       </Form.Group>
                       <Form.Group as={Col} md={4} controlId="sortBy">
-                        <Form.Label>{ I18n.get('text.sort.by') }</Form.Label>
+                        <Form.Label>{I18n.get('text.sort.by')}</Form.Label>
                         <Form.Control as="select" defaultValue={this.state.sort} onChange={this.handleSort}>
                           <option value={SortBy.Asc}>A-Z</option>
                           <option value={SortBy.Desc}>Z-A</option>
@@ -491,11 +491,11 @@ class RootCause extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <CSVLink data={this.state.csvRootCauses} filename={'root-cause-upload-template.csv'} className="btn btn-primary btn-sm">{ I18n.get('button.download.csv.format') }</CSVLink>
+                  <CSVLink data={this.state.csvRootCauses} filename={'root-cause-upload-template.csv'} className="btn btn-primary btn-sm">{I18n.get('button.download.csv.format')}</CSVLink>
                   <EmptyCol />
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Upload)}>{ I18n.get('button.upload.csv') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Upload)}>{I18n.get('button.upload.csv')}</Button>
                   <EmptyCol />
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ I18n.get('button.add.rootcause') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{I18n.get('button.add.rootcause')}</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -503,42 +503,42 @@ class RootCause extends React.Component<IProps, IState> {
           <EmptyRow />
           <Row>
             <Col>
-            {
-              this.state.rootCauses.length === 0 && !this.state.isLoading &&
-              <Jumbotron>
-                <p>{ I18n.get('text.no.rootcause') }</p>
-              </Jumbotron>
-            }
-            {
-              this.state.rootCauses.length > 0 && !this.state.isLoading &&
-              <Card className="custom-card-big">
-                <Card.Body>
-                  <Table striped bordered>
-                    <thead>
-                      <tr>
-                        <th>{ I18n.get('text.rootcause') }</th>
-                        <th className="fixed-th-150">{ I18n.get('text.action') }</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                    {
-                      this.state.rootCauses.filter((rootCause: IRootCause) => rootCause.visible)
-                        .map((rootCause: IRootCause) => {
-                          return (
-                            <tr key={rootCause.id}>
-                              <td>{rootCause.rootCause}</td>
-                              <td>
-                                <Button variant="danger" size="sm" onClick={() => this.openModal(ModalType.Delete, rootCause.id, rootCause.rootCause)}>{ I18n.get('button.delete') }</Button>
-                              </td>
-                            </tr>
-                          );
-                        })
-                    }
-                    </tbody>
-                  </Table>
-                </Card.Body>
-              </Card>
-            }
+              {
+                this.state.rootCauses.length === 0 && !this.state.isLoading &&
+                <Jumbotron>
+                  <p>{I18n.get('text.no.rootcause')}</p>
+                </Jumbotron>
+              }
+              {
+                this.state.rootCauses.length > 0 && !this.state.isLoading &&
+                <Card className="custom-card-big">
+                  <Card.Body>
+                    <Table striped bordered>
+                      <thead>
+                        <tr>
+                          <th>{I18n.get('text.rootcause')}</th>
+                          <th className="fixed-th-150">{I18n.get('text.action')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {
+                          this.state.rootCauses.filter((rootCause: IRootCause) => rootCause.visible)
+                            .map((rootCause: IRootCause) => {
+                              return (
+                                <tr key={rootCause.id}>
+                                  <td>{rootCause.name}</td>
+                                  <td>
+                                    <Button variant="danger" size="sm" onClick={() => this.openModal(ModalType.Delete, rootCause.id, rootCause.name)}>{I18n.get('button.delete')}</Button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                        }
+                      </tbody>
+                    </Table>
+                  </Card.Body>
+                </Card>
+              }
             </Col>
           </Row>
           {
@@ -554,7 +554,7 @@ class RootCause extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ I18n.get('error') }:</strong><br />
+                  <strong>{I18n.get('error')}:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -571,16 +571,16 @@ class RootCause extends React.Component<IProps, IState> {
               <Modal.Body>
                 <Form>
                   <Form.Group controlId="rootCause">
-                    <Form.Label>{ I18n.get('text.rootcause') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ I18n.get('input.rootcause') }
-                      defaultValue="" onChange={this.handleRootCauseChange} className={ getInputFormValidationClassName(this.state.rootCause, this.state.isRootCauseValid) } />
-                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.rootcause')}` }</Form.Text>
+                    <Form.Label>{I18n.get('text.rootcause')} <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={I18n.get('input.rootcause')}
+                      defaultValue="" onChange={this.handleRootCauseChange} className={getInputFormValidationClassName(this.state.rootCause, this.state.isRootCauseValid)} />
+                    <Form.Text className="text-muted">{`(${I18n.get('text.required')}) ${I18n.get('info.valid.rootcause')}`}</Form.Text>
                   </Form.Group>
                 </Form>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
-                <Button variant="primary" onClick={this.addRootCause} disabled={this.state.isModalProcessing || !this.state.isRootCauseValid}>{ I18n.get('button.add') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
+                <Button variant="primary" onClick={this.addRootCause} disabled={this.state.isModalProcessing || !this.state.isRootCauseValid}>{I18n.get('button.add')}</Button>
               </Modal.Footer>
             </div>
           }
@@ -588,15 +588,15 @@ class RootCause extends React.Component<IProps, IState> {
             this.state.modalType === ModalType.Delete &&
             <div>
               <Modal.Body>
-                { I18n.get('text.confirm.delete.rootcause') }: <strong>{this.state.rootCause}</strong>?
+                {I18n.get('text.confirm.delete.rootcause')}: <strong>{this.state.rootCause}</strong>?
                 <EmptyRow />
                 <Alert variant="warning">
-                  { I18n.get('warning.delete.rootcause') }
+                  {I18n.get('warning.delete.rootcause')}
                 </Alert>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
-                <Button variant="danger" onClick={this.deleteRootCause} disabled={this.state.isModalProcessing}>{ I18n.get('button.delete') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
+                <Button variant="danger" onClick={this.deleteRootCause} disabled={this.state.isModalProcessing}>{I18n.get('button.delete')}</Button>
               </Modal.Footer>
             </div>
           }
@@ -607,7 +607,7 @@ class RootCause extends React.Component<IProps, IState> {
                 {
                   this.state.uploadResult.length === 0 &&
                   <Form.File>
-                    <Form.File.Label>{ I18n.get('info.upload.csv') }</Form.File.Label>
+                    <Form.File.Label>{I18n.get('info.upload.csv')}</Form.File.Label>
                     <Form.File label={this.state.csvFileName} data-browse={I18n.get('button.browse')} accept=".csv" custom onChange={this.handleFileChange} disabled={this.state.isModalProcessing} />
                   </Form.File>
                 }
@@ -616,30 +616,30 @@ class RootCause extends React.Component<IProps, IState> {
                   <Table striped bordered>
                     <thead>
                       <tr>
-                        <th>{ I18n.get('text.rootcause') }</th>
-                        <th>{ I18n.get('text.result') }</th>
+                        <th>{I18n.get('text.rootcause')}</th>
+                        <th>{I18n.get('text.result')}</th>
                       </tr>
                     </thead>
                     <tbody>
-                    {
-                      this.state.uploadResult.map((result: IUploadResult) => {
-                        return (
-                          <tr key={result.name}>
-                            <td>{result.name}</td>
-                            <td>{result.result}</td>
-                          </tr>
-                        );
-                      })
-                    }
+                      {
+                        this.state.uploadResult.map((result: IUploadResult) => {
+                          return (
+                            <tr key={result.name}>
+                              <td>{result.name}</td>
+                              <td>{result.result}</td>
+                            </tr>
+                          );
+                        })
+                      }
                     </tbody>
                   </Table>
                 }
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
                 {
                   this.state.uploadResult.length === 0 &&
-                  <Button variant="primary" onClick={this.uploadCsv} disabled={this.state.isModalProcessing || !this.state.isFileValid}>{ I18n.get('button.upload') }</Button>
+                  <Button variant="primary" onClick={this.uploadCsv} disabled={this.state.isModalProcessing || !this.state.isFileValid}>{I18n.get('button.upload')}</Button>
                 }
               </Modal.Footer>
             </div>

@@ -63,12 +63,14 @@ interface IState {
   deviceId: string;
   deviceName: string;
   deviceDescription: string;
+  deviceAlias: string;
   modalType: ModalType;
   modalTitle: string;
   showModal: boolean;
   isModalProcessing: boolean;
   isDeviceNameValid: boolean;
   isDeviceDescriptionValid: boolean;
+  isDeviceAliasValid: boolean;
 }
 
 // Logging
@@ -101,12 +103,14 @@ class Device extends React.Component<IProps, IState> {
       deviceId: '',
       deviceName: '',
       deviceDescription: '',
+      deviceAlias: '',
       modalType: ModalType.None,
       modalTitle: '',
       showModal: false,
       isModalProcessing: false,
       isDeviceNameValid: false,
-      isDeviceDescriptionValid: false
+      isDeviceDescriptionValid: false,
+      isDeviceAliasValid: false
     };
 
     this.graphQlCommon = new GraphQLCommon();
@@ -119,6 +123,7 @@ class Device extends React.Component<IProps, IState> {
     this.handleModalClose = this.handleModalClose.bind(this);
     this.handleDeviceNameChange = this.handleDeviceNameChange.bind(this);
     this.handleDeviceDescriptionChange = this.handleDeviceDescriptionChange.bind(this);
+    this.handleDeviceAliasChange = this.handleDeviceAliasChange.bind(this);
   }
 
   /**
@@ -220,12 +225,12 @@ class Device extends React.Component<IProps, IState> {
 
     try {
       // Graphql operation to register a device
-      const { devices, stationId, deviceName, deviceDescription, searchKeyword, sort } = this.state;
+      const { devices, stationId, deviceName, deviceDescription, deviceAlias, searchKeyword, sort } = this.state;
       const input = {
         deviceStationId: stationId,
         name: deviceName,
         description: deviceDescription,
-        __typename: 'Device'
+        alias: deviceAlias
       };
 
       const response = await API.graphql(graphqlOperation(createDevice, input)) as GraphQLResult;
@@ -239,9 +244,11 @@ class Device extends React.Component<IProps, IState> {
         title: `${I18n.get('text.devices')} (${newDevices.length})`,
         deviceName: '',
         deviceDescription: '',
+        deviceAlias: '',
         isModalProcessing: false,
         isDeviceNameValid: false,
         isDeviceDescriptionValid: false,
+        isDeviceAliasValid: false,
         showModal: false,
         modalTitle: '',
         modalType: ModalType.None
@@ -270,7 +277,7 @@ class Device extends React.Component<IProps, IState> {
 
   /**
    * Open modal based on type input.
-   * @param {ModalType} modalType - Moddal type
+   * @param {ModalType} modalType - Modal type
    * @param {string | undefined} deviceId - Device ID
    * @param {string | undefined} deviceName - Device Name
    */
@@ -326,8 +333,10 @@ class Device extends React.Component<IProps, IState> {
       deviceId: '',
       deviceName: '',
       deviceDescription: '',
+      deviceAlias: '',
       isDeviceNameValid: false,
       isDeviceDescriptionValid: false,
+      isDeviceAliasValid: false,
       showModal: false
     });
   }
@@ -357,6 +366,20 @@ class Device extends React.Component<IProps, IState> {
     this.setState({
       deviceDescription,
       isDeviceDescriptionValid
+    });
+  }
+
+  /**
+   * Handle the device alias change.
+   * @param {any} event - Event from the device alias input
+   */
+  handleDeviceAliasChange(event: any) {
+    const deviceAlias = event.target.value;
+    const isDeviceAliasValid = validateGeneralInput(deviceAlias, 1, 40, '- _/#');
+
+    this.setState({
+      deviceAlias,
+      isDeviceAliasValid
     });
   }
 
@@ -445,6 +468,10 @@ class Device extends React.Component<IProps, IState> {
                                 <td>{I18n.get('text.device.id')}</td>
                                 <td>{device.id}</td>
                               </tr>
+                              <tr>
+                                <td>{I18n.get('text.device.alias')}</td>
+                                <td>{device.alias}</td>
+                              </tr>
                             </tbody>
                           </Table>
                           <Form>
@@ -500,6 +527,12 @@ class Device extends React.Component<IProps, IState> {
                     <Form.Control required type="text" placeholder={I18n.get('input.device.description')}
                       defaultValue="" onChange={this.handleDeviceDescriptionChange} className={getInputFormValidationClassName(this.state.deviceDescription, this.state.isDeviceDescriptionValid)} />
                     <Form.Text className="text-muted">{`(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}`}</Form.Text>
+                  </Form.Group>
+                  <Form.Group controlId="deviceAlias">
+                    <Form.Label>{I18n.get('text.device.alias')}</Form.Label>
+                    <Form.Control required type="text" placeholder={I18n.get('input.device.alias')}
+                      defaultValue="" onChange={this.handleDeviceAliasChange} className={getInputFormValidationClassName(this.state.deviceAlias, this.state.isDeviceAliasValid)} />
+                    <Form.Text className="text-muted">{`${I18n.get('info.valid.general.input')}`}</Form.Text>
                   </Form.Group>
                 </Form>
               </Modal.Body>

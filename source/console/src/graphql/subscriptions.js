@@ -1,5 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable */
-// this is an auto generated file. This will be overwritten
 
 export const onCreateIssue = `subscription OnCreateIssue {
   onCreateIssue {
@@ -21,6 +22,7 @@ export const onCreateIssue = `subscription OnCreateIssue {
     acknowledgedTime
     status
     version
+    additionalDetails
   }
 }
 `;
@@ -51,7 +53,7 @@ export const onUpdateIssue = `subscription OnUpdateIssue {
 `;
 export const onPutPermission = `subscription OnPutPermission {
   onPutPermission {
-    userId
+    id
     sites {
       id
       name
@@ -81,18 +83,18 @@ export const onPutPermission = `subscription OnPutPermission {
 }`;
 export const onDeletePermission = `subscription OnDeletePermission {
   onDeletePermission {
-    userId
+    id
   }
 }`;
 export const onCreateRootCause = `subscription OnCreateRootCause {
   onCreateRootCause {
     id
-    rootCause
+    name
   }
 }`;
-export const onDeleteRootCause = `subscription OnDeletePermission {
+export const onDeleteRootCause = `subscription OnDeleteRootCause {
   onDeleteRootCause {
     id
-    rootCause
+    name
   }
 }`;

@@ -26,6 +26,7 @@
 **/coverage
 **/andon_config.js
 deployment/create-stack.sh
+deployment/update-packages.sh
 source/console/public/assets/andon_config.js
 
 # System Files

@@ -7,8 +7,7 @@ import { API, graphqlOperation, PubSub, Auth, I18n } from 'aws-amplify';
 import { GraphQLResult } from '@aws-amplify/api-graphql';
 import { Logger } from '@aws-amplify/core';
 import { RouteComponentProps } from 'react-router';
-// @ts-ignore
-import { S3Image } from 'aws-amplify-react';
+import { AmplifyS3Image } from "@aws-amplify/ui-react";
 
 // Import React Bootstrap components
 import Container from 'react-bootstrap/Container';
@@ -17,9 +16,16 @@ import Col from 'react-bootstrap/Col';
 import Breadcrumb from 'react-bootstrap/Breadcrumb';
 import Form from 'react-bootstrap/Form';
 import Card from 'react-bootstrap/Card';
+import CardGroup from 'react-bootstrap/CardGroup';
 import Alert from 'react-bootstrap/Alert';
 import Jumbotron from 'react-bootstrap/Jumbotron';
 import ProgressBar from 'react-bootstrap/ProgressBar';
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
+import Tooltip from 'react-bootstrap/Tooltip';
+import Modal from 'react-bootstrap/Modal';
+import Table from 'react-bootstrap/Table'
+import { BsFillExclamationCircleFill } from 'react-icons/bs';
+import { RiArrowGoBackFill } from 'react-icons/ri';
 
 // Import graphql
 import { getPermission } from '../graphql/queries';
@@ -27,9 +33,10 @@ import { onCreateIssue, onUpdateIssue, onPutPermission, onDeletePermission } fro
 
 // Import other packages
 import * as uuid from 'uuid';
+import moment from 'moment';
 
 // Import custom setting
-import { LOGGING_LEVEL, sendMetrics, addISOTimeOffset, handleSubscriptionError } from '../util/CustomUtil';
+import { LOGGING_LEVEL, sendMetrics, addISOTimeOffset, handleSubscriptionError, convertSecondsToHms } from '../util/CustomUtil';
 import GraphQLCommon from '../util/GraphQLCommon';
 import { IGeneralQueryData, IIssue, IEvent, ISelectedData, IPermission } from '../components/Interfaces';
 import EmptyRow from '../components/EmptyRow';
@@ -65,6 +72,12 @@ interface IState {
   isLoading: boolean;
   error: string;
   showEvent: boolean;
+  showModal: boolean;
+  modalAnomalyDetectionTime: string;
+  modalPredictionScore: string;
+  modalDiagnostics: { name: string, value: string }[],
+  modalDiagnosticsMaxValue: number;
+  currentParentEventId: string;
 }
 
 // Logging
@@ -72,7 +85,7 @@ const LOGGER = new Logger('Client', LOGGING_LEVEL);
 
 // Empty permission
 const EMPTY_PERMISSION: IPermission = {
-  userId: '',
+  id: '',
   username: '',
   sites: [],
   areas: [],
@@ -102,6 +115,8 @@ export enum ClientSubscriptionTypes {
 class Client extends React.Component<IProps, IState, RouteComponentProps> {
   // User ID
   private userId: string;
+  // Username
+  private username: string;
   // User groups
   private userGroups: string[];
   // Processing events - this will block duplicated events.
@@ -111,7 +126,7 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
   // Create issue subscription
   private createIssueSubscription: any;
   // Update issue subscription
-  private updateIssuesubscription: any;
+  private updateIssueSubscription: any;
   // Put permission subscription
   private putPermissionSubscription: any;
   // Delete issue subscription
@@ -136,10 +151,17 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
       selectedStation: EMPTY_SELECT,
       isLoading: false,
       error: '',
-      showEvent: false
+      showEvent: false,
+      showModal: false,
+      modalAnomalyDetectionTime: '',
+      modalPredictionScore: '',
+      modalDiagnostics: [],
+      modalDiagnosticsMaxValue: 0,
+      currentParentEventId: ''
     };
 
     this.userId = '';
+    this.username = '';
     this.userGroups = [];
     this.processingEvents = [];
     this.graphQlCommon = new GraphQLCommon();
@@ -152,6 +174,13 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
     this.handleEventClick = this.handleEventClick.bind(this);
     this.getInitialSelectItem = this.getInitialSelectItem.bind(this);
     this.configureSubscription = this.configureSubscription.bind(this);
+    this.toggleModal = this.toggleModal.bind(this);
+    this.hasOpenSubEvents = this.hasOpenSubEvents.bind(this);
+    this.hasAcknowledgedSubEvents = this.hasAcknowledgedSubEvents.bind(this);
+    this.clickedSubEventModalBack = this.clickedSubEventModalBack.bind(this);
+    this.getNumSubEventsWithStatus = this.getNumSubEventsWithStatus.bind(this);
+    this.outputEventNameForCardTitle = this.outputEventNameForCardTitle.bind(this);
+    this.getFullEventDescription = this.getFullEventDescription.bind(this);
   }
 
   /**
@@ -161,7 +190,7 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
     // Get user information
     await this.getUser();
 
-    // Get Local storage to set the inital site, area, and process.
+    // Get Local storage to set the initial site, area, and process.
     if (!this.props.location.search) {
       try {
         const avaCache = localStorage.getItem('ava_cache');
@@ -220,15 +249,17 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
               if (selectedSite.name === newIssue.siteName && selectedArea.name === newIssue.areaName
                 && selectedProcess.name === newIssue.processName && selectedStation.name === newIssue.stationName
                 && selectedDevice.name === newIssue.deviceName) {
-                events.filter((event: IEvent) => event.name === newIssue.eventDescription)
+                events.filter((event: IEvent) => event.id === newIssue.eventId)
                   .forEach((event: IEvent) => {
                     event.isActive = true;
                     event.activeIssueId = newIssue.id;
                     event.updateIssueVersion = newIssue.version;
                     event.createIssueTime = newIssue.created;
+                    event.createIssueTimeUtc = newIssue.createdAt;
                     event.isOpen = true;
                     event.isAcknowledged = false;
                     event.isClosedRejected = false;
+                    event.issueAdditionalDetails = newIssue.additionalDetails;
 
                     this.processingEvents = this.processingEvents.filter(processingEvent => processingEvent.id !== event.id);
                   });
@@ -279,9 +310,9 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
           });
           break;
         case ClientSubscriptionTypes.UPDATE_ISSUE:
-          if (this.updateIssuesubscription) { this.updateIssuesubscription.unsubscribe(); }
+          if (this.updateIssueSubscription) { this.updateIssueSubscription.unsubscribe(); }
           // @ts-ignore
-          this.updateIssuesubscription = API.graphql(graphqlOperation(onUpdateIssue)).subscribe({
+          this.updateIssueSubscription = API.graphql(graphqlOperation(onUpdateIssue)).subscribe({
             next: (response: any) => {
               const { issues, selectedSite, selectedArea, selectedProcess, selectedStation, selectedDevice } = this.state;
               let { events } = this.state;
@@ -296,17 +327,19 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
               if (selectedSite.name === updatedIssue.siteName && selectedArea.name === updatedIssue.areaName
                 && selectedProcess.name === updatedIssue.processName && selectedStation.name === updatedIssue.stationName
                 && selectedDevice.name === updatedIssue.deviceName) {
-                events.filter((event: IEvent) => event.name === updatedIssue.eventDescription)
+                events.filter((event: IEvent) => event.id === updatedIssue.eventId)
                   .forEach((event: IEvent) => {
                     if (['closed', 'rejected'].includes(updatedIssue.status)) {
                       event.isActive = false;
                       event.isAcknowledged = false;
                       event.isClosedRejected = true;
                       event.activeIssueId = '';
+                      delete event.createIssueTimeUtc;
                       event.isOpen = false;
                     } else if (updatedIssue.status === 'acknowledged') {
                       event.updateIssueVersion = updatedIssue.version;
                       event.createIssueTime = updatedIssue.created;
+                      delete event.createIssueTimeUtc;
                       event.isAcknowledged = true;
                       event.isOpen = false;
                     }
@@ -335,12 +368,15 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
    * React componentWillUnmount function
    */
   componentWillUnmount() {
-    if (this.updateIssuesubscription) this.updateIssuesubscription.unsubscribe();
+    if (this.updateIssueSubscription) this.updateIssueSubscription.unsubscribe();
     if (this.createIssueSubscription) this.createIssueSubscription.unsubscribe();
     if (this.putPermissionSubscription) this.putPermissionSubscription.unsubscribe();
     if (this.deletePermissionSubscription) this.deletePermissionSubscription.unsubscribe();
   }
 
+  /**
+   * React componentDidUpdate function
+   */
   componentDidUpdate(prevProps: IProps, prevState: IState) {
     const queryParams = new URLSearchParams(this.props.location.search);
     let queryKeyToUpdate = "";
@@ -402,6 +438,7 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
   async getUser() {
     const user = await Auth.currentAuthenticatedUser();
     this.userId = user.signInUserSession.idToken.payload.sub;
+    this.username = user.username;
     this.userGroups = user.signInUserSession.idToken.payload['cognito:groups'];
 
     // Filter user groups for associate group users only.
@@ -470,7 +507,7 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
    */
   async getPermission() {
     if (this.userId && this.userId !== '' && this.userGroups.length === 0) {
-      const response = await API.graphql(graphqlOperation(getPermission, { userId: this.userId })) as GraphQLResult;
+      const response = await API.graphql(graphqlOperation(getPermission, { id: this.userId })) as GraphQLResult;
       const data: any = response.data;
       if (data.getPermission) {
         const permission: IPermission = data.getPermission;
@@ -493,7 +530,7 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
        * If there's no permission for the associate user, the user gets nothing.
        */
       if (this.userGroups.length > 0 ||
-        (this.userGroups.length === 0 && this.state.permission.userId !== '')) {
+        (this.userGroups.length === 0 && this.state.permission.id !== '')) {
         sites = await this.graphQlCommon.listSites();
 
         if (this.userGroups.length === 0) {
@@ -537,7 +574,7 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
        * If there's no permission for the associate user, the user gets nothing.
        */
       if (this.userGroups.length > 0 ||
-        (this.userGroups.length === 0 && this.state.permission.userId !== '')) {
+        (this.userGroups.length === 0 && this.state.permission.id !== '')) {
         areas = await this.graphQlCommon.listAreas(siteId as string);
 
         if (this.userGroups.length === 0) {
@@ -582,7 +619,7 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
        * If there's no permission for the associate user, the user gets nothing.
        */
       if (this.userGroups.length > 0 ||
-        (this.userGroups.length === 0 && this.state.permission.userId !== '')) {
+        (this.userGroups.length === 0 && this.state.permission.id !== '')) {
         processes = await this.graphQlCommon.listProcesses(areaId as string);
         stations = await this.graphQlCommon.listStations(areaId as string);
 
@@ -646,7 +683,7 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
        * If there's no permission for the associate user, the user gets nothing.
        */
       if (this.userGroups.length > 0 ||
-        (this.userGroups.length === 0 && this.state.permission.userId !== '')) {
+        (this.userGroups.length === 0 && this.state.permission.id !== '')) {
         devices = await this.graphQlCommon.listDevices(stationId as string);
 
         if (this.userGroups.length === 0) {
@@ -670,8 +707,8 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
         selectedDevice && selectedDevice.id && selectedDevice.id !== '' &&
         selectedProcess && selectedProcess.id && selectedProcess.id !== ''
       ) {
-        this.getEvents(selectedProcess);
-        this.getIssues(selectedDevice, selectedProcess);
+        await this.getEvents(selectedProcess);
+        await this.getIssues(selectedDevice, selectedProcess);
       }
 
       devices.sort((a, b) => a.name.localeCompare(b.name));
@@ -683,7 +720,7 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
   }
 
   /**
-   * Get issues by the deivce and the process
+   * Get issues by the device and the process
    * @param {object} selectedDevice - Selected device
    * @param {object} selectedProcess - Selected process
    */
@@ -718,12 +755,14 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
       const { events } = this.state;
       issues.filter((issue: IIssue) => issue.deviceName === selectedDevice.name)
         .forEach((issue: IIssue) => {
-          events.filter((event: IEvent) => event.name === issue.eventDescription)
+          events.filter((event: IEvent) => event.id === issue.eventId)
             .forEach((event: IEvent) => {
               event.isActive = true;
               event.activeIssueId = issue.id;
               event.updateIssueVersion = issue.version;
               event.createIssueTime = issue.created;
+              event.createIssueTimeUtc = issue.createdAt;
+              event.issueAdditionalDetails = issue.additionalDetails;
 
               if (issue.status === 'acknowledged') {
                 event.isAcknowledged = true;
@@ -758,9 +797,7 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
    * @param {object} selectedProcess - Selected Process
    */
   async getEvents(selectedProcess: ISelectedData) {
-    if (selectedProcess.id === '' || selectedProcess.id === undefined) {
-      return;
-    }
+    if (selectedProcess.id === '' || selectedProcess.id === undefined) { return; }
 
     this.setState({
       isLoading: true,
@@ -768,7 +805,7 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
     });
 
     try {
-      const events: IEvent[] = await this.graphQlCommon.listEvents(selectedProcess.id);
+      const events: IEvent[] = await this.graphQlCommon.listEventsInProcess(selectedProcess.id);
 
       for (let event of events) {
         event.isActive = false;
@@ -856,7 +893,7 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
    * Handle process select change event.
    * @param {any} event - Event from the process select
    */
-  handleProcessChange(event: any) {
+  async handleProcessChange(event: any) {
     const { selectedDevice } = this.state;
     const index = event.target.options.selectedIndex;
     const selectedProcess = {
@@ -872,8 +909,8 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
     });
 
     if (selectedDevice.name !== '') {
-      this.getEvents(selectedProcess);
-      this.getIssues(selectedDevice, selectedProcess);
+      await this.getEvents(selectedProcess);
+      await this.getIssues(selectedDevice, selectedProcess);
     }
   }
 
@@ -905,7 +942,7 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
    * Handle device select change event.
    * @param {any} event - Event from the device select
    */
-  handleDeviceChange(event: any) {
+  async handleDeviceChange(event: any) {
     const { selectedProcess } = this.state;
     const index = event.target.options.selectedIndex;
     const selectedDevice = {
@@ -921,8 +958,8 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
     });
 
     if (selectedProcess.name !== '') {
-      this.getEvents(selectedProcess);
-      this.getIssues(selectedDevice, selectedProcess);
+      await this.getEvents(selectedProcess);
+      await this.getIssues(selectedDevice, selectedProcess);
     }
   }
 
@@ -931,6 +968,17 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
    * @param {IEvent} event - Clicked event
    */
   async handleEventClick(event: IEvent) {
+    if (event.eventType && event.eventType.trim().toLowerCase() === 'automated') {
+      LOGGER.warn('Automated events cannot be closed on the Client screen');
+      return;
+    }
+
+    // Check if this event has sub events
+    if (this.state.events.some(e => e.parentId === event.id)) {
+      this.setState({ currentParentEventId: event.id! });
+      return;
+    }
+
     const promises = [];
 
     // If there's processing events, it won't publish messages for the event anymore.
@@ -942,16 +990,18 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
           id: uuid.v1(),
           eventId: event.id,
           eventDescription: event.name,
-          type: event.type,
+          fullEventDescription: this.getFullEventDescription(event),
+          eventType: event.eventType,
           priority: event.priority,
-          topicArn: event.topicArn,
           siteName: selectedSite.name,
           areaName: selectedArea.name,
           processName: selectedProcess.name,
           stationName: selectedStation.name,
           deviceName: selectedDevice.name,
           created: addISOTimeOffset(new Date()),
-          status: 'open'
+          status: 'open',
+          createdBy: this.username,
+          issueSource: 'webClient'
         };
 
         promises.push(sendMetrics({ 'issue': 1 }));
@@ -962,9 +1012,8 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
           id: event.activeIssueId,
           eventId: event.id,
           eventDescription: event.name,
-          type: event.type,
+          eventType: event.eventType,
           priority: event.priority,
-          topicArn: event.topicArn,
           siteName: selectedSite.name,
           areaName: selectedArea.name,
           processName: selectedProcess.name,
@@ -974,7 +1023,8 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
           closed: issueClosedTimestamp,
           resolutionTime: resolutionTime,
           status: 'closed',
-          expectedVersion: event.updateIssueVersion
+          expectedVersion: event.updateIssueVersion,
+          closedBy: this.username
         };
       }
 
@@ -989,6 +1039,30 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
         this.processingEvents = this.processingEvents.filter(processingEvent => processingEvent.id !== event.id);
         LOGGER.error('Error occurred to publish an issue.', error);
       }
+    }
+  }
+
+  /**
+   * Returns the full event description that will be used when publishing the to the issue
+   * notification SNS Topic. In the case of sub events, it will include the parent event name(s)
+   * @param {IEvent} event - Clicked event
+   * @param {string} subEventName - A string containing the descriptions of any sub events
+   */
+  getFullEventDescription(event: IEvent, subEventName: string = ''): string {
+    let updatedSubEventName = event.name;
+    if (subEventName && subEventName.trim() !== '') {
+      updatedSubEventName += ` > ${subEventName.trim()}`;
+    }
+
+    if (event.parentId === event.eventProcessId) {
+      return `${updatedSubEventName} (${event.description})`;
+    }
+
+    const parentEvent = this.state.events.find(e => e.id === event.parentId);
+    if (parentEvent) {
+      return this.getFullEventDescription(parentEvent, updatedSubEventName);
+    } else {
+      throw new Error('Unable to find parent event');
     }
   }
 
@@ -1015,10 +1089,139 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
 
     return null
   }
+
+  /**
+   * Toggles whether to show the modal containing detailed data for automated events
+   * @param detailStr JSON string for the detailed data to show in the modal
+   */
+  toggleModal(detailStr?: string) {
+    let shouldOpenModal = !this.state.showModal;
+
+    if (shouldOpenModal) {
+      try {
+        const parsedDetailStr = JSON.parse(detailStr!);
+        const utcDate = moment.utc(parsedDetailStr.timestamp);
+        const localDate = moment.unix(utcDate.unix());
+
+        this.setState({
+          modalDiagnostics: [...parsedDetailStr.diagnostics].sort((a, b) => parseFloat(b.value) - parseFloat(a.value)),
+          modalDiagnosticsMaxValue: Math.ceil(100 * Math.max(...(parsedDetailStr.diagnostics as any[]).map(d => d.value))),
+          modalPredictionScore: parsedDetailStr.prediction,
+          modalAnomalyDetectionTime: `${localDate.format('YYYY-MM-DD HH:mm:ss')} (${localDate.fromNow()})`
+        });
+      } catch (err) {
+        LOGGER.error('Unable to parse anomaly detail string', err);
+        shouldOpenModal = false;
+      }
+    } else {
+      this.setState({
+        modalDiagnostics: [],
+        modalPredictionScore: '',
+        modalAnomalyDetectionTime: ''
+      });
+    }
+
+    this.setState({ showModal: shouldOpenModal });
+  }
+
+  /**
+   * Checks whether the event with the supplied ID has any open sub events
+   * @param eventId The ID for the root event to check
+   */
+  hasOpenSubEvents(eventId: string): boolean {
+    const subEvents = this.state.events.filter(e => e.parentId === eventId);
+
+    if (subEvents.length === 0) {
+      return false;
+    } else if (subEvents.some(e => e.isOpen)) {
+      return true;
+    }
+
+    // Check if there are any child sub events that are open
+    return subEvents.some(e => this.hasOpenSubEvents(e.id!));
+  }
+
+  /**
+   * Checks whether the event with the supplied ID has any acknowledged sub events
+   * @param eventId The ID for the root event to check
+   */
+  hasAcknowledgedSubEvents(eventId: string): boolean {
+    const subEvents = this.state.events.filter(e => e.parentId === eventId);
+
+    if (subEvents.length === 0) {
+      return false;
+    } else if (subEvents.some(e => e.isAcknowledged)) {
+      return true;
+    }
+
+    // Check if there are any child sub events that are acknowledged
+    return subEvents.some(e => this.hasAcknowledgedSubEvents(e.id!));
+  }
+
+  /**
+   * When the Back button is clicked on the sub event modal, display sub events one level above
+   * the current level. If there are no levels above the current, close the modal
+   */
+  clickedSubEventModalBack() {
+    // Get the event that matches the `currentParentEventId`
+    const currentParentEvent = this.state.events.find(e => e.id === this.state.currentParentEventId);
+
+    if (currentParentEvent) {
+      if (currentParentEvent.parentId === this.state.selectedProcess.id) {
+        // Close the modal
+        this.setState({ currentParentEventId: '' });
+      } else {
+        this.setState({ currentParentEventId: currentParentEvent.parentId! });
+      }
+    }
+  }
+
+  /**
+   * Returns the number of sub events that match one of the statuses in the supplied array
+   * @param {string} parentId The ID of the root event
+   * @param {string[]} statuses The statuses to check for
+   */
+  getNumSubEventsWithStatus(parentId: string, statuses: string[]): number {
+    const subEvents = this.state.events.filter(e => e.parentId === parentId);
+
+    let output = 0;
+
+    for (const subEvent of subEvents) {
+      if (subEvent.isOpen && statuses.includes('open')) {
+        output++;
+      } else if (subEvent.isAcknowledged && statuses.includes('acknowledged')) {
+        output++;
+      }
+
+      output += this.getNumSubEventsWithStatus(subEvent.id!, statuses);
+    }
+
+    return output;
+  }
+
+  /**
+   * Returns the name of the event to be used as the title for it's Card. If there are open or
+   * acknowledged sub events underneath, show a counter as well as the name
+   * @param {IEvent} event The event for which to retrieve a formatted name
+   */
+  outputEventNameForCardTitle(event: IEvent): string {
+    let output = event.name;
+
+    const numOpenOrAck = this.getNumSubEventsWithStatus(event.id!, ['open', 'acknowledged']);
+
+    if (numOpenOrAck > 0) {
+      output = `${output} (${numOpenOrAck})`;
+    }
+
+    return output;
+  }
+
   /**
    * Render this page.
    */
   render() {
+    const nonAutomatedEvents = this.state.events.filter(e => e.eventType !== 'automated');
+
     return (
       <div className="view">
         <Container>
@@ -1116,52 +1319,157 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
                 </Jumbotron>
               }
               {
-                this.state.events.length > 0 &&
+                nonAutomatedEvents.some(e => e.parentId === this.state.selectedProcess.id) &&
                 <Card className="custom-card-big">
                   <Row>
                     {
-                      this.state.events.map((event: IEvent) => {
-                        let className = 'custom-card-event';
-                        if (event.isOpen) {
-                          className = className.concat(' ', 'event-open');
-                        } else if (event.isAcknowledged) {
-                          className = className.concat(' ', 'event-acknowledged');
-                        } else if (event.isClosedRejected) {
-                          className = className.concat(' ', 'event-closed-rejected');
-                        }
+                      nonAutomatedEvents
+                        .filter(e => e.parentId === this.state.selectedProcess.id)
+                        .map((event: IEvent) => {
+                          let className = 'custom-card-event';
+                          if (event.isOpen || this.hasOpenSubEvents(event.id!)) {
+                            className = className.concat(' ', 'event-open');
+                          } else if (event.isAcknowledged || this.hasAcknowledgedSubEvents(event.id!)) {
+                            className = className.concat(' ', 'event-acknowledged');
+                          } else if (event.isClosedRejected) {
+                            className = className.concat(' ', 'event-closed-rejected');
+                          }
 
-                        let eventImg;
-                        if (event.eventImgKey) {
-                          eventImg = (
-                            <div className='client-event-img-container'>
-                              <S3Image
-                                className='client-event-img'
-                                key={event.eventImgKey}
-                                imgKey={event.eventImgKey}>
-                              </S3Image>
-                            </div>
+                          let eventImg;
+                          if (event.eventImgKey) {
+                            eventImg = (
+                              <div className='client-event-img-container'>
+                                <AmplifyS3Image
+                                  className='amplify-s3-image client-event-img'
+                                  key={event.eventImgKey}
+                                  imgKey={event.eventImgKey}>
+                                </AmplifyS3Image>
+                              </div>
+                            );
+                          } else {
+                            eventImg = '';
+                          }
+
+                          return (
+                            <Col xs={6} sm={3} md={3} key={event.id} className='custom-card-event-col'>
+                              <Card className={className} onClick={async () => this.handleEventClick(event)}>
+                                <Card.Body className='client-event-card-body'>
+                                  <Card.Title>
+                                    {this.outputEventNameForCardTitle(event)}
+                                  </Card.Title>
+                                  <Card.Text>
+                                    {event.description}
+                                  </Card.Text>
+                                  {eventImg}
+                                </Card.Body>
+                              </Card>
+                            </Col>
                           );
-                        } else {
-                          eventImg = '';
-                        }
-
-                        return (
-                          <Col xs={6} sm={3} md={3} key={event.id} className='custom-card-event-col'>
-                            <Card className={className} onClick={async () => this.handleEventClick(event)}>
-                              <Card.Body className='client-event-card-body'>
-                                <Card.Title>{event.name}</Card.Title>
-                                <Card.Text>
-                                  {event.description}
-                                </Card.Text>
-                                {eventImg}
-                              </Card.Body>
-                            </Card>
-                          </Col>
-                        );
-                      })
+                        })
                     }
                   </Row>
                 </Card>
+              }
+              {
+                this.state.events.filter(e => e.eventType === 'automated').length > 0 &&
+                <>
+                  <hr />
+                  <div className="automated-issues-heading">
+                    <span className="automated-issues-heading-label">{I18n.get('text.automated.issues')}</span>
+                    <OverlayTrigger
+                      key="automated-issues-heading-trigger"
+                      placement="right"
+                      overlay={
+                        <Tooltip id="automated-issues-heading-tooltip">
+                          {I18n.get('text.automated.issues.description')}
+                        </Tooltip>
+                      }
+                    >
+                      <BsFillExclamationCircleFill />
+                    </OverlayTrigger>
+
+                  </div>
+                  <Card className="custom-card-big">
+                    <Row>
+                      {
+                        this.state.events.filter(e => e.eventType === 'automated').map((event: IEvent) => {
+                          let className = 'custom-card-event';
+                          if (event.isOpen) {
+                            className = className.concat(' ', 'event-open');
+                          } else if (event.isAcknowledged) {
+                            className = className.concat(' ', 'event-acknowledged');
+                          } else if (event.isClosedRejected) {
+                            className = className.concat(' ', 'event-closed-rejected');
+                          }
+
+                          let eventImg;
+                          if (event.eventImgKey) {
+                            eventImg = (
+                              <div className='client-event-img-container'>
+                                <AmplifyS3Image
+                                  className='amplify-s3-image client-event-img'
+                                  key={event.eventImgKey}
+                                  imgKey={event.eventImgKey}>
+                                </AmplifyS3Image>
+                              </div>
+                            );
+                          } else {
+                            eventImg = '';
+                          }
+
+                          let createdText;
+                          if (event.createIssueTimeUtc) {
+                            const now = new Date().valueOf();
+                            const dt = new Date(event.createIssueTimeUtc);
+                            let relativeTime = convertSecondsToHms((now - dt.valueOf()) / 1000);
+                            if (relativeTime.trim().toLowerCase() !== 'just now') {
+                              relativeTime += ' ago';
+                            }
+                            createdText = (
+                              <>
+                                <br /><br />
+                                <u>{I18n.get('text.created.at')}</u><br />
+                                {`${dt.toDateString()} ${dt.toTimeString().split(' ')[0]}`}
+                                <br />
+                                {` (${relativeTime})`}
+                              </>
+                            );
+                          } else {
+                            createdText = '';
+                          }
+
+                          let viewAdditionalDetails;
+                          if (event.issueAdditionalDetails) {
+                            viewAdditionalDetails = (
+                              <>
+                                <br /><br />
+                                <u onClick={() => this.toggleModal(event.issueAdditionalDetails)}>{I18n.get('button.detail')}</u><br />
+                              </>
+                            );
+                          } else {
+                            viewAdditionalDetails = '';
+                          }
+
+                          return (
+                            <Col xs={6} sm={3} md={3} key={event.id} className='custom-card-event-col'>
+                              <Card className={className}>
+                                <Card.Body className='client-event-card-body'>
+                                  <Card.Title>{event.name}</Card.Title>
+                                  <Card.Text>
+                                    {event.description}
+                                    {createdText}
+                                    {viewAdditionalDetails}
+                                  </Card.Text>
+                                  {eventImg}
+                                </Card.Body>
+                              </Card>
+                            </Col>
+                          );
+                        })
+                      }
+                    </Row>
+                  </Card>
+                </>
               }
             </Col>
           </Row>
@@ -1184,6 +1492,106 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
               </Col>
             </Row>
           }
+          <Modal show={this.state.showModal} onHide={this.toggleModal} size="sm">
+            <Modal.Header>
+              <Modal.Title>{I18n.get('text.anomaly.modal.title')}</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              {I18n.get('text.anomaly.detection.time')}: {this.state.modalAnomalyDetectionTime}<br />
+              {I18n.get('text.anomaly.prediction.score')}: {this.state.modalPredictionScore}
+              <Table striped bordered hover responsive="sm">
+                <thead>
+                  <tr>
+                    <th key="anomaly-name-header">{I18n.get('text.anomaly.feature')}</th>
+                    <th key="anomaly-value-header">{I18n.get('text.anomaly.value')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {this.state.modalDiagnostics
+                    .map(d => {
+                      return (
+                        <tr key={`row-${d.name}`}>
+                          <td className="anomaly-modal-name-col" key={`name-${d.name}`}>{d.name}</td>
+                          <td key={`value-${d.name}`}>
+                            <ProgressBar key={d.name} max={this.state.modalDiagnosticsMaxValue} variant="danger" now={parseFloat(d.value) * 100} />
+                            {d.value}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </Table>
+            </Modal.Body>
+          </Modal>
+          <Modal show={this.state.currentParentEventId !== ''} onHide={() => this.setState({ currentParentEventId: '' })} size="sm">
+            <Modal.Body>
+              <Row>
+                <Col sm={2}>
+                  <Card className="client-event-card-body sub-event-info">
+                    <Card.Body>
+                      {I18n.get('text.station')}: {this.state.selectedStation.name}<br />
+                      {I18n.get('text.site')}: {this.state.selectedSite.name}<br />
+                      {this.state.currentParentEventId !== '' && this.state.events.find(e => e.id === this.state.currentParentEventId)!.name}
+                    </Card.Body>
+                  </Card>
+                  <Card onClick={this.clickedSubEventModalBack} className="client-event-card-body sub-event-back">
+                    <Card.Body>
+                      <RiArrowGoBackFill /><br />
+                      {I18n.get('text.back')}
+                    </Card.Body>
+                  </Card>
+                </Col>
+                <Col>
+                  <Card className="custom-card-big">
+                    <CardGroup>
+                      {
+                        nonAutomatedEvents
+                          .filter(e => e.parentId === this.state.currentParentEventId)
+                          .map((event: IEvent) => {
+                            let className = 'custom-card-sub-event';
+                            if (event.isOpen || this.hasOpenSubEvents(event.id!)) {
+                              className = className.concat(' ', 'event-open');
+                            } else if (event.isAcknowledged || this.hasAcknowledgedSubEvents(event.id!)) {
+                              className = className.concat(' ', 'event-acknowledged');
+                            } else if (event.isClosedRejected) {
+                              className = className.concat(' ', 'event-closed-rejected');
+                            }
+
+                            let eventImg;
+                            if (event.eventImgKey) {
+                              eventImg = (
+                                <div className='client-event-img-container'>
+                                  <AmplifyS3Image
+                                    className='amplify-s3-image client-event-img'
+                                    key={event.eventImgKey}
+                                    imgKey={event.eventImgKey}>
+                                  </AmplifyS3Image>
+                                </div>
+                              );
+                            } else {
+                              eventImg = '';
+                            }
+
+                            return (
+                              <Col xs={6} sm={3} md={3} key={event.id} className='custom-card-event-col sub-event-card-col'>
+                                <Card className={className} onClick={async () => this.handleEventClick(event)}>
+                                  <Card.Body className='client-event-card-body'>
+                                    <Card.Title>
+                                      {this.outputEventNameForCardTitle(event)}
+                                    </Card.Title>
+                                    {eventImg}
+                                  </Card.Body>
+                                </Card>
+                              </Col>
+                            );
+                          })
+                      }
+                    </CardGroup>
+                  </Card>
+                </Col>
+              </Row>
+            </Modal.Body>
+          </Modal>
         </Container>
       </div>
     );

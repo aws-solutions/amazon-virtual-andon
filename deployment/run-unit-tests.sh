@@ -50,10 +50,13 @@ coverage_reports_top_path=$source_dir/test/coverage-reports
 
 # Test the attached Lambda function
 declare -a lambda_packages=(
-  "custom-resource"
   "ava-issue-handler"
-  "migration"
+  "appsync-lambda-resolver"
+  "solution-helper"
   "solution-utils"
+  "cdk-infrastructure"
+  "external-integrations-handler"
+  "cognito-trigger"
 )
 
 for lambda_package in "${lambda_packages[@]}"

@@ -1,0 +1,416 @@
+# Schema
+schema {
+	query: Query
+	mutation: Mutation
+	subscription: Subscription
+}
+
+# Types
+type Query {
+	getSite(id: ID!, type: String!): Site @aws_auth(cognito_groups: ["AdminGroup"])
+	listSites(limit: Int, nextToken: String): SiteConnection @aws_auth(cognito_groups: ["AdminGroup", "ManagerGroup", "EngineerGroup", "AssociateGroup"])
+	getArea(id: ID!, type: String!): Area @aws_auth(cognito_groups: ["AdminGroup"])
+	listAreas(areaSiteId: ID!, name: String, limit: Int, nextToken: String): AreaConnection @aws_auth(cognito_groups: ["AdminGroup", "ManagerGroup", "EngineerGroup", "AssociateGroup"])
+	getProcess(id: ID!, type: String!): Process @aws_auth(cognito_groups: ["AdminGroup"])
+	listProcesses(processAreaId: ID!, name: String, limit: Int, nextToken: String): ProcessConnection @aws_auth(cognito_groups: ["AdminGroup", "ManagerGroup", "EngineerGroup", "AssociateGroup"])
+	getEvent(id: ID!, type: String!): Event @aws_auth(cognito_groups: ["AdminGroup", "ManagerGroup", "EngineerGroup", "AssociateGroup"])
+	listEvents(parentId: ID, eventProcessId: ID, name: String, limit: Int, nextToken: String): EventConnection @aws_auth(cognito_groups: ["AdminGroup", "ManagerGroup", "EngineerGroup", "AssociateGroup"])
+	getStation(id: ID!, type: String!): Station @aws_auth(cognito_groups: ["AdminGroup"])
+	listStations(stationAreaId: ID!, name: String, limit: Int, nextToken: String): StationConnection @aws_auth(cognito_groups: ["AdminGroup", "ManagerGroup", "EngineerGroup", "AssociateGroup"])
+	listDevices(deviceStationId: ID!, name: String, limit: Int, nextToken: String): DeviceConnection @aws_auth(cognito_groups: ["AdminGroup", "ManagerGroup", "EngineerGroup", "AssociateGroup"])
+	issuesBySiteAreaStatus(
+		siteName: String,
+		areaNameStatusProcessNameEventDescriptionStationNameDeviceNameCreated: IssueBySiteAreaStatusCompositeKeyConditionInput,
+		filter: IssueFilterInput,
+		limit: Int,
+		nextToken: String
+	): IssueConnection @aws_auth(cognito_groups: ["AdminGroup", "ManagerGroup", "EngineerGroup"])
+	issuesByDevice(
+		siteName: String,
+		areaNameStatusProcessNameStationNameDeviceNameCreated: IssueByDeviceCompositeKeyConditionInput,
+		limit: Int,
+		nextToken: String
+	): IssueConnection @aws_auth(cognito_groups: ["AdminGroup", "ManagerGroup", "EngineerGroup", "AssociateGroup"])
+	getPermission(id: ID!, type: String!): Permission @aws_auth(cognito_groups: ["AdminGroup", "ManagerGroup", "EngineerGroup", "AssociateGroup"])
+	listPermissions(limit: Int, nextToken: String): PermissionConnection @aws_auth(cognito_groups: ["AdminGroup"])
+	listRootCauses(limit: Int, nextToken: String): RootCauseConnection @aws_auth(cognito_groups: ["AdminGroup", "ManagerGroup", "EngineerGroup"])
+	getPrevDayIssuesStats: PrevDayIssuesStats @aws_auth(cognito_groups: ["AdminGroup", "ManagerGroup"])
+}
+
+type Mutation {
+	createSite(id: ID, type: String!, name: String!, description: String!): Site @aws_auth(cognito_groups: ["AdminGroup"])
+	deleteSite(id: ID!, type: String!): Site @aws_auth(cognito_groups: ["AdminGroup"])
+	createArea(id: ID, type: String!, areaSiteId: ID!, name: String!, description: String!): Area @aws_auth(cognito_groups: ["AdminGroup"])
+	deleteArea(id: ID!, type: String!): Area @aws_auth(cognito_groups: ["AdminGroup"])
+	createProcess(id: ID, type: String!, processAreaId: ID!, name: String!, description: String!): Process @aws_auth(cognito_groups: ["AdminGroup"])
+	deleteProcess(id: ID!, type: String!): Process @aws_auth(cognito_groups: ["AdminGroup"])
+	createEvent(
+		id: ID,
+		type: String!,
+		eventProcessId: ID,
+		parentId: ID,
+		name: String!,
+		description: String!,
+		priority: Priority!,
+		sms: String,
+		email: String,
+		rootCauses: [String],
+		eventImgKey: String,
+		eventType: String,
+		alias: String
+	): Event @aws_auth(cognito_groups: ["AdminGroup"])
+	updateEvent(id: ID!, sms: String, email: String, previousSms: String, previousEmail: String, rootCauses: [String], eventImgKey: String, alias: String): Event @aws_auth(cognito_groups: ["AdminGroup"])
+	deleteEvent(id: ID!, type: String!): Event @aws_auth(cognito_groups: ["AdminGroup"])
+	createStation(id: ID, type: String!, stationAreaId: ID!, name: String!, description: String!): Station @aws_auth(cognito_groups: ["AdminGroup"])
+	deleteStation(id: ID!, type: String!): Station @aws_auth(cognito_groups: ["AdminGroup"])
+	createDevice(id: ID, type: String!, deviceStationId: ID!, name: String!, description: String!, alias: String): Device @aws_auth(cognito_groups: ["AdminGroup"])
+	deleteDevice(id: ID!, type: String!): Device @aws_auth(cognito_groups: ["AdminGroup"])
+	createIssue(input: CreateIssueInput!): Issue @aws_iam @aws_cognito_user_pools
+	updateIssue(input: UpdateIssueInput!): Issue @aws_iam @aws_cognito_user_pools
+	putPermission(input: PermissionInput!): Permission @aws_auth(cognito_groups: ["AdminGroup"])
+	deletePermission(id: ID!, type: String!): Permission @aws_auth(cognito_groups: ["AdminGroup"])
+	createRootCause(id: ID, type: String!, name: String!): RootCause @aws_auth(cognito_groups: ["AdminGroup"])
+	deleteRootCause(id: ID!, type: String!): RootCause @aws_auth(cognito_groups: ["AdminGroup"])
+}
+
+type Subscription {
+	onCreateIssue: Issue @aws_subscribe(mutations: ["createIssue"]) @aws_auth(cognito_groups: ["AdminGroup", "ManagerGroup", "EngineerGroup", "AssociateGroup"])
+	onUpdateIssue: Issue @aws_subscribe(mutations: ["updateIssue"]) @aws_auth(cognito_groups: ["AdminGroup", "ManagerGroup", "EngineerGroup", "AssociateGroup"])
+	onPutPermission: Permission @aws_subscribe(mutations: ["putPermission"]) @aws_auth(cognito_groups: ["AdminGroup", "ManagerGroup", "EngineerGroup", "AssociateGroup"])
+	onDeletePermission: Permission @aws_subscribe(mutations: ["deletePermission"]) @aws_auth(cognito_groups: ["AdminGroup", "ManagerGroup", "EngineerGroup", "AssociateGroup"])
+	onCreateRootCause: RootCause @aws_subscribe(mutations: ["createRootCause"]) @aws_auth(cognito_groups: ["AdminGroup"])
+	onDeleteRootCause: RootCause @aws_subscribe(mutations: ["deleteRootCause"]) @aws_auth(cognito_groups: ["AdminGroup"])
+}
+
+type Area {
+	id: ID!
+	type: String!
+	site: Site!
+	name: String!
+	process(
+		limit: Int,
+		nextToken: String
+	): ProcessConnection
+	station(
+		limit: Int,
+		nextToken: String
+	): StationConnection
+	description: String!
+	version: Int!
+}
+
+type AreaConnection {
+	items: [Area]
+	nextToken: String
+}
+
+type Device {
+	id: ID!
+	type: String!
+	name: String!
+	description: String!
+	station: Station!
+	version: Int!
+	alias: String
+}
+
+type DeviceConnection {
+	items: [Device]
+	nextToken: String
+}
+
+type Event {
+	id: ID!
+	type: String
+	name: String!
+	description: String!
+	priority: Priority!
+	sms: String
+	email: String
+	process: Process!
+	version: Int!
+	rootCauses: [String]
+	eventImgKey: String
+	eventType: String
+	alias: String
+	eventProcessId: ID!
+	parentId: ID!
+}
+
+type EventConnection {
+	items: [Event]
+	nextToken: String
+}
+
+type Issue @aws_iam @aws_cognito_user_pools {
+	id: ID!
+	eventId: String!
+	eventDescription: String!
+	type: String
+	priority: Priority!
+	siteName: String!
+	processName: String!
+	areaName: String!
+	stationName: String
+	deviceName: String
+	created: AWSDateTime!
+	createdAt: AWSDateTime
+	acknowledged: AWSDateTime
+	closed: AWSDateTime
+	resolutionTime: Int
+	acknowledgedTime: Int
+	status: Status!
+	version: Int!
+	rootCause: String
+	comment: String
+	issueSource: IssueSource!
+	createdBy: String!
+	closedBy: String
+	rejectedBy: String
+	acknowledgedBy: String
+	additionalDetails: String
+}
+
+type IssueConnection @aws_iam @aws_cognito_user_pools {
+	items: [Issue]
+	nextToken: String
+}
+
+type Permission {
+	id: ID!
+	type: String!
+	sites: [PermissionObject]
+	areas: [PermissionObject]
+	processes: [PermissionObject]
+	stations: [PermissionObject]
+	devices: [PermissionObject]
+	version: Int!
+}
+
+type PermissionConnection {
+	items: [Permission]
+	nextToken: String
+}
+
+type PermissionObject {
+	id: String!
+	name: String!
+	parentId: String
+}
+
+type Process {
+	id: ID!
+	type: String!
+	name: String!
+	description: String!
+	area: Area!
+	event(
+		limit: Int,
+		nextToken: String
+	): EventConnection
+	version: Int!
+}
+
+type ProcessConnection {
+	items: [Process]
+	nextToken: String
+}
+
+type RootCause {
+	id: ID!
+	type: String!
+	name: String!
+}
+
+type RootCauseConnection {
+	items: [RootCause]
+	nextToken: String
+}
+
+type Site {
+	id: ID!
+	type: String!
+	name: String!
+	area(
+		limit: Int,
+		nextToken: String
+	): AreaConnection
+	description: String
+	version: Int!
+}
+
+type SiteConnection {
+	items: [Site]
+	nextToken: String
+}
+
+type Station {
+	id: ID!
+	type: String!
+	name: String!
+	description: String
+	area: Area!
+	device(
+		limit: Int,
+		nextToken: String
+	): DeviceConnection
+	version: Int!
+}
+
+type StationConnection {
+	items: [Station]
+	nextToken: String
+}
+
+type PrevDayIssuesStats {
+	open: Int
+	acknowledged: Int
+	closed: Int
+	lastThreeHours: Int
+}
+
+# Inputs
+input CreateIssueInput {
+	id: ID!
+	eventId: String!
+	eventDescription: String!
+	type: String
+	priority: Priority!
+	siteName: String!
+	processName: String!
+	areaName: String!
+	stationName: String!
+	deviceName: String!
+	created: AWSDateTime!
+	acknowledged: AWSDateTime
+	closed: AWSDateTime
+	resolutionTime: Int
+	acknowledgedTime: Int
+	status: Status!
+	issueSource: IssueSource!
+	createdBy: String!
+	additionalDetails: String
+	eventType: String
+}
+
+input UpdateIssueInput {
+	id: ID!
+	eventId: String!
+	eventDescription: String
+	type: String
+	priority: Priority
+	siteName: String
+	processName: String
+	areaName: String
+	stationName: String
+	deviceName: String
+	created: AWSDateTime
+	createdAt: AWSDateTime
+	acknowledged: AWSDateTime
+	closed: AWSDateTime
+	resolutionTime: Int
+	acknowledgedTime: Int
+	status: Status
+	expectedVersion: Int!
+	rootCause: String
+	comment: String
+	createdBy: String
+	closedBy: String
+	acknowledgedBy: String
+	rejectedBy: String
+	additionalDetails: String
+	eventType: String
+}
+
+input IssueByDeviceCompositeKeyConditionInput {
+	eq: IssueByDeviceCompositeKeyInput
+	le: IssueByDeviceCompositeKeyInput
+	lt: IssueByDeviceCompositeKeyInput
+	ge: IssueByDeviceCompositeKeyInput
+	gt: IssueByDeviceCompositeKeyInput
+	between: [IssueByDeviceCompositeKeyInput]
+	beginsWith: IssueByDeviceCompositeKeyInput
+}
+
+input IssueByDeviceCompositeKeyInput {
+	areaName: String
+	status: Status
+	processName: String
+	stationName: String
+	deviceName: String
+	created: String
+}
+
+input IssueBySiteAreaStatusCompositeKeyConditionInput {
+	eq: IssueBySiteAreaStatusCompositeKeyInput
+	le: IssueBySiteAreaStatusCompositeKeyInput
+	lt: IssueBySiteAreaStatusCompositeKeyInput
+	ge: IssueBySiteAreaStatusCompositeKeyInput
+	gt: IssueBySiteAreaStatusCompositeKeyInput
+	between: [IssueBySiteAreaStatusCompositeKeyInput]
+	beginsWith: IssueBySiteAreaStatusCompositeKeyInput
+}
+
+input IssueBySiteAreaStatusCompositeKeyInput {
+	areaName: String
+	status: Status
+	processName: String
+	eventDescription: String
+	stationName: String
+	deviceName: String
+	created: String
+}
+
+input IssueFilterInput {
+	created: StringInput
+	status: StringInput
+}
+
+input PermissionInput {
+	id: ID!
+	sites: [PermissionObjectInput]
+	areas: [PermissionObjectInput]
+	processes: [PermissionObjectInput]
+	stations: [PermissionObjectInput]
+	devices: [PermissionObjectInput]
+	version: Int!
+}
+
+input PermissionObjectInput {
+	id: String!
+	name: String!
+	parentId: String
+}
+
+input RootCauseInput {
+	id: String!
+	name: String!
+}
+
+input StringInput {
+	gt: String
+	eq: String
+	between: [String]
+}
+
+# Enums
+enum Priority {
+	low
+	medium
+	high
+	critical
+}
+
+enum Status {
+	open
+	acknowledged
+	closed
+	inprogress
+	rejected
+}
+
+enum IssueSource {
+	webClient
+	s3File
+	device
+}

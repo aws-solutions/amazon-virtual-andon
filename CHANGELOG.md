@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2021-10-28
+⚠ BREAKING CHANGES
+Version 3.0.0 does not support upgrading from previous versions.
+### Added
+- Option to export the solution’s DynamoDB table data to Amazon S3 for in-depth data analysis
+- Ability to enter nested “sub events” after creating events
+- Edit option for closed issues for Root Cause and Comments
+- Option to subscribe multiple email addresses and/or phone numbers to Events for Amazon SNS notifications
+- Multi-language support: Thai
+
+### Changed
+- Architecture is now maintained using the AWS [Cloud Development Kit](https://aws.amazon.com/cdk/)
+- Consolidated previous Metrics & History pages into the new Issue Reporting page
+- Capture the users who create, acknowledge, and close issues so they can be viewed in the Issue Reporting screen
+
 ## [2.2.0] - 2021-07-07
 ### Added
 - Added ability to upload images and associate them with events

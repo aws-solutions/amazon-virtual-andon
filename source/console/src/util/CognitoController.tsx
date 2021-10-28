@@ -212,13 +212,6 @@ class CognitoController {
   async getUser(username: string): Promise<IUser> {
     const isAuthorized = await this.isAuthorized();
     if (isAuthorized) {
-      if (!validateEmailAddress(username)) {
-        throw new CustomError({
-          errorType: 'InvalidFormatError',
-          message: I18n.get('error.invalid.username')
-        });
-      }
-
       const params = {
         UserPoolId: this.userPoolId,
         Username: username
@@ -278,7 +271,7 @@ class CognitoController {
         user.userId = this.getCognitoAttributeValue('sub', response.User?.Attributes);
 
         // Set user groups
-        await this.setUserGourps(user.username, user.groups);
+        await this.setUserGroups(user.username, user.groups);
 
         return user;
       } catch (error) {
@@ -302,7 +295,7 @@ class CognitoController {
   async editUser(user: IUser) {
     const isAuthorized = await this.isAuthorized();
     if (isAuthorized) {
-      if (!validateEmailAddress(user.username)) {
+      if (user.status !== 'EXTERNAL_PROVIDER' && !validateEmailAddress(user.username)) {
         throw new CustomError({
           errorType: 'InvalidFormatError',
           message: I18n.get('error.invalid.username')
@@ -317,7 +310,7 @@ class CognitoController {
 
         const promises = [
           this.removeUserGroups(user.username, removeGroups),
-          this.setUserGourps(user.username, addGroups)
+          this.setUserGroups(user.username, addGroups)
         ];
 
         await Promise.all(promises);
@@ -375,14 +368,7 @@ class CognitoController {
    * @param {string} username - The user name to set the user groups
    * @param {string[]} groups - The user groups to assign the user
    */
-  private async setUserGourps(username: string, groups: string[]) {
-    if (!validateEmailAddress(username)) {
-      throw new CustomError({
-        errorType: 'InvalidFormatError',
-        message: I18n.get('error.invalid.username')
-      });
-    }
-
+  private async setUserGroups(username: string, groups: string[]) {
     try {
       const promises = [];
 
@@ -413,13 +399,6 @@ class CognitoController {
    * @param {string[]} groups - The user groups to remove from the user
    */
   private async removeUserGroups(username: string, groups: string[]) {
-    if (!validateEmailAddress(username)) {
-      throw new CustomError({
-        errorType: 'InvalidFormatError',
-        message: I18n.get('error.invalid.username')
-      });
-    }
-
     if (groups.length > 0) {
       try {
         const promises = [];

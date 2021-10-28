@@ -26,11 +26,12 @@ export interface IRoute {
 export interface IGeneralQueryData {
   parentId?: string;
   id?: string;
+  type: string;
   name: string;
   description: string;
   version?: number;
   visible?: boolean;
-  __typename?: string;
+  alias?: string;
 }
 
 /**
@@ -39,11 +40,9 @@ export interface IGeneralQueryData {
  */
 export interface IEvent extends IGeneralQueryData {
   eventProcessId?: string;
-  type?: string;
   priority: string;
   sms?: string;
   email?: string;
-  topicArn?: string;
   rootCauses?: string[];
   isActive?: boolean;
   isClosedRejected?: boolean;
@@ -52,7 +51,10 @@ export interface IEvent extends IGeneralQueryData {
   activeIssueId?: string;
   updateIssueVersion?: number;
   createIssueTime?: string;
+  createIssueTimeUtc?: string;
   eventImgKey?: string;
+  eventType?: string;
+  issueAdditionalDetails?: string;
 }
 
 /**
@@ -63,9 +65,11 @@ export interface IEventUpdate {
   id: string;
   sms?: string;
   email?: string;
-  topicArn?: string;
+  previousSms?: string;
+  previousEmail?: string;
   rootCauses: string[];
   eventImgKey?: string;
+  alias?: string;
 }
 
 /**
@@ -93,8 +97,46 @@ export interface IIssue {
   version: number;
   visible?: boolean;
   expectedVersion?: number;
-  rootCause?: string;
-  comment?: string
+  rootCause?: string | null;
+  comment?: string | null;
+  createdBy: string;
+  closedBy?: string;
+  acknowledgedBy?: string;
+  rejectedBy?: string;
+  openFor?: number | string | null;
+  additionalDetails?: string;
+}
+
+/**
+ * UpdateIssueResponse Interface
+ * @interface IUpdateIssueResponse
+ */
+ export interface IUpdateIssueResponse {
+  data: {
+    updateIssue?: {
+      id: string;
+      eventId: string;
+      eventDescription: string;
+      type: string;
+      priority: string;
+      siteName: string;
+      processName: string;
+      areaName: string;
+      stationName: string;
+      deviceName: string;
+      created: string;
+      createdAt: string;
+      acknowledged: string;
+      closed: string;
+      resolutionTime: string;
+      acknowledgedTime: string;
+      status: string;
+      version: string;
+      rootCause: string;
+      comment: string;
+    }
+  },
+  errors?: any[];
 }
 
 /**
@@ -154,7 +196,7 @@ export interface IUploadResult {
  * @interface IPermission
  */
 export interface IPermission {
-  userId: string;
+  id: string;
   username: string;
   sites: ISelectedData[];
   areas: ISelectedData[];
@@ -171,7 +213,7 @@ export interface IPermission {
  */
 export interface IRootCause {
   id: string;
-  rootCause: string;
+  name: string;
   visible?: boolean;
   deleted?: boolean;
 }

@@ -200,7 +200,7 @@ class Process extends React.Component<IProps, IState> {
         }
       }
 
-      LOGGER.error('Error while deleting proces', error);
+      LOGGER.error('Error while deleting process', error);
       this.props.handleNotification(message, 'error', 5);
       this.setState({ isModalProcessing: false });
     }
@@ -218,8 +218,7 @@ class Process extends React.Component<IProps, IState> {
       const input = {
         processAreaId: areaId,
         name: processName,
-        description: processDescription,
-        __typename: 'Process'
+        description: processDescription
       };
 
       const response = await API.graphql(graphqlOperation(createProcess, input)) as GraphQLResult;
@@ -262,7 +261,7 @@ class Process extends React.Component<IProps, IState> {
 
   /**
    * Open modal based on type input.
-   * @param {ModalType} modalType - Moddal type
+   * @param {ModalType} modalType - Modal type
    * @param {string | undefined} processId - Process ID
    * @param {string | undefined} processName  - Process Name
    */
@@ -363,12 +362,12 @@ class Process extends React.Component<IProps, IState> {
             <Col>
               <Breadcrumb>
                 <LinkContainer to="/sites" exact>
-                  <Breadcrumb.Item>{ I18n.get('text.sites') }</Breadcrumb.Item>
+                  <Breadcrumb.Item>{I18n.get('text.sites')}</Breadcrumb.Item>
                 </LinkContainer>
                 <LinkContainer to={`/sites/${this.state.siteId}`} exact>
-                  <Breadcrumb.Item>{ I18n.get('text.areas') }{this.state.siteName}</Breadcrumb.Item>
+                  <Breadcrumb.Item>{I18n.get('text.areas')}{this.state.siteName}</Breadcrumb.Item>
                 </LinkContainer>
-                <Breadcrumb.Item active>{ I18n.get('info.processes') }{this.state.areaName}</Breadcrumb.Item>
+                <Breadcrumb.Item active>{I18n.get('info.processes')}{this.state.areaName}</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -376,7 +375,7 @@ class Process extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ I18n.get('button.add.process') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{I18n.get('button.add.process')}</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -390,11 +389,11 @@ class Process extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={4} controlId="searchKeyword">
-                        <Form.Label>{ I18n.get('text.search.keyword') }</Form.Label>
-                        <Form.Control type="text" placeholder={ I18n.get('text.search.process.name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
+                        <Form.Label>{I18n.get('text.search.keyword')}</Form.Label>
+                        <Form.Control type="text" placeholder={I18n.get('text.search.process.name')} defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
                       </Form.Group>
                       <Form.Group as={Col} md={4} controlId="sortBy">
-                        <Form.Label>{ I18n.get('text.sort.by') }</Form.Label>
+                        <Form.Label>{I18n.get('text.sort.by')}</Form.Label>
                         <Form.Control as="select" defaultValue={this.state.sort} onChange={this.handleSort}>
                           <option value={SortBy.Asc}>A-Z</option>
                           <option value={SortBy.Desc}>Z-A</option>
@@ -412,7 +411,7 @@ class Process extends React.Component<IProps, IState> {
               this.state.processes.length === 0 && !this.state.isLoading &&
               <Col>
                 <Jumbotron>
-                  <p>{ I18n.get('text.no.process') }</p>
+                  <p>{I18n.get('text.no.process')}</p>
                 </Jumbotron>
               </Col>
             }
@@ -427,7 +426,7 @@ class Process extends React.Component<IProps, IState> {
                           <Table striped bordered>
                             <tbody>
                               <tr>
-                                <td>{ I18n.get('text.description') }</td>
+                                <td>{I18n.get('text.description')}</td>
                                 <td>{process.description}</td>
                               </tr>
                             </tbody>
@@ -435,8 +434,8 @@ class Process extends React.Component<IProps, IState> {
                           <Form>
                             <Form.Row className="justify-content-between">
                               <Button size="sm" variant="danger"
-                                onClick={() => this.openModal(ModalType.Delete, process.id, process.name)}>{ I18n.get('button.delete') }</Button>
-                              <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/processes/${process.id}`)}>{ I18n.get('button.detail') }</Button>
+                                onClick={() => this.openModal(ModalType.Delete, process.id, process.name)}>{I18n.get('button.delete')}</Button>
+                              <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/processes/${process.id}`)}>{I18n.get('button.detail')}</Button>
                             </Form.Row>
                           </Form>
                         </Card.Body>
@@ -459,7 +458,7 @@ class Process extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ I18n.get('error') }:</strong><br />
+                  <strong>{I18n.get('error')}:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -476,22 +475,22 @@ class Process extends React.Component<IProps, IState> {
               <Modal.Body>
                 <Form>
                   <Form.Group controlId="processName">
-                    <Form.Label>{ I18n.get('text.process.name') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ I18n.get('input.process.name') }
-                      defaultValue="" onChange={this.handleProcessNameChange} className={ getInputFormValidationClassName(this.state.processName, this.state.isProcessNameValid) } />
-                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
+                    <Form.Label>{I18n.get('text.process.name')} <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={I18n.get('input.process.name')}
+                      defaultValue="" onChange={this.handleProcessNameChange} className={getInputFormValidationClassName(this.state.processName, this.state.isProcessNameValid)} />
+                    <Form.Text className="text-muted">{`(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}`}</Form.Text>
                   </Form.Group>
                   <Form.Group controlId="processDescription">
-                    <Form.Label>{ I18n.get('text.process.description') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ I18n.get('input.process.description') }
-                      defaultValue="" onChange={this.handleProcessDescriptionChange} className={ getInputFormValidationClassName(this.state.processDescription, this.state.isProcessDescriptionValid) } />
-                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
+                    <Form.Label>{I18n.get('text.process.description')} <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={I18n.get('input.process.description')}
+                      defaultValue="" onChange={this.handleProcessDescriptionChange} className={getInputFormValidationClassName(this.state.processDescription, this.state.isProcessDescriptionValid)} />
+                    <Form.Text className="text-muted">{`(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}`}</Form.Text>
                   </Form.Group>
                 </Form>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
-                <Button variant="primary" onClick={this.addProcess} disabled={this.state.isModalProcessing || !this.state.isProcessNameValid || !this.state.isProcessDescriptionValid}>{ I18n.get('button.register') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
+                <Button variant="primary" onClick={this.addProcess} disabled={this.state.isModalProcessing || !this.state.isProcessNameValid || !this.state.isProcessDescriptionValid}>{I18n.get('button.register')}</Button>
               </Modal.Footer>
             </div>
           }
@@ -499,15 +498,15 @@ class Process extends React.Component<IProps, IState> {
             this.state.modalType === ModalType.Delete &&
             <div>
               <Modal.Body>
-                { I18n.get('text.confirm.delete.process') }: <strong>{this.state.processName}</strong>?
+                {I18n.get('text.confirm.delete.process')}: <strong>{this.state.processName}</strong>?
                 <EmptyRow />
                 <Alert variant="danger">
-                  { I18n.get('warning.delete.process') }
+                  {I18n.get('warning.delete.process')}
                 </Alert>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
-                <Button variant="danger" onClick={this.deleteProcess} disabled={this.state.isModalProcessing}>{ I18n.get('button.delete') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
+                <Button variant="danger" onClick={this.deleteProcess} disabled={this.state.isModalProcessing}>{I18n.get('button.delete')}</Button>
               </Modal.Footer>
             </div>
           }

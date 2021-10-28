@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Import React and Amplify packages
-import React from 'react';
 import { CookiesProvider, Cookies } from 'react-cookie';
 import ReactDOM from 'react-dom';
 import { I18n } from 'aws-amplify';
@@ -13,7 +12,6 @@ import App from './App';
 // Import style sheets
 import './assets/css/style.scss';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import 'chartist/dist/chartist.min.css';
 
 // Import language files
 import de from './util/lang/de.json'; // German
@@ -23,9 +21,19 @@ import fr from './util/lang/fr.json'; // French (France)
 import ja from './util/lang/ja.json'; // Japanese
 import ko from './util/lang/ko.json'; // Korean
 import zh from './util/lang/zh.json'; // Chinese (Simplified)
+import th from './util/lang/th.json'; // Thai
 
+// Create dictionary for translated strings. Default to English if a string is 
+// missing a translation
 const dict: any = {
-  de, en, es, fr, ja, ko, zh
+  en,
+  de: { ...en, ...de },
+  es: { ...en, ...es },
+  fr: { ...en, ...fr },
+  ja: { ...en, ...ja },
+  ko: { ...en, ...ko },
+  zh: { ...en, ...zh },
+  th: { ...en, ...th }
 };
 I18n.putVocabularies(dict);
 
@@ -63,6 +71,9 @@ if (locale === undefined) {
       break;
     case 'Spanish (Spain)':
       localLanguage = 'es';
+      break;
+    case 'Thai':
+      localLanguage = 'th';
       break;
     default:
       localLanguage = 'en';

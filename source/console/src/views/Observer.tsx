@@ -3,7 +3,7 @@
 
 // Import React and Amplify packages
 import React from 'react';
-import { API, graphqlOperation, I18n } from 'aws-amplify';
+import { API, graphqlOperation, I18n, Auth } from 'aws-amplify';
 import { GraphQLResult } from '@aws-amplify/api-graphql';
 import { Logger } from '@aws-amplify/core';
 import { RouteComponentProps } from 'react-router';
@@ -78,6 +78,8 @@ const LOGGER = new Logger('Observer', LOGGING_LEVEL);
  * @class Observer
  */
 class Observer extends React.Component<IProps, IState, RouteComponentProps> {
+  // Username
+  private username: string;
   // GraphQL common class
   private graphQlCommon: GraphQLCommon;
   // Create issue subscription
@@ -114,12 +116,16 @@ class Observer extends React.Component<IProps, IState, RouteComponentProps> {
     this.handleModalClose = this.handleModalClose.bind(this);
     this.calculateTimeSinceIssueCreated = this.calculateTimeSinceIssueCreated.bind(this);
     this.configureSubscription = this.configureSubscription.bind(this);
+    this.username = '';
   }
 
   /**
    * React componentDidMount function
    */
   async componentDidMount() {
+    // Get user information
+    await this.getUser();
+
     // Get sites at page load
     this.getSites();
 
@@ -189,6 +195,14 @@ class Observer extends React.Component<IProps, IState, RouteComponentProps> {
     } catch (err) {
       console.error('Unable to configure subscription', err);
     }
+  }
+
+  /**
+   * Get the current user.
+   */
+  async getUser() {
+    const user = await Auth.currentAuthenticatedUser();
+    this.username = user.username;
   }
 
   componentDidUpdate(prevProps: IProps, prevState: IState) {
@@ -423,6 +437,7 @@ class Observer extends React.Component<IProps, IState, RouteComponentProps> {
 
       let translatedStatus = '';
       if (status === 'closed') {
+        issue.closedBy = this.username;
         issue.closed = addISOTimeOffset(new Date());
         issue.resolutionTime = Math.ceil((new Date(issue.closed).valueOf() - new Date(issue.created).valueOf()) / 1000);
         translatedStatus = I18n.get('text.status.close');
@@ -431,7 +446,9 @@ class Observer extends React.Component<IProps, IState, RouteComponentProps> {
         issue.closed = addISOTimeOffset(new Date());
         issue.resolutionTime = 0;
         translatedStatus = I18n.get('text.status.reject');
+        issue.rejectedBy = this.username;
       } else if (status === 'acknowledged') {
+        issue.acknowledgedBy = this.username;
         issue.acknowledged = addISOTimeOffset(new Date());
         issue.acknowledgedTime = Math.ceil((new Date(issue.acknowledged).valueOf() - new Date(issue.created).valueOf()) / 1000);
         translatedStatus = I18n.get('text.status.acknowledge');
@@ -461,7 +478,7 @@ class Observer extends React.Component<IProps, IState, RouteComponentProps> {
 
     const response = await API.graphql(graphqlOperation(getEvent, { id: eventId })) as GraphQLResult;
     const data: any = response.data;
-    const rootCauses: string[] = data.getEvent.rootCauses ? data.getEvent.rootCauses : [];
+    const rootCauses: string[] = data.getEvent?.rootCauses || [];
 
     if (rootCauses.length > 0) {
       rootCauses.sort((a, b) => a.localeCompare(b));
@@ -659,7 +676,7 @@ class Observer extends React.Component<IProps, IState, RouteComponentProps> {
                   </Form.Control>
                   <Form.Text className="text-muted">
                     {this.state.comment.length}/500
-                    </Form.Text>
+                  </Form.Text>
                 </Form.Group>
               }
             </Form>

@@ -1,4 +1,4 @@
-# Amazon Virtual Andon Solution
+# Amazon Virtual Andon
 Amazon Virtual Andon is a self-service, cloud based andon system that makes it easy for
 any business to deploy andon in their factory. It is based on the same technology used
 by the Amazon Fulfillment centers built on AWS.
@@ -11,6 +11,7 @@ For more information and a detailed deployment guide visit the Amazon Virtual An
 
 ## Architecture Overview
 ![Architecture](architecture.jpg)
+Please refer to our [documentation](https://docs.aws.amazon.com/solutions/latest/amazon-virtual-andon/architecture-overview.html) for more details on the architecture.
 
 ## Running unit tests for customization
 * Clone the repository, then make the desired code changes
@@ -46,7 +47,7 @@ aws s3 cp ./regional-s3-assets/ s3://$DIST_OUTPUT_BUCKET-$REGION/$SOLUTION_NAME/
 * Deploy the Amazon Virtual Andon solution to your account by launching a new AWS CloudFormation stack using the link of the amazon-virtual-andon.template.
 
 ## Collection of operational metrics
-This solution collects anonymous operational metrics to help AWS improve the quality and features of the solution. For more information, including how to disable this capability, please see the [implementation guide](https://docs.aws.amazon.com/solutions/latest/efs-to-efs-backup/appendix-e.html).
+This solution collects anonymous operational metrics to help AWS improve the quality and features of the solution. For more information, including how to disable this capability, please see the [implementation guide](https://docs.aws.amazon.com/solutions/latest/amazon-virtual-andon/collection-of-operational-metrics.html).
 
 ***
 

@@ -158,7 +158,7 @@ class User extends React.Component<IProps, IState> {
       // Adds visible key/value for filter
       for (let user of users) {
         user.visible = searchKeyword === '' || user.username.includes(searchKeyword);
-        user.groups = [ I18n.get('text.loading') ];
+        user.groups = [I18n.get('text.loading')];
       }
 
       // Get user groups asynchronously for performance purpose
@@ -259,17 +259,18 @@ class User extends React.Component<IProps, IState> {
 
     try {
       const { users, email, groups } = this.state;
+      const index = users.findIndex(indexUser => indexUser.username === email);
+      const user = users[index];
+
       const editUser: IUser = {
-        username: email,
+        username: user.username,
         groups: groups,
-        status: '',
+        status: user.status
       };
 
       const cognitoController = await this.getCognitoController();
       await cognitoController.editUser(editUser);
 
-      const index = users.findIndex(indexUser => indexUser.username === editUser.username);
-      const user = users[index];
       const { userId, visible, status } = user;
       editUser.visible = visible;
       editUser.status = status;
@@ -330,11 +331,11 @@ class User extends React.Component<IProps, IState> {
   getHighestUserGroup(user: IUser): string {
     if (user.groups.includes('AdminGroup')) {
       return 'AdminGroup';
-    } else if(user.groups.includes('ManagerGroup')) {
+    } else if (user.groups.includes('ManagerGroup')) {
       return 'ManagerGroup';
-    } else if(user.groups.includes('EngineerGroup')) {
+    } else if (user.groups.includes('EngineerGroup')) {
       return 'EngineerGroup';
-    } else if(user.groups.includes('AssociateGroup')) {
+    } else if (user.groups.includes('AssociateGroup')) {
       return 'AssociateGroup';
     } else {
       return '';
@@ -472,7 +473,7 @@ class User extends React.Component<IProps, IState> {
 
   /**
    * Open modal based on type input.
-   * @param {ModalType} modalType - Moddal type
+   * @param {ModalType} modalType - Modal type
    * @param {string | undefined} email - E-Mail address (username)
    * @param {string[] | undefined} groups - User groups
    */
@@ -628,7 +629,7 @@ class User extends React.Component<IProps, IState> {
           <Row>
             <Col>
               <Breadcrumb>
-                <Breadcrumb.Item active>{ I18n.get('text.users') }</Breadcrumb.Item>
+                <Breadcrumb.Item active>{I18n.get('text.users')}</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -640,11 +641,11 @@ class User extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={4} controlId="searchKeyword">
-                        <Form.Label>{ I18n.get('text.search.keyword') }</Form.Label>
-                        <Form.Control type="text" placeholder={ I18n.get('text.search.user.name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
+                        <Form.Label>{I18n.get('text.search.keyword')}</Form.Label>
+                        <Form.Control type="text" placeholder={I18n.get('text.search.user.name')} defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
                       </Form.Group>
                       <Form.Group as={Col} md={4} controlId="sortBy">
-                        <Form.Label>{ I18n.get('text.sort.by') }</Form.Label>
+                        <Form.Label>{I18n.get('text.sort.by')}</Form.Label>
                         <Form.Control as="select" defaultValue={this.state.sort} onChange={this.handleSort}>
                           <option value={SortBy.Asc}>A-Z</option>
                           <option value={SortBy.Desc}>Z-A</option>
@@ -661,11 +662,11 @@ class User extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <CSVLink data={this.state.csvUsers} filename={'user-upload-template.csv'} className="btn btn-primary btn-sm">{ I18n.get('button.download.csv.format') }</CSVLink>
+                  <CSVLink data={this.state.csvUsers} filename={'user-upload-template.csv'} className="btn btn-primary btn-sm">{I18n.get('button.download.csv.format')}</CSVLink>
                   <EmptyCol />
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Upload)}>{ I18n.get('button.upload.csv') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Upload)}>{I18n.get('button.upload.csv')}</Button>
                   <EmptyCol />
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ I18n.get('button.add.user') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{I18n.get('button.add.user')}</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -673,51 +674,51 @@ class User extends React.Component<IProps, IState> {
           <EmptyRow />
           <Row>
             <Col>
-            {
-              this.state.users.length === 0 && !this.state.isLoading &&
-              <Jumbotron>
-                <p>{ I18n.get('text.no.user') }</p>
-              </Jumbotron>
-            }
-            {
-              this.state.users.length > 0 && !this.state.isLoading &&
-              <Card className="custom-card-big">
-                <Card.Body>
-                  <Table striped bordered>
-                    <thead>
-                      <tr>
-                        <th>{ I18n.get('text.email') }</th>
-                        <th>{ I18n.get('text.status') }</th>
-                        <th>{ I18n.get('text.groups') }</th>
-                        <th colSpan={2}>{ I18n.get('text.actions') }</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                    {
-                      this.state.users.filter((user: IUser) => user.visible)
-                        .map((user: IUser) => {
-                          return (
-                            <tr key={user.username}>
-                              <td>{user.username}</td>
-                              <td>{user.status}</td>
-                              <td>{user.groups.join(', ')}</td>
-                              <td>
-                                <Button variant="primary" size="sm" disabled={this.userId === user.username}
-                                  onClick={() => this.openModal(ModalType.Edit, { email: user.username, groups: user.groups })}>{ I18n.get('button.edit') }</Button>
-                              </td>
-                              <td>
-                                <Button variant="danger" size="sm" disabled={this.userId === user.username}
-                                  onClick={() => this.openModal(ModalType.Delete, { email: user.username, userId: user.userId })}>{ I18n.get('button.delete') }</Button>
-                              </td>
-                            </tr>
-                          );
-                        })
-                    }
-                    </tbody>
-                  </Table>
-                </Card.Body>
-              </Card>
-            }
+              {
+                this.state.users.length === 0 && !this.state.isLoading &&
+                <Jumbotron>
+                  <p>{I18n.get('text.no.user')}</p>
+                </Jumbotron>
+              }
+              {
+                this.state.users.length > 0 && !this.state.isLoading &&
+                <Card className="custom-card-big">
+                  <Card.Body>
+                    <Table striped bordered>
+                      <thead>
+                        <tr>
+                          <th>{I18n.get('text.email')}</th>
+                          <th>{I18n.get('text.status')}</th>
+                          <th>{I18n.get('text.groups')}</th>
+                          <th colSpan={2}>{I18n.get('text.actions')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {
+                          this.state.users.filter((user: IUser) => user.visible)
+                            .map((user: IUser) => {
+                              return (
+                                <tr key={user.username}>
+                                  <td>{user.username}</td>
+                                  <td>{user.status}</td>
+                                  <td>{user.groups.join(', ')}</td>
+                                  <td>
+                                    <Button variant="primary" size="sm" disabled={this.userId === user.username}
+                                      onClick={() => this.openModal(ModalType.Edit, { email: user.username, groups: user.groups })}>{I18n.get('button.edit')}</Button>
+                                  </td>
+                                  <td>
+                                    <Button variant="danger" size="sm" disabled={this.userId === user.username}
+                                      onClick={() => this.openModal(ModalType.Delete, { email: user.username, userId: user.userId })}>{I18n.get('button.delete')}</Button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                        }
+                      </tbody>
+                    </Table>
+                  </Card.Body>
+                </Card>
+              }
             </Col>
           </Row>
           {
@@ -733,7 +734,7 @@ class User extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ I18n.get('error') }:</strong><br />
+                  <strong>{I18n.get('error')}:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -750,13 +751,13 @@ class User extends React.Component<IProps, IState> {
               <Modal.Body>
                 <Form>
                   <Form.Group controlId="userName">
-                    <Form.Label>{ I18n.get('text.email') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ I18n.get('input.user.email') }
-                      defaultValue="" onChange={this.handleEmailChange} className={ getInputFormValidationClassName(this.state.email, this.state.isEmailValid) } />
-                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.email')}` }</Form.Text>
+                    <Form.Label>{I18n.get('text.email')} <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={I18n.get('input.user.email')}
+                      defaultValue="" onChange={this.handleEmailChange} className={getInputFormValidationClassName(this.state.email, this.state.isEmailValid)} />
+                    <Form.Text className="text-muted">{`(${I18n.get('text.required')}) ${I18n.get('info.valid.email')}`}</Form.Text>
                   </Form.Group>
                   <Form.Group controlId="userGroup">
-                    <Form.Label>{ I18n.get('text.groups') }</Form.Label>
+                    <Form.Label>{I18n.get('text.groups')}</Form.Label>
                     <div>
                       <Form.Check inline id="AdminGroup" type="checkbox" label="Admin Group" onChange={this.handleGroupChange} />
                       <Form.Check inline id="ManagerGroup" type="checkbox" label="Manager Group" onChange={this.handleGroupChange} />
@@ -767,8 +768,8 @@ class User extends React.Component<IProps, IState> {
                 </Form>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
-                <Button variant="primary" onClick={this.addUser} disabled={this.state.isModalProcessing || !this.state.isEmailValid}>{ I18n.get('button.add') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
+                <Button variant="primary" onClick={this.addUser} disabled={this.state.isModalProcessing || !this.state.isEmailValid}>{I18n.get('button.add')}</Button>
               </Modal.Footer>
             </div>
           }
@@ -778,11 +779,11 @@ class User extends React.Component<IProps, IState> {
               <Modal.Body>
                 <Form>
                   <Form.Group controlId="userName">
-                    <Form.Label>{ I18n.get('text.email') }</Form.Label>
+                    <Form.Label>{I18n.get('text.email')}</Form.Label>
                     <Form.Control type="text" defaultValue={this.state.email} disabled />
                   </Form.Group>
                   <Form.Group controlId="userGroup">
-                    <Form.Label>{ I18n.get('text.groups') }</Form.Label>
+                    <Form.Label>{I18n.get('text.groups')}</Form.Label>
                     <div>
                       <Form.Check inline id="AdminGroup" type="checkbox" label="Admin Group" onChange={this.handleGroupChange} checked={this.state.groups.includes('AdminGroup')} />
                       <Form.Check inline id="ManagerGroup" type="checkbox" label="Manager Group" onChange={this.handleGroupChange} checked={this.state.groups.includes('ManagerGroup')} />
@@ -793,8 +794,8 @@ class User extends React.Component<IProps, IState> {
                 </Form>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
-                <Button variant="primary" onClick={this.editUser} disabled={this.state.isModalProcessing}>{ I18n.get('button.save') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
+                <Button variant="primary" onClick={this.editUser} disabled={this.state.isModalProcessing}>{I18n.get('button.save')}</Button>
               </Modal.Footer>
             </div>
           }
@@ -802,11 +803,11 @@ class User extends React.Component<IProps, IState> {
             this.state.modalType === ModalType.Delete &&
             <div>
               <Modal.Body>
-                { I18n.get('text.confirm.delete.user') }: <strong>{this.state.email}</strong>?
+                {I18n.get('text.confirm.delete.user')}: <strong>{this.state.email}</strong>?
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
-                <Button variant="danger" onClick={this.deleteUser} disabled={this.state.isModalProcessing}>{ I18n.get('button.delete') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
+                <Button variant="danger" onClick={this.deleteUser} disabled={this.state.isModalProcessing}>{I18n.get('button.delete')}</Button>
               </Modal.Footer>
             </div>
           }
@@ -817,7 +818,7 @@ class User extends React.Component<IProps, IState> {
                 {
                   this.state.uploadResult.length === 0 &&
                   <Form.File>
-                    <Form.File.Label>{ I18n.get('info.upload.csv') }</Form.File.Label>
+                    <Form.File.Label>{I18n.get('info.upload.csv')}</Form.File.Label>
                     <Form.File label={this.state.csvFileName} data-browse={I18n.get('button.browse')} accept=".csv" custom onChange={this.handleFileChange} disabled={this.state.isModalProcessing} />
                   </Form.File>
                 }
@@ -826,30 +827,30 @@ class User extends React.Component<IProps, IState> {
                   <Table striped bordered>
                     <thead>
                       <tr>
-                        <th>{ I18n.get('text.username') }</th>
-                        <th>{ I18n.get('text.result') }</th>
+                        <th>{I18n.get('text.username')}</th>
+                        <th>{I18n.get('text.result')}</th>
                       </tr>
                     </thead>
                     <tbody>
-                    {
-                      this.state.uploadResult.map((result: IUploadResult) => {
-                        return (
-                          <tr key={result.name}>
-                            <td>{result.name}</td>
-                            <td>{result.result}</td>
-                          </tr>
-                        );
-                      })
-                    }
+                      {
+                        this.state.uploadResult.map((result: IUploadResult) => {
+                          return (
+                            <tr key={result.name}>
+                              <td>{result.name}</td>
+                              <td>{result.result}</td>
+                            </tr>
+                          );
+                        })
+                      }
                     </tbody>
                   </Table>
                 }
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
                 {
                   this.state.uploadResult.length === 0 &&
-                  <Button variant="primary" onClick={this.uploadCsv} disabled={this.state.isModalProcessing || !this.state.isFileValid}>{ I18n.get('button.upload') }</Button>
+                  <Button variant="primary" onClick={this.uploadCsv} disabled={this.state.isModalProcessing || !this.state.isFileValid}>{I18n.get('button.upload')}</Button>
                 }
               </Modal.Footer>
             </div>

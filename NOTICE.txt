@@ -18,23 +18,45 @@ THIRD PARTY COMPONENTS
 **********************
 This software includes third party software subject to the following copyrights:
 
+@aws-amplify/pubsub under the Apache License Version 2.0
+@aws-amplify/ui-react under the Apache License Version 2.0
+@aws-cdk/assert under the Apache License Version 2.0
+@aws-cdk/aws-appsync under the Apache License Version 2.0
+@aws-cdk/aws-cloudfront under the Apache License Version 2.0
+@aws-cdk/aws-dynamodb under the Apache License Version 2.0
+@aws-cdk/aws-events under the Apache License Version 2.0
+@aws-cdk/aws-glue under the Apache License Version 2.0
+@aws-cdk/aws-iam under the Apache License Version 2.0
+@aws-cdk/aws-iot under the Apache License Version 2.0
+@aws-cdk/aws-kms under the Apache License Version 2.0
+@aws-cdk/aws-lambda under the Apache License Version 2.0
+@aws-cdk/aws-s3 under the Apache License Version 2.0
+@aws-cdk/aws-sns under the Apache License Version 2.0
+@aws-cdk/core under the Apache License Version 2.0
+@aws-solutions-constructs/aws-cloudfront-s3 under the Apache License Version 2.0
+@aws-solutions-constructs/aws-iot-lambda under the Apache License Version 2.0
+@types/jest under the Massachusetts Institute of Technology (MIT) license
+@types/node under the Massachusetts Institute of Technology (MIT) license
+@types/react-csv under the Massachusetts Institute of Technology (MIT) license
+@types/react-dom under the Massachusetts Institute of Technology (MIT) license
+@types/react-notification-system under the Massachusetts Institute of Technology (MIT) license
+@types/react-router-bootstrap under the Massachusetts Institute of Technology (MIT) license
+@types/react-router-dom under the Massachusetts Institute of Technology (MIT) license
+@types/uuid under the Massachusetts Institute of Technology (MIT) license
 aws-amplify under the Apache License Version 2.0
-aws-amplify-react under the Apache License Version 2.0
 aws-appsync under the Apache License Version 2.0
+aws-cdk under the Apache License Version 2.0
 aws-sdk under the Apache License Version 2.0
 axios under the Massachusetts Institute of Technology (MIT) license
-axios-mock-adapter under the Massachusetts Institute of Technology (MIT) license
 bootstrap under the Massachusetts Institute of Technology (MIT) license
-chartist under the Massachusetts Institute of Technology (MIT) license
+es6-promise under the Massachusetts Institute of Technology (MIT) license
 graphql-tag under the Massachusetts Institute of Technology (MIT) license
 isomorphic-fetch under the Massachusetts Institute of Technology (MIT) license
 jest under the Massachusetts Institute of Technology (MIT) license
-mobx under the Massachusetts Institute of Technology (MIT) license
-mobx-react under the Massachusetts Institute of Technology (MIT) license
+moment under the Massachusetts Institute of Technology (MIT) license
 node-sass under the Massachusetts Institute of Technology (MIT) license
 react under the Massachusetts Institute of Technology (MIT) license
 react-bootstrap under the Massachusetts Institute of Technology (MIT) license
-react-chartist under the Massachusetts Institute of Technology (MIT) license
 react-cookie under the Massachusetts Institute of Technology (MIT) license
 react-csv under the Massachusetts Institute of Technology (MIT) license
 react-dom under the Massachusetts Institute of Technology (MIT) license
@@ -43,5 +65,7 @@ react-notification-system under the Massachusetts Institute of Technology (MIT) 
 react-router-bootstrap under the Apache License Version 2.0
 react-router-dom under the Massachusetts Institute of Technology (MIT) license
 react-scripts under the Massachusetts Institute of Technology (MIT) license
+ts-jest under the Massachusetts Institute of Technology (MIT) license
+ts-node under the Massachusetts Institute of Technology (MIT) license
 typescript under the Apache License Version 2.0
 uuid under the Massachusetts Institute of Technology (MIT) license
