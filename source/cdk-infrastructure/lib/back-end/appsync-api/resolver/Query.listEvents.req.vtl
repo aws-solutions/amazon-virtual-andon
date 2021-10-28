@@ -1,0 +1,55 @@
+## Check authorization
+#set ($isAllowed = false)
+#set ($userGroups = $util.defaultIfNull($ctx.identity.claims.get("cognito:groups"), []))
+#set ($allowedGroups = ["AdminGroup","ManagerGroup","EngineerGroup","AssociateGroup"])
+#foreach ($userGroup in $userGroups)
+  #if ($allowedGroups.contains($userGroup))
+    #set ($isAllowed = true)
+    #break
+  #end
+#end
+
+## Throw authorized if the user is not authorized.
+#if ($isAllowed == false)
+  $util.unauthorized()
+#end
+
+{
+  "version": "2017-02-28",
+  "operation": "Query",
+  "query": {
+    "expressionNames": {
+      "#type": "type",
+      #if( $context.args.parentId ) "#parent": "parentId" #end
+    },
+    "expressionValues": {
+      ":type": $util.dynamodb.toDynamoDBJson("EVENT"),
+      #if( $context.args.parentId ) ":parent": $util.dynamodb.toDynamoDBJson($ctx.args.parentId) #end
+    },
+    "expression": "#type = :type #if( $context.args.parentId ) and #parent = :parent #end"
+  },
+  #if( $context.args.name || $context.args.eventProcessId )
+    "filter": {
+      #if( $context.args.name && $context.args.eventProcessId )
+        "expression" : "#name = :name and #process = :process",
+      #elseif( $context.args.name )
+        "expression" : "#name = :name",
+      #else
+        "expression" : "#process = :process",
+      #end
+      "expressionNames" : {
+          #if( $context.args.name ) "#name" : "name", #end
+          #if( $context.args.eventProcessId ) "#process" : "eventProcessId", #end
+      },
+      "expressionValues" : {
+          #if( $context.args.name ) ":name" : { "S" : "$ctx.args.name" }, #end
+          #if( $context.args.eventProcessId ) ":process" : { "S" : "$ctx.args.eventProcessId" }, #end
+      }
+    },
+  #end
+  "index": "ByTypeAndParent-index",
+  #if ($ctx.args.nextToken)
+    "nextToken": "$ctx.args.nextToken",
+  #end
+  "limit": $util.defaultIfNull($ctx.args.limit, 20)
+}

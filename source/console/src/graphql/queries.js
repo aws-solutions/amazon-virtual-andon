@@ -1,8 +1,9 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable */
-// this is an auto generated file. This will be overwritten
 
 export const getSite = `query GetSite($id: ID!) {
-  getSite(id: $id) {
+  getSite(id: $id, type: "SITE") {
     id
     name
     area(limit: 50) {
@@ -16,6 +17,15 @@ export const getSite = `query GetSite($id: ID!) {
     }
     description
     version
+  }
+}
+`;
+export const getPrevDayIssuesStats = `query GetPrevDayIssuesStats {
+  getPrevDayIssuesStats {
+    open
+    acknowledged
+    closed
+    lastThreeHours
   }
 }
 `;
@@ -35,7 +45,7 @@ export const listSites = `query ListSites(
 }
 `;
 export const getArea = `query GetArea($id: ID!) {
-  getArea(id: $id) {
+  getArea(id: $id, type: "AREA") {
     id
     site {
       id
@@ -86,7 +96,7 @@ export const listAreas = `query ListAreas(
   }
 }`;
 export const getProcess = `query GetProcess($id: ID!) {
-  getProcess(id: $id) {
+  getProcess(id: $id, type: "PROCESS") {
     id
     name
     description
@@ -117,10 +127,11 @@ export const getProcess = `query GetProcess($id: ID!) {
         priority
         sms
         email
-        topicArn
         rootCauses
         version
         eventImgKey
+        alias
+        eventType
       }
       nextToken
     }
@@ -144,7 +155,7 @@ export const listProcesses = `query ListProcesses(
   }
 }`;
 export const getEvent = `query GetEvent($id: ID!) {
-  getEvent(id: $id) {
+  getEvent(id: $id, type: "EVENT") {
     id
     name
     description
@@ -172,11 +183,12 @@ export const getEvent = `query GetEvent($id: ID!) {
 }
 `;
 export const listEvents = `query ListEvents(
-  $eventProcessId: ID!
+  $parentId: ID
+  $eventProcessId: ID
   $limit: Int
   $nextToken: String
 ) {
-  listEvents(eventProcessId: $eventProcessId, limit: $limit, nextToken: $nextToken) {
+  listEvents(parentId: $parentId, eventProcessId: $eventProcessId, limit: $limit, nextToken: $nextToken) {
     items {
       id
       name
@@ -185,16 +197,18 @@ export const listEvents = `query ListEvents(
       priority
       sms
       email
-      topicArn
       rootCauses
       version
       eventImgKey
+      eventType
+      parentId
+      eventProcessId
     }
     nextToken
   }
 }`;
 export const getStation = `query GetStation($id: ID!) {
-  getStation(id: $id) {
+  getStation(id: $id, type: "STATION") {
     id
     name
     description
@@ -222,6 +236,7 @@ export const getStation = `query GetStation($id: ID!) {
         name
         description
         version
+        alias
       }
       nextToken
     }
@@ -294,6 +309,11 @@ export const issuesBySiteAreaStatus = `query IssuesBySiteAreaStatus(
       version
       rootCause
       comment
+      createdBy
+      closedBy
+      rejectedBy
+      acknowledgedBy
+      additionalDetails
     }
     nextToken
   }
@@ -330,14 +350,15 @@ export const issuesByDevice = `query IssuesByDevice(
       acknowledgedTime
       status
       version
+      additionalDetails
     }
     nextToken
   }
 }
 `;
-export const getPermission = `query GetPermission($userId: ID!) {
-  getPermission(userId: $userId) {
-    userId
+export const getPermission = `query GetPermission($id: ID!) {
+  getPermission(id: $id, type: "PERMISSION") {
+    id
     sites {
       id
       name
@@ -372,7 +393,7 @@ export const listPermissions = `query ListPermissions(
 ) {
   listPermissions(limit: $limit, nextToken: $nextToken) {
     items {
-      userId
+      id
       sites {
         id
         name
@@ -410,7 +431,7 @@ export const listRootCauses = `query ListRootCauses(
   listRootCauses(limit: $limit, nextToken: $nextToken) {
     items {
       id
-      rootCause
+      name
     }
     nextToken
   }

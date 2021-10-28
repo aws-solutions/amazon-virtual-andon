@@ -1,0 +1,40 @@
+{
+  "name": "amazon-virtual-andon",
+  "version": "3.0.0",
+  "author": "AWS Solutions",
+  "license": "Apache-2.0",
+  "bin": {
+    "amazon-virtual-andon": "bin/amazon-virtual-andon.js"
+  },
+  "scripts": {
+    "clean": "rm -rf node_modules/ cdk.out/ coverage/ package-lock.json",
+    "clean-synth": "npm run clean && npm install && npm run cdk synth --asset-metadata false --path-metadata false --json false",
+    "pretest": "npm run clean && npm install",
+    "test": "jest --coverage",
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "@aws-cdk/assert": "1.125.0",
+    "@types/jest": "^26.0.10",
+    "@types/node": "^10.0.0",
+    "jest": "^26.4.2",
+    "ts-jest": "^26.2.0",
+    "aws-cdk": "1.125.0",
+    "ts-node": "^9.0.0",
+    "typescript": "~3.9.7",
+    "@aws-cdk/aws-appsync": "1.125.0",
+    "@aws-cdk/aws-cloudfront": "1.125.0",
+    "@aws-cdk/aws-dynamodb": "1.125.0",
+    "@aws-cdk/aws-events": "1.125.0",
+    "@aws-cdk/aws-glue": "1.125.0",
+    "@aws-cdk/aws-iam": "1.125.0",
+    "@aws-cdk/aws-iot": "1.125.0",
+    "@aws-cdk/aws-kms": "1.125.0",
+    "@aws-cdk/aws-lambda": "1.125.0",
+    "@aws-cdk/aws-s3": "1.125.0",
+    "@aws-cdk/aws-sns": "1.125.0",
+    "@aws-cdk/core": "1.125.0",
+    "@aws-solutions-constructs/aws-cloudfront-s3": "1.125.0",
+    "@aws-solutions-constructs/aws-iot-lambda": "1.125.0"
+  }
+}

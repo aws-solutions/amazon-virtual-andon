@@ -1,23 +1,33 @@
-
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Import React and Amplify packages
 import React from 'react';
-import { I18n } from 'aws-amplify';
+import { GoPencil } from 'react-icons/go';
+import { GrSort, GrAscend, GrDescend } from "react-icons/gr";
+import { API, graphqlOperation, I18n } from 'aws-amplify';
+import { GraphQLResult } from '@aws-amplify/api-graphql';
+import { Logger } from '@aws-amplify/core';
 
 // Import React Bootstrap components
-import Row from 'react-bootstrap/Row';
+import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
 import Jumbotron from 'react-bootstrap/Jumbotron';
-import Table from 'react-bootstrap/Table';
+import Modal from 'react-bootstrap/Modal';
 import Pagination from 'react-bootstrap/Pagination';
+import ProgressBar from 'react-bootstrap/ProgressBar';
+import Row from 'react-bootstrap/Row';
+import Table from 'react-bootstrap/Table';
+
+// Import graphql
+import { getEvent } from '../graphql/queries';
+import { updateIssue } from '../graphql/mutations';
 
 // Import custom setting
 import { SortBy } from './Enums';
-import { sortByName } from '../util/CustomUtil';
-import EmptyCol from '../components/EmptyCol';
+import { sortByName, LOGGING_LEVEL } from '../util/CustomUtil';
+import { IIssue, IUpdateIssueResponse } from '../components/Interfaces';
 import * as uuid from 'uuid';
 
 /**
@@ -35,6 +45,7 @@ interface IProps {
   initialSort?: { key: string, order: SortBy, keyType?: string };
   // Data version from the source
   dataVersion?: number
+  handleNotification: Function;
 }
 
 /**
@@ -56,7 +67,17 @@ interface IState {
   sort: { key: string, order: SortBy, keyType?: string };
   // Data version
   dataVersion?: number
+  issue?: IIssue;
+  showModal: boolean;
+  rootCause?: string | null;
+  rootCauses: string[];
+  comment: string | null;
+  isModalProcessing: boolean,
+  showNoRootCauseModal: boolean
 }
+
+// Logging
+const LOGGER = new Logger('Observer', LOGGING_LEVEL);
 
 /**
  * The class returns data table with the given data.
@@ -80,7 +101,13 @@ class DataTable extends React.Component<IProps, IState> {
       currentPage: 1,
       lastPage: 1,
       sort: this.props.initialSort ? this.props.initialSort : { key: '', order: SortBy.Asc },
-      dataVersion: this.props.dataVersion ? this.props.dataVersion : undefined
+      dataVersion: this.props.dataVersion ? this.props.dataVersion : undefined,
+      showModal: false,
+      isModalProcessing: false,
+      rootCauses: [],
+      rootCause: '',
+      comment: '',
+      showNoRootCauseModal: false
     }
 
     // The first page is 1.
@@ -94,6 +121,10 @@ class DataTable extends React.Component<IProps, IState> {
     this.setCurrentPage = this.setCurrentPage.bind(this);
     this.handlePageSizeChange = this.handlePageSizeChange.bind(this);
     this.handleSearchKeywordChange = this.handleSearchKeywordChange.bind(this);
+    this.handleModalClose = this.handleModalClose.bind(this);
+    this.updateRootCause = this.updateRootCause.bind(this);
+    this.handleRootCauseChange = this.handleRootCauseChange.bind(this);
+    this.handleUpdateRootCause = this.handleUpdateRootCause.bind(this);
   }
 
   /**
@@ -108,7 +139,7 @@ class DataTable extends React.Component<IProps, IState> {
       datum.visible = true;
     }
 
-    // If sort key is not provided, first header key becomes the inital sort key.
+    // If sort key is not provided, first header key becomes the initial sort key.
     if (sort.key === '' && headers.length > 0) {
       sort.key = headers[0].key;
       sort.keyType = headers[0].keyType;
@@ -200,7 +231,7 @@ class DataTable extends React.Component<IProps, IState> {
     /**
      * 1) If there's no data, it returns only disabled page 1.
      * 2) If the last page is equal to or less than the number of maximum pagination items, it shows every pagination items.
-     * 3) If the pages are more than the number of maximum pagination items, it caculates which pages to show.
+     * 3) If the pages are more than the number of maximum pagination items, it calculates which pages to show.
      */
     if (lastPage === 0) {
       pagination.push(
@@ -223,7 +254,7 @@ class DataTable extends React.Component<IProps, IState> {
       let lastShowPage = lastPage;
 
       /**
-       * 1) If the number of pages between the first page and the current page is less than buffer, the last page number to show is the number of the maximium pagination items.
+       * 1) If the number of pages between the first page and the current page is less than buffer, the last page number to show is the number of the maximum pagination items.
        * 2) If the number of pages between the first/last page and the current page is somewhat in the middle of pagination, the current page goes in the middle.
        * 3) If there are not enough pages between the last page and the current page, the last page number to show is the last page.
        */
@@ -332,10 +363,135 @@ class DataTable extends React.Component<IProps, IState> {
   }
 
   /**
+   * Handle editing root cause for an event.
+   * @param {IIssue} issue - Issue to edit
+   */
+  async handleEditRootcause(issue: IIssue) {
+    const { eventId } = issue;
+    const response = await API.graphql(graphqlOperation(getEvent, { id: eventId })) as GraphQLResult;
+    const data: any = response.data;
+    const rootCauses: string[] = data.getEvent.rootCauses ? data.getEvent.rootCauses : [];
+
+    if (rootCauses.length > 0) {
+      rootCauses.sort((a, b) => a.localeCompare(b));
+      this.setState({
+        issue,
+        rootCauses,
+        showModal: true,
+        rootCause: issue.rootCause,
+        comment: issue.comment || ''
+      });
+    } else {
+      this.setState({
+        issue,
+        showNoRootCauseModal: true
+      })
+    }
+  }
+
+  /**
+   * Handle root cause change event.
+   * @param {any} event - Event from the root cause input
+   */
+  handleRootCauseChange(event: any) {
+    const rootCause = event.target.value;
+    this.setState({ rootCause });
+  }
+
+  /**
+   * Handle modal close.
+   */
+  handleModalClose() {
+    this.setState({
+      issue: undefined,
+      showModal: false,
+      rootCauses: [],
+      rootCause: '',
+      showNoRootCauseModal: false
+    });
+  }
+
+  /**
+   * Update the Rootcause associated with closed Issue.
+   */
+  async updateRootCause() {
+    this.setState({ isModalProcessing: true });
+    const issue = this.state.issue;
+    try {
+      if (issue) {
+        const { rootCause, comment } = this.state;
+        if (rootCause) {
+          issue.rootCause = rootCause;
+          if (issue.comment !== comment) {
+            issue.comment = comment;
+          }
+          if (issue.comment === '') issue.comment = null
+        } else {
+          issue.rootCause = null
+          issue.comment = null
+        }
+        await this.handleUpdateRootCause(issue);
+      }
+    } catch (error) {
+      LOGGER.error('Error occurred while updating root cause', error)
+    }
+    this.setState({ isModalProcessing: false });
+  }
+
+  /**
+   * Handle Root Cause update.
+   * @param {IIssue} issue - Issue to update
+   */
+  async handleUpdateRootCause(issue: IIssue) {
+    try {
+      issue.expectedVersion = issue.version;
+      // @ts-ignore
+      delete issue.version;
+      delete issue.visible;
+      const openFor = issue.openFor;
+      delete issue.openFor; // OpenFor attribute is calculated only on client side.
+
+      const input = issue;
+      const updateIssueResponse: IUpdateIssueResponse = await API.graphql(graphqlOperation(updateIssue, { input })) as IUpdateIssueResponse;
+
+      if (updateIssueResponse.errors && updateIssueResponse.errors.length > 0) {
+        LOGGER.error('Error while updating issue', ...updateIssueResponse.errors);
+        throw new Error('Error while updating issue');
+      }
+
+      if (updateIssueResponse.data.updateIssue) {
+        const updatedIssue = updateIssueResponse.data.updateIssue;
+        const dataTableIssues = this.state.data;
+        const dataTableIssue = dataTableIssues.find(d => d.id === updatedIssue.id);
+
+        if (!dataTableIssue) {
+          throw new Error(`Not able to locate issue ID: ${updatedIssue.id}`);
+        }
+
+        dataTableIssue.version = updatedIssue.version;
+        dataTableIssue.openFor = openFor;
+        dataTableIssue.visible = true;
+      } else {
+        throw new Error('An updated issue was not returned');
+      }
+
+      this.props.handleNotification(`${issue.rootCause ? I18n.get('info.edit.rootcause') : I18n.get('info.delete.rootcause')}`, 'info', 5);
+      this.setState({
+        issue,
+        showModal: false,
+        rootCauses: []
+      })
+    } catch (error) {
+      LOGGER.error(error);
+      this.props.handleNotification(I18n.get('error.update.rootcause'), 'error', 5);
+    }
+  }
+
+  /**
    * Render this page.
    */
   render() {
-    const { headers, data, sort, currentPage, pageSize } = this.state;
+    const { headers, data, currentPage, pageSize } = this.state;
     const startIndex = currentPage * pageSize - pageSize;
     const endIndex = currentPage * pageSize;
 
@@ -348,7 +504,7 @@ class DataTable extends React.Component<IProps, IState> {
                 <Col md={3}>
                   <Form.Group as={Row} controlId="showCountId">
                     <Form.Label column sm={6}>
-                      { I18n.get('text.page.size') }
+                      {I18n.get('text.page.size')}
                     </Form.Label>
                     <Col sm={6}>
                       <Form.Control as="select" defaultValue={pageSize} onChange={this.handlePageSizeChange}>
@@ -361,7 +517,7 @@ class DataTable extends React.Component<IProps, IState> {
                   </Form.Group>
                 </Col>
                 <Col md={3}>
-                  <Form.Control id="searchKeyword" placeholder={ I18n.get('text.search.keyword') } onChange={this.handleSearchKeywordChange} />
+                  <Form.Control id="searchKeyword" placeholder={I18n.get('text.search.keyword')} onChange={this.handleSearchKeywordChange} />
                 </Col>
               </Form.Row>
             </Form>
@@ -369,80 +525,131 @@ class DataTable extends React.Component<IProps, IState> {
         </Row>
         <Row>
           <Col>
-          {
-            headers.length === 0 &&
-            <Jumbotron>
-              <p>{ I18n.get('text.no.header.datatable') }</p>
-            </Jumbotron>
-          }
-          {
-            headers.length > 0 &&
-            <div>
-              <Form.Text>
-                <span className="required-field">*</span>
-                <EmptyCol />
-                <strong>{ I18n.get('text.sort.by') }</strong>:
-                <EmptyCol />
-                { headers.filter(header => header.key === sort.key).length > 0 ? headers.filter(header => header.key === sort.key)[0].name : 'N/A' },
-                <EmptyCol />
-                <strong>{ I18n.get('text.order') }</strong>:
-                <EmptyCol />
-                { sort.order === SortBy.Asc ? I18n.get('text.order.asc') : I18n.get('text.order.desc') } -
-                <EmptyCol />
-                { I18n.get('text.sort.datatable')}
-              </Form.Text>
-              <Table striped bordered>
-                <thead>
-                  <tr>
-                  {
-                    headers.map(header => {
-                      return (
-                        <th key={`thead-${header.key}`} onClick={() => this.handleSort(header.key, header.keyType)}>{header.name}</th>
-                      );
-                    })
-                  }
-                  </tr>
-                </thead>
-                <tbody>
-                {
-                  data.filter(datum => datum.visible).slice(startIndex, endIndex).length === 0 &&
-                  <tr>
-                    <td colSpan={headers.length}>{ I18n.get('text.no.data') }</td>
-                  </tr>
-                }
-                {
-                  data.filter(datum => datum.visible).slice(startIndex, endIndex).map(datum => {
-                    return (
-                      <tr key={uuid.v4()}>
+            {
+              headers.length === 0 &&
+              <Jumbotron>
+                <p>{I18n.get('text.no.header.datatable')}</p>
+              </Jumbotron>
+            }
+            {
+              headers.length > 0 &&
+              <div>
+                <Table striped bordered>
+                  <thead>
+                    <tr>
                       {
                         headers.map(header => {
-                          const key = header.key;
-                          const value = datum[key] ? datum[key] : '';
-
                           return (
-                            <td key={`tbody-${key}`}>{ header.callFunction ? header.callFunction(value) : value }</td>
+                            <th key={`thead-${header.key}`} onClick={() => this.handleSort(header.key, header.keyType)}>{header.name} &nbsp;
+                              {(() => {
+                                if (this.state.sort.key === header.key) {
+                                  return (this.state.sort.order === 'asc') ? <GrAscend /> : <GrDescend />
+                                } else {
+                                  return <GrSort />
+                                }
+                              })()}
+                            </th>
                           );
                         })
                       }
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {
+                      data.filter(datum => datum.visible).slice(startIndex, endIndex).length === 0 &&
+                      <tr>
+                        <td colSpan={headers.length}>{I18n.get('text.no.data')}</td>
                       </tr>
-                    )
-                  })
-                }
-                </tbody>
-                <tfoot>
-                  <tr>
+                    }
+                    {
+                      data.filter(datum => datum.visible).slice(startIndex, endIndex).map(datum => {
+                        return (
+                          <tr id={datum.id} key={uuid.v4()}>
+                            {
+                              headers.map(header => {
+                                const key = header.key;
+                                const value = datum[key] ? datum[key] : '';
+                                return (
+                                  <td key={`tbody-${key}`}>{header.callFunction ? header.callFunction(value) : value}
+                                    {(key === 'rootCause' && datum.status === 'closed') ? <Button className="float-sm-right" variant="link" size="sm" onClick={async () => this.handleEditRootcause(datum)}><GoPencil /></Button> : ''}
+                                  </td>
+                                );
+                              })
+                            }
+                          </tr>
+                        )
+                      })
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      {
+                        headers.map(header => {
+                          return (
+                            <th key={`tfoot-${header.key}`} onClick={() => this.handleSort(header.key, header.keyType)}>{header.name} &nbsp;
+                              {(() => {
+                                if (this.state.sort.key === header.key) {
+                                  return (this.state.sort.order === 'asc') ? <GrAscend /> : <GrDescend />
+                                } else {
+                                  return <GrSort />
+                                }
+                              })()}
+                            </th>
+                          );
+                        })
+                      }
+                    </tr>
+                  </tfoot>
+                </Table>
+                <Modal show={this.state.showModal} onHide={this.handleModalClose}>
+                  <Modal.Header>
+                    <Modal.Title>{I18n.get('text.edit.rootcause')}</Modal.Title>
+                  </Modal.Header>
+                  <Modal.Body>
+                    <Form>
+                      <Form.Group controlId="rootCause">
+                        <Form.Label>{I18n.get('text.rootcause')}</Form.Label>
+                        <Form.Control as="select" defaultValue={this.state.rootCause ? this.state.rootCause : ''} onChange={this.handleRootCauseChange}>
+                          <option value="">{I18n.get('text.choose.rootcause.none')}</option>
+                          {
+                            this.state.rootCauses && this.state.rootCauses.map((rootCause: string) => {
+                              return (
+                                <option key={rootCause} value={rootCause}>{rootCause}</option>
+                              );
+                            })
+                          }
+                        </Form.Control>
+                      </Form.Group>
+                      {this.state.rootCause &&
+                        <Form.Group>
+                          <Form.Label>{I18n.get('text.choose.rootcause.comment')}</Form.Label>
+                          <Form.Control as='textarea' id="rootcauseComment" defaultValue={this.state.comment ? this.state.comment : undefined} rows={3} name="comment" maxLength={500}
+                            onChange={(event) => this.setState({ comment: event.target.value })}
+                          >
+                          </Form.Control>
+                          <Form.Text className="text-muted">{this.state.comment ? this.state.comment.length : 0} /500 </Form.Text>
+                        </Form.Group>
+                      }
+                    </Form>
+                  </Modal.Body>
                   {
-                    headers.map(header => {
-                      return (
-                        <th key={`tfoot-${header.key}`} onClick={() => this.handleSort(header.key, header.keyType)}>{header.name}</th>
-                      );
-                    })
+                    this.state.isModalProcessing &&
+                    <ProgressBar animated now={100} />
                   }
-                  </tr>
-                </tfoot>
-              </Table>
-            </div>
-          }
+                  <Modal.Footer>
+                    <Button id="rootcauseCancel" variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
+                    <Button id="rootcauseSubmit" variant="primary" onClick={this.updateRootCause}>{I18n.get('button.submit')}</Button>
+                  </Modal.Footer>
+
+                </Modal>
+                <Modal centered show={this.state.showNoRootCauseModal}>
+                  <Modal.Body>
+                    <p>{I18n.get('text.no.rootcause.modal')} "{this.state && this.state.issue ? this.state.issue.eventDescription : ""}", {I18n.get('text.process.name')} "{this.state && this.state.issue ? this.state.issue.processName : ''}"</p>
+                  </Modal.Body>
+                  <Modal.Footer><Button variant="primary" onClick={this.handleModalClose}>{I18n.get('button.ok')}</Button></Modal.Footer>
+                </Modal>
+              </div>
+            }
           </Col>
         </Row>
         {
@@ -453,7 +660,7 @@ class DataTable extends React.Component<IProps, IState> {
                 <Pagination>
                   <Pagination.First disabled={this.state.currentPage === 1} onClick={() => this.setCurrentPage(1)} />
                   <Pagination.Prev disabled={this.state.currentPage === 1} onClick={() => this.setCurrentPage(this.state.currentPage - 1)} />
-                  { this.getPagination () }
+                  {this.getPagination()}
                   <Pagination.Next disabled={this.state.lastPage <= this.state.currentPage} onClick={() => this.setCurrentPage(this.state.currentPage + 1)} />
                   <Pagination.Last disabled={this.state.lastPage <= this.state.currentPage} onClick={() => this.setCurrentPage(this.state.lastPage)} />
                 </Pagination>

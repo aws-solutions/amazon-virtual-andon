@@ -1,3 +1,13 @@
+$color-red: #ff0000;
+$color-white: #FFFFFF;
+$color-btn-primary: #FF9900;
+$color-btn-link: #007EB9;
+$color-event-inactive: #e9e9e9;
+$color-event-open: #ff6961;
+$color-event-acknowledged: #fdfd96;
+$color-issue-open: #ef5350;
+$color-sub-event-info: #6ac3e3;
+
 html * {
   font-family: "Amazon Ember", "Helvetica Neue", Arial, Helvetica, sans-serif !important;
 }
@@ -14,6 +24,7 @@ html * {
     max-width: 80% !important;
   }
 }
+
 .main-wrapper {
   padding: 0 0 100px;
   position: relative;
@@ -58,7 +69,6 @@ body {
   width: 20px;
 }
 
-
 .view {
   position: relative;
 }
@@ -78,26 +88,22 @@ body {
   padding: 10px 10px 10px 10px;
 }
 
-.custom-card-header-success > .card-header {
-  background: #28a745;
-  color: #FFF;
-}
-
-.custom-card-header-warning > .card-header {
-  background: #FF9900;
-  color: #FFF;
-}
-
-.custom-card-header-danger > .card-header {
-  background: #EF5350;
-  color: #FFF;
-}
-
 .custom-card-event {
   text-align: center;
   height: 100%;
   min-height: 32.5vh;
-  background-color: rgb(233, 233, 233) !important;
+  background-color: $color-event-inactive !important;
+  cursor: pointer;
+}
+
+.custom-card-sub-event {
+  text-align: center;
+  height: 100%;
+  min-height: 165px !important;
+  max-height: 165px !important;
+  min-width: 165px !important;
+  max-width: 165px !important;
+  background-color: $color-event-inactive !important;
   cursor: pointer;
 }
 
@@ -112,54 +118,56 @@ body {
 }
 
 .custom-card-issue > .card-header {
-  background: linear-gradient(#ef5350, #e53935);
-  color: #FFF;
+  background: $color-issue-open;
+  color: $color-white;
 }
 
 .event-open {
-  background-color: #ff6961 !important;
+  background-color: $color-event-open !important;
 }
 
 .event-acknowledged {
-  background-color: #fdfd96 !important;
-}
-
-.event-closed-rejected-transit {
-  background-color: #33cc33 !important;
+  background-color: $color-event-acknowledged !important;
 }
 
 .event-closed-rejected {
-  background-color: #e9e9e9 !important;
+  background-color: $color-event-inactive !important;
 }
 
-.ct-bar {
-  stroke: red !important;
+.sub-event-info {
+  background-color: $color-sub-event-info !important;
 }
 
-.ct-point {
-  stroke: red !important;
+.sub-event-back-icon {
+  font-size: xx-large;
 }
 
-.ct-area {
-  fill: red !important;
+.sub-event-name-container {
+  float: left;
+  margin-right: 1rem;
 }
 
-.ct-line {
-  stroke: red !important;
+.new-sub-event-name-container {
+  margin-right: 1rem;
+}
+
+.sub-event-button-container > button {
+  margin-right: 1rem;
+}
+
+.sub-event-back {
+  background-color: $color-event-inactive !important;
+  font-size: 2rem;
+  cursor: pointer;
 }
 
 .btn-primary {
-  background-color: #FF9900 !important;
-  border-color: #FF9900 !important;
+  background-color: $color-btn-primary !important;
+  border-color: $color-btn-primary !important;
 }
 
 .btn-link {
-  color: #007EB9 !important;
-}
-
-.btn-secondary {
-  background-color: #828282 !important;
-  border-color: #828282 !important;
+  color: $color-btn-link !important;
 }
 
 .cookie-banner {
@@ -173,11 +181,11 @@ body {
 }
 
 .cookie-banner-font {
-  color: #FFFFFF !important;
+  color: $color-white !important;
 }
 
 .cookie-banner-font > a {
-  color: #FFFFFF !important;
+  color: $color-white !important;
   text-decoration: underline;
 }
 
@@ -187,27 +195,38 @@ ul {
 }
 
 .required-field {
-  color: red;
+  color: $color-red;
 }
 
 .form-group-no-margin {
   margin-bottom: 0 !important;
 }
 
-.event-image {
-  height: 100px;
-  width: 100px;
+.amplify-s3-image {
+  --height : 100px;
+  --width: 100px;
+  overflow: hidden;
+}
+
+.amplify-s3-image.event-image {
   margin-right: 5px;
 }
 
-.event-image.selected {
-  border: 5px solid #FF9900;
+.amplify-s3-image.event-image.selected {
+  height: 100px;
+  border: 5px solid $color-btn-primary;
+  display: inline-block;
 }
 
 .event-image-thumbnail-container {
   position: relative;
   width: 40px;
   height: 40px;
+}
+
+.event-image-thumbnail-container > .amplify-s3-image {
+  --height : 40px;
+  --width: 40px;
 }
 
 .event-image-thumbnail-container div {
@@ -219,7 +238,7 @@ ul {
 .event-image-thumbnail {
   max-width: 100%;
   max-height: 100%;
-  position: absolute;  
+  position: absolute;
   top: 50%;
   transform: translateY(-50%);
 }
@@ -228,6 +247,11 @@ ul {
   width: 100%;
   flex-grow: 1;
   display: flex;
+}
+
+.client-event-img-container > .amplify-s3-image {
+  --height: auto;
+  --width: 75%;
 }
 
 .client-event-card-body {
@@ -262,4 +286,54 @@ ul {
   top: 0px;
   opacity: 0;
   cursor: pointer;
+}
+
+.automated-issues-heading .automated-issues-heading-label {
+  font-size: x-large;
+  margin-right: 1rem;
+}
+
+.anomaly-modal-name-col {
+  width: 20rem;
+}
+
+.sub-event-card-col {
+  width: 10rem !important;
+}
+
+.sub-event-modal-form-group {
+  padding: 0 !important;
+}
+
+.sub-event-to-be-deleted {
+  text-decoration: line-through;
+}
+
+.sub-event-list-indent-0 {
+  margin-left: 0;
+}
+
+.sub-event-list-indent-1 {
+  margin-left: 3rem;
+}
+
+.sub-event-image-select-container {
+  margin-top: 1rem;
+}
+
+.sub-event-image-button-container {
+  margin-top: 1rem;
+}
+
+.sub-event-image-button-container > button {
+  margin-right: 1rem;
+}
+
+.sub-event-image-thumbnail-container {
+  float: left;
+}
+
+.sub-event-image-thumbnail-container > .amplify-s3-image {
+  --height : 40px;
+  --width: 40px;
 }

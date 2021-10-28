@@ -16,7 +16,6 @@ import { SortBy } from '../components/Enums';
 import { AppSubscriptionTypes } from '../App';
 import { ClientSubscriptionTypes } from '../views/Client';
 import { EventSubscriptionTypes } from '../views/Event';
-import { HistorySubscriptionTypes } from '../views/History';
 import { ObserverSubscriptionTypes } from '../views/Observer';
 
 // Declare Amazon Virtual Andon console configuration
@@ -80,6 +79,8 @@ export async function sendMetrics(data: object) {
  * @return {boolean} Validated result
  */
 export function validateGeneralInput(input: string, minLength: number, maxLength: number, allowedSpecialCharacters: string): boolean {
+  if (input === '' && minLength === 0) { return true; }
+
   // Due to supporting multi-languages since v2.1, removed alphanumeric validation.
   if (input.length > maxLength || input.length < minLength || input.trimLeft().trimRight() === '') {
     return false;
@@ -110,23 +111,59 @@ export function validateGeneralInput(input: string, minLength: number, maxLength
 }
 
 /**
- * Validate the phone number.
- * @param {string} phoneNumber - Phone number to validate
- * @return {boolean} Validated result
+ * Validates a phone number
+ * @param phoneNumber Phone number to validate
+ * @param emptyStringIsValid Flag for whether an empty string should evaluate to true
+ * @returns Boolean indicating whether the supplied string is a valid phone number
  */
-export function validatePhoneNumber(phoneNumber: string): boolean {
+export function validatePhoneNumber(phoneNumber: string, emptyStringIsValid = false): boolean {
+  if (emptyStringIsValid && phoneNumber === '') { return true; }
+
   const regex = /^(\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/;  // NOSONAR: typescript:S4784 - Valid regex for phone number
-  return regex.test(phoneNumber);
+  return validateUniqueListAndRegex(phoneNumber, ',', regex);
 }
 
 /**
- * Validate the E-Mail address.
- * @param {string} emailAddress - E-Mail address to validate
- * @return {boolean} Validated result
+ * Validate an E-Mail address
+ * @param emailAddress E-Mail address to validate
+ * @param emptyStringIsValid Flag for whether an empty string should evaluate to true
+ * @returns Boolean indicating whether the supplied string is a valid email address
  */
-export function validateEmailAddress(emailAddress: string): boolean {
+export function validateEmailAddress(emailAddress: string, emptyStringIsValid = false): boolean {
+  if (emptyStringIsValid && emailAddress === '') { return true; }
+
   const regex = /^[_a-z0-9-]+(\.[_a-z0-9-]+)*(\+[a-z0-9-]+)?@\w+([\.-]?\w+)*(\.\w{2,3})+$/; // NOSONAR: typescript:S4784 - Valid regex for email
-  return regex.test(emailAddress);
+  return validateUniqueListAndRegex(emailAddress, ',', regex);
+}
+
+/**
+ * Splits `testStr` by the `delimiter` and returns whether each value passes the RegEx test
+ * @param testStr The string with the list of strings to evaluate
+ * @param delimiter The delimiter to split `testStr` by
+ * @param regexStr The RegExp to validate each item in the testStr againist
+ * @param trimWhitespace Boolean indicating whether each token after splitting `testStr` by the `delimiter` should be trimmed of whitespace
+ * @returns booolean
+ */
+function validateUniqueListAndRegex(testStr: string, delimiter: string, regexStr: RegExp, trimWhitespace: boolean = true): boolean {
+  // Split by the delimiter
+  let splitTestStr = testStr.split(delimiter);
+
+  if (trimWhitespace) {
+    splitTestStr = splitTestStr.map(s => s.trim());
+  }
+
+  for (const token of splitTestStr) {
+    if (!regexStr.test(token)) {
+      return false;
+    }
+  }
+
+  // Ensure there are no duplicates
+  if (new Set<string>(splitTestStr).size !== splitTestStr.length) {
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -262,7 +299,7 @@ export function makeVisibleBySearchKeyword(data: any[], searchKey: string, searc
   }
 }
 
-type SubscriptionTypes = AppSubscriptionTypes | ClientSubscriptionTypes | EventSubscriptionTypes | HistorySubscriptionTypes | ObserverSubscriptionTypes;
+type SubscriptionTypes = AppSubscriptionTypes | ClientSubscriptionTypes | EventSubscriptionTypes | ObserverSubscriptionTypes;
 type ConfigureSubscriptionFn = (subscriptionType: any, delayMS: number) => Promise<void>;
 
 /**

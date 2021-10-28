@@ -194,8 +194,7 @@ class Site extends React.Component<IProps, IState> {
       const { sites, siteName, siteDescription, searchKeyword, sort } = this.state;
       const input = {
         name: siteName,
-        description: siteDescription,
-        __typename: 'Site'
+        description: siteDescription
       };
 
       const response = await API.graphql(graphqlOperation(createSite, input)) as GraphQLResult;
@@ -240,7 +239,7 @@ class Site extends React.Component<IProps, IState> {
 
   /**
    * Open modal based on type input.
-   * @param {ModalType} modalType - Moddal type
+   * @param {ModalType} modalType - Modal type
    * @param {string | undefined} siteId - Site ID
    * @param {string | undefined} siteName - Site Name
    */
@@ -340,7 +339,7 @@ class Site extends React.Component<IProps, IState> {
           <Row>
             <Col>
               <Breadcrumb>
-                <Breadcrumb.Item active>{ I18n.get('text.sites') }</Breadcrumb.Item>
+                <Breadcrumb.Item active>{I18n.get('text.sites')}</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -348,7 +347,7 @@ class Site extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ I18n.get('button.add.site') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{I18n.get('button.add.site')}</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -362,11 +361,11 @@ class Site extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={4} controlId="searchKeyword">
-                        <Form.Label>{ I18n.get('text.search.keyword') }</Form.Label>
-                        <Form.Control type="text" placeholder={ I18n.get('text.search.site.name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
+                        <Form.Label>{I18n.get('text.search.keyword')}</Form.Label>
+                        <Form.Control type="text" placeholder={I18n.get('text.search.site.name')} defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
                       </Form.Group>
                       <Form.Group as={Col} md={4} controlId="sortBy">
-                        <Form.Label>{ I18n.get('text.sort.by') }</Form.Label>
+                        <Form.Label>{I18n.get('text.sort.by')}</Form.Label>
                         <Form.Control as="select" defaultValue={this.state.sort} onChange={this.handleSort}>
                           <option value={SortBy.Asc}>A-Z</option>
                           <option value={SortBy.Desc}>Z-A</option>
@@ -384,7 +383,7 @@ class Site extends React.Component<IProps, IState> {
               this.state.sites.length === 0 && !this.state.isLoading &&
               <Col>
                 <Jumbotron>
-                  <p>{ I18n.get('text.no.site') }</p>
+                  <p>{I18n.get('text.no.site')}</p>
                 </Jumbotron>
               </Col>
             }
@@ -399,7 +398,7 @@ class Site extends React.Component<IProps, IState> {
                           <Table striped bordered>
                             <tbody>
                               <tr>
-                                <td>{ I18n.get('text.description') }</td>
+                                <td>{I18n.get('text.description')}</td>
                                 <td>{site.description}</td>
                               </tr>
                             </tbody>
@@ -407,8 +406,8 @@ class Site extends React.Component<IProps, IState> {
                           <Form>
                             <Form.Row className="justify-content-between">
                               <Button size="sm" variant="danger"
-                                onClick={() => this.openModal(ModalType.Delete, site.id, site.name)}>{ I18n.get('button.delete') }</Button>
-                              <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/sites/${site.id}`)}>{ I18n.get('button.detail') }</Button>
+                                onClick={() => this.openModal(ModalType.Delete, site.id, site.name)}>{I18n.get('button.delete')}</Button>
+                              <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/sites/${site.id}`)}>{I18n.get('button.detail')}</Button>
                             </Form.Row>
                           </Form>
                         </Card.Body>
@@ -431,7 +430,7 @@ class Site extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ I18n.get('error') }:</strong><br />
+                  <strong>{I18n.get('error')}:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -448,22 +447,22 @@ class Site extends React.Component<IProps, IState> {
               <Modal.Body>
                 <Form>
                   <Form.Group controlId="siteName">
-                    <Form.Label>{ I18n.get('text.site.name') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ I18n.get('input.site.nae') }
-                      defaultValue="" onChange={this.handleSiteNameChange} className={ getInputFormValidationClassName(this.state.siteName, this.state.isSiteNameValid) } />
-                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
+                    <Form.Label>{I18n.get('text.site.name')} <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={I18n.get('input.site.nae')}
+                      defaultValue="" onChange={this.handleSiteNameChange} className={getInputFormValidationClassName(this.state.siteName, this.state.isSiteNameValid)} />
+                    <Form.Text className="text-muted">{`(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}`}</Form.Text>
                   </Form.Group>
                   <Form.Group controlId="siteDescription">
-                    <Form.Label>{ I18n.get('text.site.description') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ I18n.get('input.site.description') }
-                      defaultValue="" onChange={this.handleSiteDescriptionChange} className={ getInputFormValidationClassName(this.state.siteDescription, this.state.isSiteDescriptionValid) } />
-                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
+                    <Form.Label>{I18n.get('text.site.description')} <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={I18n.get('input.site.description')}
+                      defaultValue="" onChange={this.handleSiteDescriptionChange} className={getInputFormValidationClassName(this.state.siteDescription, this.state.isSiteDescriptionValid)} />
+                    <Form.Text className="text-muted">{`(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}`}</Form.Text>
                   </Form.Group>
                 </Form>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
-                <Button variant="primary" onClick={this.addSite} disabled={this.state.isModalProcessing || !this.state.isSiteNameValid || !this.state.isSiteDescriptionValid}>{ I18n.get('button.register') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
+                <Button variant="primary" onClick={this.addSite} disabled={this.state.isModalProcessing || !this.state.isSiteNameValid || !this.state.isSiteDescriptionValid}>{I18n.get('button.register')}</Button>
               </Modal.Footer>
             </div>
           }
@@ -471,15 +470,15 @@ class Site extends React.Component<IProps, IState> {
             this.state.modalType === ModalType.Delete &&
             <div>
               <Modal.Body>
-                { I18n.get('text.confirm.delete.site') }: <strong>{this.state.siteName}</strong>?
+                {I18n.get('text.confirm.delete.site')}: <strong>{this.state.siteName}</strong>?
                 <EmptyRow />
                 <Alert variant="danger">
-                  { I18n.get('warning.delete.site') }
+                  {I18n.get('warning.delete.site')}
                 </Alert>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
-                <Button variant="danger" onClick={this.deleteSite} disabled={this.state.isModalProcessing}>{ I18n.get('button.delete') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
+                <Button variant="danger" onClick={this.deleteSite} disabled={this.state.isModalProcessing}>{I18n.get('button.delete')}</Button>
               </Modal.Footer>
             </div>
           }

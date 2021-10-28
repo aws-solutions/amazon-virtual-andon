@@ -19,7 +19,7 @@ import EmptyCol from './EmptyCol';
  * Properties Interface
  * @interface IProps
  */
-interface IProps {}
+interface IProps { }
 
 /**
  * State Interface
@@ -82,7 +82,7 @@ class Footer extends React.Component<IProps, IState> {
     window.location.reload();
   }
 
-    /**
+  /**
    * Handle cookie banner.
    */
   handleCookieBanner() {
@@ -104,28 +104,29 @@ class Footer extends React.Component<IProps, IState> {
         {
           this.state.showCookieBanner &&
           <Navbar bg="dark" className="cookie-banner">
-            <Navbar.Text className="cookie-banner-font">
-              { I18n.get('info.cookie') }
+            <Navbar.Text id="info-cookie" className="cookie-banner-font">
+              {I18n.get('info.cookie')}
               <EmptyCol />
-              <Button size="sm" variant="secondary" onClick={this.handleCookieBanner}>X</Button>
+              <Button id="dismiss-cookie" size="sm" variant="secondary" onClick={this.handleCookieBanner}>X</Button>
             </Navbar.Text>
           </Navbar>
         }
         <Navbar bg="light" fixed="bottom">
           <Navbar.Collapse className="justify-content-between">
             <Form inline>
-              <Form.Control as="select" onChange={this.handleLanguageChange} defaultValue={new Cookies().get('ui_locale')}>
-                <option value="de">{ I18n.get('select.german') }</option>
-                <option value="en">{ I18n.get('select.english') }</option>
-                <option value="es">{ I18n.get('select.spanish') }</option>
-                <option value="fr">{ I18n.get('select.french') }</option>
-                <option value="ja">{ I18n.get('select.japanese') }</option>
-                <option value="ko">{ I18n.get('select.korean') }</option>
-                <option value="zh">{ I18n.get('select.chinese') }</option>
+              <Form.Control as="select" onChange={this.handleLanguageChange} defaultValue={new Cookies().get('ui_locale')} id="change-language">
+                <option value="de">{I18n.get('select.german')}</option>
+                <option value="en">{I18n.get('select.english')}</option>
+                <option value="es">{I18n.get('select.spanish')}</option>
+                <option value="fr">{I18n.get('select.french')}</option>
+                <option value="ja">{I18n.get('select.japanese')}</option>
+                <option value="ko">{I18n.get('select.korean')}</option>
+                <option value="zh">{I18n.get('select.chinese')}</option>
+                <option value="th">{I18n.get('select.thai')}</option>
               </Form.Control>
             </Form>
             <Nav>
-              <Nav.Link href="https://aws.amazon.com/solutions/">{ I18n.get('text.aws.solutions') }</Nav.Link>
+              <Nav.Link id="solutions-link" href="https://aws.amazon.com/solutions/" target="_blank" rel="noopener noreferrer">{I18n.get('text.aws.solutions')}</Nav.Link>
             </Nav>
           </Navbar.Collapse>
         </Navbar>

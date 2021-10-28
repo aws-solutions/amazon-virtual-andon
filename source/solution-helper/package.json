@@ -1,0 +1,33 @@
+{
+  "name": "solution-helper",
+  "version": "3.0.0",
+  "description": "CloudFormation Custom Resources for use during solution lifecycle events",
+  "main": "index.js",
+  "dependencies": {
+    "axios": "~0.21.1",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.24",
+    "@types/node": "^16.4.5",
+    "@types/uuid": "^8.3.1",
+    "aws-sdk": "2.880.0",
+    "jest": "^26.0.0",
+    "ts-jest": "^26.0.0",
+    "ts-node": "^10.1.0",
+    "typescript": "^3.9.7"
+  },
+  "scripts": {
+    "clean": "rm -rf node_modules/ dist/ coverage/ package-lock.json",
+    "prebuild": "npm run clean && npm install",
+    "build": "tsc --build tsconfig.json",
+    "package": "npm run build && npm prune --production && rsync -avrq ./node_modules ./dist && npm run include-solution-utils && npm run package:zip",
+    "package:zip": "cd dist && zip -q -r9 ./package.zip * && cd ..",
+    "pretest": "npm run clean && npm install",
+    "test": "jest --coverage --silent",
+    "include-solution-utils": "npm run solution-utils:prep && npm run solution-utils:package",
+    "solution-utils:prep": "rm -rf dist/solution-utils && mkdir dist/solution-utils",
+    "solution-utils:package": "cd ../solution-utils && npm run package && cd dist/ && rsync -avrq . ../../$npm_package_name/dist/solution-utils/ && cd ../../$npm_package_name"
+  },
+  "license": "Apache-2.0"
+}

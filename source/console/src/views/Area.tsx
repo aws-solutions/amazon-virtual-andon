@@ -211,8 +211,7 @@ class Area extends React.Component<IProps, IState> {
       const input = {
         areaSiteId: siteId,
         name: areaName,
-        description: areaDescription,
-        __typename: 'Area'
+        description: areaDescription
       };
 
       const response = await API.graphql(graphqlOperation(createArea, input)) as GraphQLResult;
@@ -257,7 +256,7 @@ class Area extends React.Component<IProps, IState> {
 
   /**
    * Open modal based on type input.
-   * @param {ModalType} modalType - Moddal type
+   * @param {ModalType} modalType - Modal type
    * @param {string | undefined} areaId - Area ID
    * @param {string | undefined} areaName - Area Name
    */
@@ -358,9 +357,9 @@ class Area extends React.Component<IProps, IState> {
             <Col>
               <Breadcrumb>
                 <LinkContainer to="/sites" exact>
-                  <Breadcrumb.Item>{ I18n.get('text.sites') }</Breadcrumb.Item>
+                  <Breadcrumb.Item>{I18n.get('text.sites')}</Breadcrumb.Item>
                 </LinkContainer>
-                <Breadcrumb.Item active>{ I18n.get('text.areas') }{this.state.siteName}</Breadcrumb.Item>
+                <Breadcrumb.Item active>{I18n.get('text.areas')}{this.state.siteName}</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -368,7 +367,7 @@ class Area extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{ I18n.get('button.add.area') }</Button>
+                  <Button size="sm" variant="primary" onClick={() => this.openModal(ModalType.Add)}>{I18n.get('button.add.area')}</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -382,11 +381,11 @@ class Area extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={4} controlId="searchKeyword">
-                        <Form.Label>{ I18n.get('text.search.keyword') }</Form.Label>
-                        <Form.Control type="text" placeholder={ I18n.get('text.search.area.name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
+                        <Form.Label>{I18n.get('text.search.keyword')}</Form.Label>
+                        <Form.Control type="text" placeholder={I18n.get('text.search.area.name')} defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
                       </Form.Group>
                       <Form.Group as={Col} md={4} controlId="sortBy">
-                        <Form.Label>{ I18n.get('text.sort.by') }</Form.Label>
+                        <Form.Label>{I18n.get('text.sort.by')}</Form.Label>
                         <Form.Control as="select" defaultValue={this.state.sort} onChange={this.handleSort}>
                           <option value={SortBy.Asc}>A-Z</option>
                           <option value={SortBy.Desc}>Z-A</option>
@@ -404,7 +403,7 @@ class Area extends React.Component<IProps, IState> {
               this.state.areas.length === 0 && !this.state.isLoading &&
               <Col>
                 <Jumbotron>
-                  <p>{ I18n.get('text.no.area') }</p>
+                  <p>{I18n.get('text.no.area')}</p>
                 </Jumbotron>
               </Col>
             }
@@ -419,7 +418,7 @@ class Area extends React.Component<IProps, IState> {
                           <Table striped bordered>
                             <tbody>
                               <tr>
-                                <td>{ I18n.get('text.description') }</td>
+                                <td>{I18n.get('text.description')}</td>
                                 <td>{area.description}</td>
                               </tr>
                             </tbody>
@@ -427,11 +426,11 @@ class Area extends React.Component<IProps, IState> {
                           <Form>
                             <Form.Row className="justify-content-between">
                               <Button size="sm" variant="danger"
-                                onClick={() => this.openModal(ModalType.Delete, area.id, area.name)}>{ I18n.get('button.delete') }</Button>
+                                onClick={() => this.openModal(ModalType.Delete, area.id, area.name)}>{I18n.get('button.delete')}</Button>
                               <Form.Row>
-                                <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/areas/${area.id}/stations`)}>{ I18n.get('text.stations') }</Button>
+                                <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/areas/${area.id}/stations`)}>{I18n.get('text.stations')}</Button>
                                 <EmptyCol />
-                                <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/areas/${area.id}/processes`)}>{ I18n.get('info.processes') }</Button>
+                                <Button size="sm" variant="primary" onClick={() => this.props.history.push(`/areas/${area.id}/processes`)}>{I18n.get('info.processes')}</Button>
                               </Form.Row>
                             </Form.Row>
                           </Form>
@@ -455,7 +454,7 @@ class Area extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ I18n.get('error') }:</strong><br />
+                  <strong>{I18n.get('error')}:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -472,22 +471,22 @@ class Area extends React.Component<IProps, IState> {
               <Modal.Body>
                 <Form>
                   <Form.Group controlId="areaName">
-                    <Form.Label>{ I18n.get('text.area.name') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ I18n.get('input.area.name') }
-                      defaultValue="" onChange={this.handleAreaNameChange} className={ getInputFormValidationClassName(this.state.areaName, this.state.isAreaNameValid) } />
-                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
+                    <Form.Label>{I18n.get('text.area.name')} <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={I18n.get('input.area.name')}
+                      defaultValue="" onChange={this.handleAreaNameChange} className={getInputFormValidationClassName(this.state.areaName, this.state.isAreaNameValid)} />
+                    <Form.Text className="text-muted">{`(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}`}</Form.Text>
                   </Form.Group>
                   <Form.Group controlId="areaDescription">
-                    <Form.Label>{ I18n.get('text.area.description') } <span className="required-field">*</span></Form.Label>
-                    <Form.Control required type="text" placeholder={ I18n.get('input.area.description') }
-                      defaultValue="" onChange={this.handleAreaDescriptionChange} className={ getInputFormValidationClassName(this.state.areaDescription, this.state.isAreaDescriptionValid) } />
-                    <Form.Text className="text-muted">{ `(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}` }</Form.Text>
+                    <Form.Label>{I18n.get('text.area.description')} <span className="required-field">*</span></Form.Label>
+                    <Form.Control required type="text" placeholder={I18n.get('input.area.description')}
+                      defaultValue="" onChange={this.handleAreaDescriptionChange} className={getInputFormValidationClassName(this.state.areaDescription, this.state.isAreaDescriptionValid)} />
+                    <Form.Text className="text-muted">{`(${I18n.get('text.required')}) ${I18n.get('info.valid.general.input')}`}</Form.Text>
                   </Form.Group>
                 </Form>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
-                <Button variant="primary" onClick={this.addArea} disabled={this.state.isModalProcessing || !this.state.isAreaNameValid || !this.state.isAreaDescriptionValid}>{ I18n.get('button.register') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
+                <Button variant="primary" onClick={this.addArea} disabled={this.state.isModalProcessing || !this.state.isAreaNameValid || !this.state.isAreaDescriptionValid}>{I18n.get('button.register')}</Button>
               </Modal.Footer>
             </div>
           }
@@ -495,15 +494,15 @@ class Area extends React.Component<IProps, IState> {
             this.state.modalType === ModalType.Delete &&
             <div>
               <Modal.Body>
-                { I18n.get('text.confirm.delete.area') }: <strong>{this.state.areaName}</strong>?
+                {I18n.get('text.confirm.delete.area')}: <strong>{this.state.areaName}</strong>?
                 <EmptyRow />
                 <Alert variant="danger">
-                  { I18n.get('warning.delete.area') }
+                  {I18n.get('warning.delete.area')}
                 </Alert>
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
-                <Button variant="danger" onClick={this.deleteArea} disabled={this.state.isModalProcessing}>{ I18n.get('button.delete') }</Button>
+                <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
+                <Button variant="danger" onClick={this.deleteArea} disabled={this.state.isModalProcessing}>{I18n.get('button.delete')}</Button>
               </Modal.Footer>
             </div>
           }

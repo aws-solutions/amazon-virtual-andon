@@ -140,12 +140,12 @@ class Permission extends React.Component<IProps, IState> {
       // Add visible key/value for filter
       for (let permission of permissions) {
         permission.visible = true;
-        permission.username = this.getUsername(permission.userId);
+        permission.username = this.getUsername(permission.id);
       }
 
-      // Change visible for exsiting users
+      // Change visible for existing users
       for (let user of this.users) {
-        const filteredPermissions = permissions.filter(permission => permission.userId === user.userId);
+        const filteredPermissions = permissions.filter(permission => permission.id === user.userId);
         user.visible = filteredPermissions.length === 0;
       }
 
@@ -235,9 +235,9 @@ class Permission extends React.Component<IProps, IState> {
 
       // Graphql operation to get permissions
       await this.graphQlCommon.deletePermission(userId);
-      const updatedPermissions = permissions.filter(permission => permission.userId !== userId);
+      const updatedPermissions = permissions.filter(permission => permission.id !== userId);
 
-      // Set user visilibity
+      // Set user visibility
       for (let currentUser of this.users) {
         if (currentUser.userId === userId) {
           currentUser.visible = true;
@@ -337,7 +337,7 @@ class Permission extends React.Component<IProps, IState> {
           <Row>
             <Col>
               <Breadcrumb>
-                <Breadcrumb.Item active>{ I18n.get('text.permissions') }</Breadcrumb.Item>
+                <Breadcrumb.Item active>{I18n.get('text.permissions')}</Breadcrumb.Item>
               </Breadcrumb>
             </Col>
           </Row>
@@ -349,11 +349,11 @@ class Permission extends React.Component<IProps, IState> {
                   <Form>
                     <Form.Row>
                       <Form.Group as={Col} md={4} controlId="searchKeyword">
-                        <Form.Label>{ I18n.get('text.search.keyword') }</Form.Label>
-                        <Form.Control type="text" placeholder={ I18n.get('text.search.user.name') } defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
+                        <Form.Label>{I18n.get('text.search.keyword')}</Form.Label>
+                        <Form.Control type="text" placeholder={I18n.get('text.search.user.name')} defaultValue={this.state.searchKeyword} onChange={this.handleSearchKeywordChange} />
                       </Form.Group>
                       <Form.Group as={Col} md={4} controlId="sortBy">
-                        <Form.Label>{ I18n.get('text.sort.by') }</Form.Label>
+                        <Form.Label>{I18n.get('text.sort.by')}</Form.Label>
                         <Form.Control as="select" defaultValue={this.state.sort} onChange={this.handleSort}>
                           <option value={SortBy.Asc}>A-Z</option>
                           <option value={SortBy.Desc}>Z-A</option>
@@ -370,7 +370,7 @@ class Permission extends React.Component<IProps, IState> {
             <Col>
               <Form>
                 <Form.Row className="justify-content-end">
-                  <Button size="sm" variant="primary" onClick={this.addPermission}>{ I18n.get('button.add.permission') }</Button>
+                  <Button size="sm" variant="primary" onClick={this.addPermission}>{I18n.get('button.add.permission')}</Button>
                 </Form.Row>
               </Form>
             </Col>
@@ -378,127 +378,127 @@ class Permission extends React.Component<IProps, IState> {
           <EmptyRow />
           <Row>
             <Col>
-            {
-              this.state.permissions.length === 0 && !this.state.isLoading &&
-              <Jumbotron>
-                <p>{ I18n.get('text.no.permission') }</p>
-              </Jumbotron>
-            }
-            {
-              this.state.permissions.length > 0 && !this.state.isLoading &&
-              <Card className="custom-card-big">
-                <Card.Body>
-                  <Table striped bordered>
-                    <thead>
-                      <tr>
-                        <th>{ I18n.get('text.email') }</th>
-                        <th>{ I18n.get('text.permissions') }</th>
-                        <th colSpan={2}>{ I18n.get('text.actions') }</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                    {
-                      this.state.permissions.filter((permission: IPermission) => permission.visible)
-                        .map((permission: IPermission) => {
-                          const user = {
-                            userId: permission.userId,
-                            username: permission.username,
-                            version: permission.version
-                          };
+              {
+                this.state.permissions.length === 0 && !this.state.isLoading &&
+                <Jumbotron>
+                  <p>{I18n.get('text.no.permission')}</p>
+                </Jumbotron>
+              }
+              {
+                this.state.permissions.length > 0 && !this.state.isLoading &&
+                <Card className="custom-card-big">
+                  <Card.Body>
+                    <Table striped bordered>
+                      <thead>
+                        <tr>
+                          <th>{I18n.get('text.email')}</th>
+                          <th>{I18n.get('text.permissions')}</th>
+                          <th colSpan={2}>{I18n.get('text.actions')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {
+                          this.state.permissions.filter((permission: IPermission) => permission.visible)
+                            .map((permission: IPermission) => {
+                              const user = {
+                                userId: permission.id,
+                                username: permission.username,
+                                version: permission.version
+                              };
 
-                          return (
-                            <tr key={permission.userId}>
-                              <td>{permission.username}</td>
-                              <td>
-                                <ul>
-                                {
-                                  permission.sites.map((site) => {
-                                    const filteredAreas = permission.areas.filter((area) => area.parentId === site.id);
-                                    if (filteredAreas.length > 0) {
-                                      return (
-                                        <li key={site.id}>
-                                          {site.name}
-                                          <ul key={site.id}>
-                                          {
-                                            filteredAreas.map((area) => {
-                                              const filteredProcesses = permission.processes.filter((process) => process.parentId === area.id);
-                                              const filteredStations = permission.stations.filter((station) => station.parentId === area.id);
-                                              if (filteredProcesses.length > 0 || filteredStations.length > 0) {
-                                                return (
-                                                  <li key={area.id}>
-                                                    {area.name}
-                                                    <ul key={area.id}>
-                                                    {
-                                                      filteredProcesses.map((process) => {
+                              return (
+                                <tr key={permission.id}>
+                                  <td>{permission.username}</td>
+                                  <td>
+                                    <ul>
+                                      {
+                                        permission.sites.map((site) => {
+                                          const filteredAreas = permission.areas.filter((area) => area.parentId === site.id);
+                                          if (filteredAreas.length > 0) {
+                                            return (
+                                              <li key={site.id}>
+                                                {site.name}
+                                                <ul key={site.id}>
+                                                  {
+                                                    filteredAreas.map((area) => {
+                                                      const filteredProcesses = permission.processes.filter((process) => process.parentId === area.id);
+                                                      const filteredStations = permission.stations.filter((station) => station.parentId === area.id);
+                                                      if (filteredProcesses.length > 0 || filteredStations.length > 0) {
                                                         return (
-                                                          <li key={process.id}>{`${I18n.get('text.process.name')}: ${process.name}`}</li>
-                                                        );
-                                                      })
-                                                    }
-                                                    {
-                                                      filteredStations.map((station) => {
-                                                        const filteredDevices = permission.devices.filter((device) => device.parentId === station.id);
-                                                        if (filteredDevices.length > 0) {
-                                                          return (
-                                                            <li key={station.id}>
-                                                              {`${I18n.get('text.station.name')}: ${station.name}`}
-                                                              <ul key={station.id}>
+                                                          <li key={area.id}>
+                                                            {area.name}
+                                                            <ul key={area.id}>
                                                               {
-                                                                filteredDevices.map((device) => {
+                                                                filteredProcesses.map((process) => {
                                                                   return (
-                                                                    <li key={device.id}>{device.name}</li>
+                                                                    <li key={process.id}>{`${I18n.get('text.process.name')}: ${process.name}`}</li>
                                                                   );
                                                                 })
                                                               }
-                                                              </ul>
-                                                            </li>
-                                                          )
-                                                        } else {
-                                                          return (
-                                                            <li key={station.id}>{`${I18n.get('text.station.name')}: ${station.name}`}</li>
-                                                          );
-                                                        }
-                                                      })
-                                                    }
-                                                    </ul>
-                                                  </li>
-                                                );
-                                              } else {
-                                                return (
-                                                  <li key={area.id}>{area.name}</li>
-                                                );
-                                              }
-                                            })
+                                                              {
+                                                                filteredStations.map((station) => {
+                                                                  const filteredDevices = permission.devices.filter((device) => device.parentId === station.id);
+                                                                  if (filteredDevices.length > 0) {
+                                                                    return (
+                                                                      <li key={station.id}>
+                                                                        {`${I18n.get('text.station.name')}: ${station.name}`}
+                                                                        <ul key={station.id}>
+                                                                          {
+                                                                            filteredDevices.map((device) => {
+                                                                              return (
+                                                                                <li key={device.id}>{device.name}</li>
+                                                                              );
+                                                                            })
+                                                                          }
+                                                                        </ul>
+                                                                      </li>
+                                                                    )
+                                                                  } else {
+                                                                    return (
+                                                                      <li key={station.id}>{`${I18n.get('text.station.name')}: ${station.name}`}</li>
+                                                                    );
+                                                                  }
+                                                                })
+                                                              }
+                                                            </ul>
+                                                          </li>
+                                                        );
+                                                      } else {
+                                                        return (
+                                                          <li key={area.id}>{area.name}</li>
+                                                        );
+                                                      }
+                                                    })
+                                                  }
+                                                </ul>
+                                              </li>
+                                            );
+                                          } else {
+                                            return (
+                                              <li key={site.id}>{site.name}</li>
+                                            )
                                           }
-                                          </ul>
-                                        </li>
-                                      );
-                                    } else {
-                                      return (
-                                        <li key={site.id}>{site.name}</li>
-                                      )
-                                    }
-                                  })
-                                }
-                                </ul>
-                              </td>
-                              <td>
-                                <Button variant="primary" size="sm"
-                                  onClick={() => this.editPermission(permission)}>{ I18n.get('button.edit') }</Button>
-                              </td>
-                              <td>
-                                <Button variant="danger" size="sm"
-                                  onClick={() => this.openModal(user)}>{ I18n.get('button.delete') }</Button>
-                              </td>
-                            </tr>
-                          );
-                        })
-                    }
-                    </tbody>
-                  </Table>
-                </Card.Body>
-              </Card>
-            }
+                                        })
+                                      }
+                                    </ul>
+                                  </td>
+                                  <td>
+                                    <Button variant="primary" size="sm"
+                                      onClick={() => this.editPermission(permission)}>{I18n.get('button.edit')}</Button>
+                                  </td>
+                                  <td>
+                                    <Button variant="danger" size="sm"
+                                      onClick={() => this.openModal(user)}>{I18n.get('button.delete')}</Button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                        }
+                      </tbody>
+                    </Table>
+                  </Card.Body>
+                </Card>
+              }
             </Col>
           </Row>
           {
@@ -514,7 +514,7 @@ class Permission extends React.Component<IProps, IState> {
             <Row>
               <Col>
                 <Alert variant="danger">
-                  <strong>{ I18n.get('error') }:</strong><br />
+                  <strong>{I18n.get('error')}:</strong><br />
                   {this.state.error}
                 </Alert>
               </Col>
@@ -523,14 +523,14 @@ class Permission extends React.Component<IProps, IState> {
         </Container>
         <Modal show={this.state.showModal} onHide={this.handleModalClose}>
           <Modal.Header>
-            <Modal.Title>{ I18n.get('text.delete.permission') }</Modal.Title>
+            <Modal.Title>{I18n.get('text.delete.permission')}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            { I18n.get('text.confirm.delete.permission') }: <strong>{this.state.user.username}</strong>?
+            {I18n.get('text.confirm.delete.permission')}: <strong>{this.state.user.username}</strong>?
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={this.handleModalClose}>{ I18n.get('button.close') }</Button>
-            <Button variant="danger" onClick={this.deletePermission} disabled={this.state.isModalProcessing}>{ I18n.get('button.delete') }</Button>
+            <Button variant="secondary" onClick={this.handleModalClose}>{I18n.get('button.close')}</Button>
+            <Button variant="danger" onClick={this.deletePermission} disabled={this.state.isModalProcessing}>{I18n.get('button.delete')}</Button>
           </Modal.Footer>
           {
             this.state.isModalProcessing &&

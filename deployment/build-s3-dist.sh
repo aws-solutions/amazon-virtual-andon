@@ -23,11 +23,15 @@ if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
     exit 1
 fi
 
+# Exit immediately if a command exits with a non-zero status.
+set -e
+
 # Get reference for all important folders
 template_dir="$PWD"
 template_dist_dir="$template_dir/global-s3-assets"
 build_dist_dir="$template_dir/regional-s3-assets"
 source_dir="$template_dir/../source"
+cdk_source_dir="$source_dir/cdk-infrastructure"
 
 echo "------------------------------------------------------------------------------"
 echo "[Init] Clean old dist folders"
@@ -42,40 +46,51 @@ echo "mkdir -p $build_dist_dir"
 mkdir -p $build_dist_dir
 
 echo "------------------------------------------------------------------------------"
-echo "[Packing] Templates"
+echo "Synthesize the CDK project into a CloudFormation template"
 echo "------------------------------------------------------------------------------"
-SUB_BUCKET_NAME="s/BUCKET_NAME_PLACEHOLDER/$1/g"
-SUB_SOLUTION_NAME="s/SOLUTION_NAME_PLACEHOLDER/$2/g"
-SUB_VERSION="s/VERSION_PLACEHOLDER/$3/g"
+export SOLUTION_BUCKET_NAME_PLACEHOLDER=$1
+export SOLUTION_NAME_PLACEHOLDER=$2
+export SOLUTION_VERSION_PLACEHOLDER=$3
 
-for FULLNAME in ./*.yaml
+cd $cdk_source_dir
+npm run clean
+npm install
+node_modules/aws-cdk/bin/cdk synth --asset-metadata false --path-metadata false > $template_dist_dir/$2.template
+
+echo "------------------------------------------------------------------------------"
+echo "Glue jobs scripts"
+echo "------------------------------------------------------------------------------"
+mkdir -p $build_dist_dir/glue-job-scripts
+cp $source_dir/glue-job-scripts/*.py $build_dist_dir/glue-job-scripts/
+
+declare -a lambda_packages=(
+  "ava-issue-handler"
+  "solution-helper"
+  "appsync-lambda-resolver"
+  "external-integrations-handler"
+  "cognito-trigger"
+)
+
+for lambda_package in "${lambda_packages[@]}"
 do
-  TEMPLATE=`basename $FULLNAME .yaml`
-  echo "Template: $TEMPLATE"
-  sed -e $SUB_BUCKET_NAME -e $SUB_SOLUTION_NAME -e $SUB_VERSION $template_dir/$TEMPLATE.yaml > $template_dist_dir/$TEMPLATE.template
-  cp $template_dist_dir/$TEMPLATE.template $build_dist_dir/
+  echo "------------------------------------------------------------------------------"
+  echo "Building Lambda package: $lambda_package"
+  echo "------------------------------------------------------------------------------"
+  cd $source_dir/$lambda_package
+  npm run package
+  # Check the result of the package step and exit if a failure is identified
+  if [ $? -eq 0 ]
+  then
+    echo "Package for $lambda_package built successfully"
+  else
+    echo "******************************************************************************"
+    echo "Lambda package build FAILED for $lambda_package"
+    echo "******************************************************************************"
+    exit 1
+  fi
+  mv dist/package.zip $build_dist_dir/$lambda_package.zip
+  rm -rf dist
 done
-
-echo "------------------------------------------------------------------------------"
-echo "[Build] Amazon Virtual Andon Custom Resource"
-echo "------------------------------------------------------------------------------"
-cd $source_dir/custom-resource
-npm run build
-cp ./dist/ava-custom-resource.zip $build_dist_dir/ava-custom-resource.zip
-
-echo "------------------------------------------------------------------------------"
-echo "[Build] Amazon Virtual Andon Issue Handler"
-echo "------------------------------------------------------------------------------"
-cd $source_dir/ava-issue-handler
-npm run build
-cp ./dist/ava-issue-handler.zip $build_dist_dir/ava-issue-handler.zip
-
-echo "------------------------------------------------------------------------------"
-echo "[Build] Amazon Virtual Andon Migration"
-echo "------------------------------------------------------------------------------"
-cd $source_dir/migration
-npm run build
-cp ./dist/ava-migration.zip $build_dist_dir/ava-migration.zip
 
 echo "------------------------------------------------------------------------------"
 echo "[Build] Amazon Virtual Andon Console"
@@ -92,10 +107,3 @@ cd $source_dir/console/build
 manifest=(`find * -type f ! -iname "andon_config.js" ! -iname ".DS_Store"`)
 manifest_json=$(IFS=,;printf "%s" "${manifest[*]}")
 echo "{\"files\":[\"$manifest_json\"]}" | sed 's/,/","/g' >> $build_dist_dir/console/site-manifest.json
-
-echo "------------------------------------------------------------------------------"
-echo "[Copy] GraphQL resources"
-echo "------------------------------------------------------------------------------"
-cd $source_dir/graphql
-mkdir $build_dist_dir/graphql
-cp -r ./* $build_dist_dir/graphql

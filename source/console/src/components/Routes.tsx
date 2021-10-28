@@ -5,7 +5,7 @@
 import { IRoute } from './Interfaces';
 
 // Icons
-import { GoLocation, GoPerson, GoEye, GoGraph, GoHistory, GoOrganization, GoLock, GoGear } from 'react-icons/go';
+import { GoLocation, GoPerson, GoEye, GoGraph, GoOrganization, GoLock, GoGear } from 'react-icons/go';
 
 // Views
 import Site from '../views/Site';
@@ -16,12 +16,12 @@ import Device from '../views/Device';
 import Event from '../views/Event';
 import Client from '../views/Client';
 import Observer from '../views/Observer';
-import Metrics from '../views/Metrics';
-import History from '../views/History';
+import IssuesReport from '../views/IssuesReport';
 import User from '../views/User';
 import Permission from '../views/Permission';
 import PermissionSetting from '../views/PermissionSetting';
 import RootCause from '../views/RootCause';
+import AddEditEvent from '../views/AddEditEvent';
 
 /**
  * Admin group routes
@@ -82,24 +82,16 @@ export const adminRoutes: IRoute[] = [
     visible: true
   },
   {
-    path: '/metrics',
-    nameCode: 'text.metrics',
-    description: 'Metrics',
-    component: Metrics,
+    path: '/issuesreport',
+    nameCode: 'text.issues.report',
+    description: 'Issues Report',
+    component: IssuesReport,
     icon: GoGraph,
     visible: true
   },
   {
-    path: '/history',
-    nameCode: 'text.history',
-    description: 'Histroy',
-    component: History,
-    icon: GoHistory,
-    visible: true
-  },
-  {
     path: '/users',
-    nameCode:'text.users',
+    nameCode: 'text.users',
     description: 'User',
     component: User,
     icon: GoOrganization,
@@ -126,6 +118,18 @@ export const adminRoutes: IRoute[] = [
     component: RootCause,
     icon: GoGear,
     visible: true
+  },
+  {
+    path: '/processes/:processId/event',
+    description: 'Add Event',
+    component: AddEditEvent,
+    visible: false
+  },
+  {
+    path: '/processes/:processId/event/:eventId',
+    description: 'Edit Event',
+    component: AddEditEvent,
+    visible: false
   }
 ];
 
@@ -150,19 +154,11 @@ export const managerRoutes: IRoute[] = [
     visible: true
   },
   {
-    path: '/metrics',
-    nameCode: 'text.metrics',
-    description: 'Metrics',
-    component: Metrics,
+    path: '/issuesreport',
+    nameCode: 'text.issues.report',
+    description: 'Issues Report',
+    component: IssuesReport,
     icon: GoGraph,
-    visible: true
-  },
-  {
-    path: '/history',
-    nameCode: 'text.history',
-    description: 'History',
-    component: History,
-    icon: GoHistory,
     visible: true
   }
 ];

@@ -1,14 +1,14 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
- // Import React and Amplify packages
+// Import React and Amplify packages
 import React from 'react';
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
 import { LinkContainer } from 'react-router-bootstrap';
-import { GoSignOut } from 'react-icons/go';
 import { I18n } from 'aws-amplify';
 import { Logger } from '@aws-amplify/core';
 import Auth from '@aws-amplify/auth';
+import { GoSignOut } from 'react-icons/go';
 
 // Import React Bootstrap components
 import Navbar from 'react-bootstrap/Navbar';
@@ -38,7 +38,7 @@ interface IProps {
  * State Interface
  * @interface IState
  */
-interface IState {}
+interface IState { }
 
 // Logging
 const LOGGER = new Logger('Main', LOGGING_LEVEL);
@@ -48,26 +48,23 @@ const LOGGER = new Logger('Main', LOGGING_LEVEL);
  * @class Main
  */
 class Main extends React.Component<IProps, IState> {
-  constructor(props: Readonly<IProps>) {
-    super(props);
-
-    this.signOut = this.signOut.bind(this);
-  }
 
   /**
    * Sign out the user.
    */
-  signOut() {
-    Auth.signOut().catch((error) => {
+  async signOut() {
+    await Auth.signOut().catch((error) => {
       LOGGER.error('Error occurred while signing out.', error);
     });
+
+    window.location.reload();
   }
 
   /**
    * Render this page.
    */
   render() {
-    if (this.props.authState === 'signedIn') {
+    if (this.props.authState === 'signedin') {
       return (
         <div className="main-wrapper">
           <Router>
@@ -82,25 +79,25 @@ class Main extends React.Component<IProps, IState> {
                     this.props.routes
                       .filter((route: IRoute) => route.visible)
                       .map((route: IRoute) => {
-                      return (
-                        <LinkContainer to={route.path} key={route.path}>
-                          <Nav.Link>
-                            {
-                              route.icon &&
-                              <route.icon />
-                            }
-                            <EmptyCol />
-                            { I18n.get(route.nameCode) }
-                          </Nav.Link>
-                        </LinkContainer>
-                      );
-                    })
+                        return (
+                          <LinkContainer to={route.path} key={route.path}>
+                            <Nav.Link>
+                              {
+                                route.icon &&
+                                <route.icon />
+                              }
+                              <EmptyCol />
+                              {I18n.get(route.nameCode)}
+                            </Nav.Link>
+                          </LinkContainer>
+                        );
+                      })
                   }
                 </Nav>
-                <Button variant="link" onClick={ this.signOut }>
+                <Button variant="link" onClick={this.signOut}>
                   <GoSignOut />
                   <EmptyCol />
-                  { I18n.get('button.sign.out') }
+                  {I18n.get('button.sign.out')}
                 </Button>
               </Navbar.Collapse>
             </Navbar>

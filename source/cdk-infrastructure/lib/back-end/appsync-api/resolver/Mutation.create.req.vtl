@@ -1,0 +1,70 @@
+## Check authorization
+#set ($isAllowed = false)
+#set ($userGroups = $util.defaultIfNull($ctx.identity.claims.get("cognito:groups"), []))
+#set ($allowedGroups = ["AdminGroup"])
+#foreach ($userGroup in $userGroups)
+  #if ($allowedGroups.contains($userGroup))
+    #set ($isAllowed = true)
+    #break
+  #end
+#end
+
+## Throw authorized if the user is not authorized.
+#if ($isAllowed == false)
+  $util.unauthorized()
+#end
+
+## Check duplication
+#set ($duplicated = $ctx.prev.result.items)
+#if ($duplicated.size() > 0)
+  #if ($ctx.args.rootCause)
+    $util.error("Same root cause already exists.", "DataDuplicatedError")
+  #else
+    $util.error("Same name already exists.", "DataDuplicatedError")
+  #end
+#end
+
+## Check validation
+#if ($ctx.args.sms)
+  #if (!$util.matches("^((\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})(,\s*((\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}))*$", $ctx.args.sms))
+    $util.error("SMS No. must be a comma-separated list of valid phone numbers.")
+  #end
+#end
+#if ($ctx.args.email)
+  #if (!$util.matches("^([_a-z0-9-]+(\.[_a-z0-9-]+)*(\+[a-z0-9-]+)?@\w+([\.-]?\w+)*(\.\w{2,3})+)(,\s*([_a-z0-9-]+(\.[_a-z0-9-]+)*(\+[a-z0-9-]+)?@\w+([\.-]?\w+)*(\.\w{2,3})+))*$", $ctx.args.email))
+    $util.error("E-Mail must be a comma-separated list of valid E-Mail addresses.")
+  #end
+#end
+
+## Set default values
+$util.qr($ctx.args.put("version", $util.defaultIfNull($ctx.args.version, 1)))
+$util.qr($ctx.args.put("createdAt", $util.defaultIfNull($ctx.args.createdAt, $util.time.nowISO8601())))
+$util.qr($ctx.args.put("updatedAt", $util.defaultIfNull($ctx.args.updatedAt, $util.time.nowISO8601())))
+#if ($ctx.args.type == "AREA")
+  $util.qr($ctx.args.put("parentId", $ctx.args.areaSiteId))
+#end
+#if ($ctx.args.type == "STATION")
+  $util.qr($ctx.args.put("parentId", $ctx.args.stationAreaId))
+#end
+#if ($ctx.args.type == "DEVICE")
+  $util.qr($ctx.args.put("parentId", $ctx.args.deviceStationId))
+#end
+#if ($ctx.args.type == "PROCESS")
+  $util.qr($ctx.args.put("parentId", $ctx.args.processAreaId))
+#end
+#if ($ctx.args.type == "EVENT")
+  #if ( ! $ctx.args.parentId)
+    ## If the parentId does not exist, this is a top-level event so use the process ID as the parentId
+    $util.qr($ctx.args.put("parentId", $ctx.args.eventProcessId))
+  #end
+#end
+
+{
+  "version": "2017-02-28",
+  "operation": "PutItem",
+  "key": {
+    "id": $util.dynamodb.toDynamoDBJson($util.defaultIfNullOrBlank($ctx.args.id, $util.autoId())),
+    "type": $util.dynamodb.toDynamoDBJson($ctx.args.type),
+  },
+  "attributeValues": $util.dynamodb.toMapValuesJson($context.args)
+}
