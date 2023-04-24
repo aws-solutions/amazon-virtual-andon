@@ -1,10 +1,13 @@
 {
   "name": "amazon-virtual-andon",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "author": "AWS Solutions",
   "license": "Apache-2.0",
   "bin": {
     "amazon-virtual-andon": "bin/amazon-virtual-andon.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "scripts": {
     "clean": "rm -rf node_modules/ cdk.out/ coverage/ package-lock.json",
@@ -14,27 +17,19 @@
     "cdk": "cdk"
   },
   "devDependencies": {
-    "@aws-cdk/assert": "1.125.0",
-    "@types/jest": "^26.0.10",
-    "@types/node": "^10.0.0",
-    "jest": "^26.4.2",
-    "ts-jest": "^26.2.0",
-    "aws-cdk": "1.125.0",
-    "ts-node": "^9.0.0",
-    "typescript": "~3.9.7",
-    "@aws-cdk/aws-appsync": "1.125.0",
-    "@aws-cdk/aws-cloudfront": "1.125.0",
-    "@aws-cdk/aws-dynamodb": "1.125.0",
-    "@aws-cdk/aws-events": "1.125.0",
-    "@aws-cdk/aws-glue": "1.125.0",
-    "@aws-cdk/aws-iam": "1.125.0",
-    "@aws-cdk/aws-iot": "1.125.0",
-    "@aws-cdk/aws-kms": "1.125.0",
-    "@aws-cdk/aws-lambda": "1.125.0",
-    "@aws-cdk/aws-s3": "1.125.0",
-    "@aws-cdk/aws-sns": "1.125.0",
-    "@aws-cdk/core": "1.125.0",
-    "@aws-solutions-constructs/aws-cloudfront-s3": "1.125.0",
-    "@aws-solutions-constructs/aws-iot-lambda": "1.125.0"
+    "@aws-cdk/assert": "2.68.0",
+    "@aws-cdk/aws-glue-alpha": "^2.72.1-alpha.0",
+    "@aws-cdk/aws-servicecatalogappregistry-alpha": "^2.74.0-alpha.0",
+    "@aws-solutions-constructs/aws-cloudfront-s3": "2.38.0",
+    "@aws-solutions-constructs/aws-iot-lambda": "2.38.0",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^18.15.11",
+    "aws-cdk": "2.74.0",
+    "constructs": "^10.1.283",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.1",
+    "typescript": "~5.0.3",
+    "cdk-nag": "^2.23.4"
   }
 }

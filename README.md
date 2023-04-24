@@ -64,3 +64,14 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+## Deploying using cloudformation command
+
+aws cloudformation create-stack \
+   --profile ${AWS_PROFILE:-default} \
+   --region ${REGION} \
+   --template-url https://${DIST_BUCKET_PREFIX}-${REGION}.s3.amazonaws.com/${SOLUTION_NAME}/${VERSION}/amazon-virtual-andon.template \
+   --stack-name AmazonVirtualAndon \
+   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+   --parameters \
+        ParameterKey=AdministratorEmail,ParameterValue=(email)

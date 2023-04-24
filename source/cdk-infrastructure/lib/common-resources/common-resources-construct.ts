@@ -1,10 +1,13 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import { Construct, RemovalPolicy } from '@aws-cdk/core';
-import { BlockPublicAccess, Bucket, BucketAccessControl, BucketEncryption } from '@aws-cdk/aws-s3';
 import { SolutionHelper } from './solution-helper/solution-helper-construct';
 import { addCfnSuppressRules } from '../../utils/utils';
+import { Construct } from 'constructs';
+import { BlockPublicAccess, Bucket, BucketPolicy, BucketEncryption } from 'aws-cdk-lib/aws-s3';
+import { PolicyDocument, PolicyStatement, Effect, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { RemovalPolicy } from 'aws-cdk-lib';
+import { NagSuppressions } from 'cdk-nag';
 
 export interface CommonResourcesProps {
     readonly defaultLanguage: string;
@@ -22,23 +25,10 @@ export interface CommonResourcesProps {
  * with a SolutionHelper construct
  */
 export class CommonResources extends Construct {
-    public readonly logsBucket: Bucket;
     public readonly solutionHelper: SolutionHelper;
 
     constructor(scope: Construct, id: string, props: CommonResourcesProps) {
         super(scope, id);
-
-        this.logsBucket = new Bucket(this, 'LogBucket', {
-            accessControl: BucketAccessControl.LOG_DELIVERY_WRITE,
-            blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
-            encryption: BucketEncryption.S3_MANAGED,
-            removalPolicy: RemovalPolicy.RETAIN,
-        });
-
-        addCfnSuppressRules(this.logsBucket, [
-            { id: 'W35', reason: 'This bucket is to store S3 and CloudFront logs, so it does not require to have logs for this bucket.' },
-            { id: 'W51', reason: 'This bucket is to store S3 and CloudFront logs, so it does not require a bucket policy.' }
-        ]);
 
         this.solutionHelper = new SolutionHelper(this, 'SolutionHelper', {
             sendAnonymousData: props.sendAnonymousData,
@@ -49,5 +39,18 @@ export class CommonResources extends Construct {
             sourceCodeKeyPrefix: props.sourceCodeKeyPrefix,
             loggingLevel: props.loggingLevel
         });
+
+
+        NagSuppressions.addResourceSuppressions(
+            this.solutionHelper,
+            [
+                {
+                    id: "AwsSolutions-IAM5",
+                    appliesTo: ["Action::s3:GetObject*"],
+                    reason: "Cloudwatch logs policy needs access to all logs arns because it's creating log groups"
+                }
+            ],
+            true
+          );
     }
 }

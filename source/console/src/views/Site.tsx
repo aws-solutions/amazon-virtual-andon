@@ -169,15 +169,17 @@ class Site extends React.Component<IProps, IState> {
     } catch (error) {
       let message = I18n.get('error.delete.site');
 
-      if (error.errors) {
-        const { errorType } = error.errors[0];
+      const castError = error as any;
+
+      if (castError.errors) {
+        const { errorType } = castError.errors[0];
 
         if (errorType === 'Unauthorized') {
           message = I18n.get('error.not.authorized');
         }
       }
 
-      LOGGER.error('Error while deleting site', error);
+      LOGGER.error('Error while deleting site', castError);
       this.props.handleNotification(message, 'error', 5);
       this.setState({ isModalProcessing: false });
     }
@@ -221,8 +223,10 @@ class Site extends React.Component<IProps, IState> {
     } catch (error) {
       let message = I18n.get('error.create.site');
 
-      if (error.errors) {
-        const { errorType } = error.errors[0];
+      const castError = error as any;
+
+      if (castError.errors) {
+        const { errorType } = castError.errors[0];
 
         if (errorType === 'Unauthorized') {
           message = I18n.get('error.not.authorized');
@@ -231,7 +235,7 @@ class Site extends React.Component<IProps, IState> {
         }
       }
 
-      LOGGER.error('Error while adding site', error);
+      LOGGER.error('Error while adding site', castError);
       this.props.handleNotification(message, 'error', 5);
       this.setState({ isModalProcessing: false });
     }

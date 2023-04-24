@@ -209,7 +209,7 @@ class GraphQLCommon {
    * @return {Promise<any>} The return value by GraphQL after deletion
    */
   async deleteSite(siteId: string): Promise<any> {
-    const promises = [];
+    const promises: Promise<any>[] = [];
 
     // Get the list of areas belonged to the site, and delete them.
     const areas = await this.listAreas(siteId);
@@ -227,7 +227,7 @@ class GraphQLCommon {
    * @return {Promise<any>} The return value by GraphQL after deletion
    */
   async deleteArea(areaId: string): Promise<any> {
-    const promises = [];
+    const promises: Promise<any>[] = [];
 
     // Get the list of processes and stations belonged to the area, and delete them.
     const processes = await this.listProcesses(areaId);
@@ -250,7 +250,7 @@ class GraphQLCommon {
    * @return {Promise<any>} The return value by GraphQL after deletion
    */
   async deleteStation(stationId: string): Promise<any> {
-    const promises = [];
+    const promises: Promise<any>[] = [];
 
     // Get the list of devices belonged to the station and delete them.
     const devices = await this.listDevices(stationId);
@@ -277,7 +277,7 @@ class GraphQLCommon {
    * @return {Promise<any>} The return value by GraphQL after deletion
    */
   async deleteProcess(processId: string): Promise<any> {
-    const promises = [];
+    const promises: Promise<any>[] = [];
 
     // Get the list of events belonged to the process, and delete them.
     const events = await this.listEventsInProcess(processId);

@@ -1,14 +1,16 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import { Construct, CfnParameter, CfnCondition, Stack, Duration, ArnFormat, Aws, Fn, CfnResource, CustomResource } from '@aws-cdk/core';
-import { Function as LambdaFunction, CfnPermission as LambdaPermission, Runtime, Code } from '@aws-cdk/aws-lambda';
-import { Bucket } from '@aws-cdk/aws-s3';
-import { Table } from '@aws-cdk/aws-dynamodb';
-import { Policy, PolicyDocument, PolicyStatement, Role, ServicePrincipal, Effect } from '@aws-cdk/aws-iam';
+import { CfnParameter, CfnCondition, Stack, Duration, ArnFormat, Aws, Fn, CfnResource, CustomResource } from "aws-cdk-lib";
+import { Function as LambdaFunction, CfnPermission as LambdaPermission, Runtime, Code } from 'aws-cdk-lib/aws-lambda';
+import { Bucket } from 'aws-cdk-lib/aws-s3';
+import { Table } from 'aws-cdk-lib/aws-dynamodb';
+import { Policy, PolicyDocument, PolicyStatement, Role, ServicePrincipal, Effect } from 'aws-cdk-lib/aws-iam';
 import { IotConstants } from '../../../utils/utils';
 import { CustomResourceActions, IConfigureBucketNotificationRequestProps } from '../../../../solution-helper/lib/utils';
 import { IotToLambda } from '@aws-solutions-constructs/aws-iot-lambda';
+import { Construct } from "constructs";
+import { NagSuppressions } from "cdk-nag";
 
 export interface ExternalIntegrationsProps {
   readonly solutionDisplayName: string;
@@ -28,6 +30,7 @@ export interface ExternalIntegrationsProps {
  */
 export class ExternalIntegrations extends Construct {
   public readonly anomalyDetectionBucketParameter: CfnParameter;
+  public externalIntegrationsIotToLambda: IotToLambda;
 
   constructor(scope: Construct, id: string, props: ExternalIntegrationsProps) {
     super(scope, id);
@@ -88,7 +91,7 @@ export class ExternalIntegrations extends Construct {
       }
     });
 
-    (new Policy(this, 'AnomalyDetectionBucketPolicy', {
+    const anomalyDetectionBucketPolicy = new Policy(this, 'AnomalyDetectionBucketPolicy', {
       document: new PolicyDocument({
         statements: [new PolicyStatement({
           effect: Effect.ALLOW,
@@ -97,7 +100,20 @@ export class ExternalIntegrations extends Construct {
         })]
       }),
       roles: [externalIntegrationsFnRole]
-    }).node.defaultChild as CfnResource).cfnOptions.condition = anomalyDetectionBucketCondition;
+    });
+    
+    (anomalyDetectionBucketPolicy.node.defaultChild as CfnResource).cfnOptions.condition = anomalyDetectionBucketCondition;
+
+    NagSuppressions.addResourceSuppressions(
+      anomalyDetectionBucketPolicy,
+      [
+          {
+              id: "AwsSolutions-IAM5",
+              reason: "Legacy code requires access to objects in bucket but uses prefix"
+          }
+      ],
+      true
+    );
 
     const externalIntegrationsIotToLambda = new IotToLambda(this, 'ExternalIntegrationsIotToLambda', {
       iotTopicRuleProps: {
@@ -108,7 +124,7 @@ export class ExternalIntegrations extends Construct {
         }
       },
       lambdaFunctionProps: {
-        runtime: Runtime.NODEJS_14_X,
+        runtime: Runtime.NODEJS_18_X,
         handler: 'external-integrations-handler/index.handler',
         timeout: Duration.seconds(60),
         description: `${props.solutionDisplayName} (${props.solutionVersion}): Handles issues created by external integrations`,
@@ -161,5 +177,7 @@ export class ExternalIntegrations extends Construct {
     (configureBucketNotificationCustomResource.node.defaultChild as CfnResource).addDependsOn(solutionHelperPutBucketNotificationPolicy.node.defaultChild as CfnResource);
     (configureBucketNotificationCustomResource.node.defaultChild as CfnResource).addDependsOn(externalIntegrationsIotToLambda.lambdaFunction.node.defaultChild as CfnResource);
     (configureBucketNotificationCustomResource.node.defaultChild as CfnResource).cfnOptions.condition = anomalyDetectionBucketCondition;
+
+    this.externalIntegrationsIotToLambda = externalIntegrationsIotToLambda;
   }
 }

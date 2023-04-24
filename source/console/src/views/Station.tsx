@@ -192,15 +192,17 @@ class Station extends React.Component<IProps, IState> {
     } catch (error) {
       let message = I18n.get('error.delete.station');
 
-      if (error.errors) {
-        const { errorType } = error.errors[0];
+      const castError = error as any;
+
+      if (castError.errors) {
+        const { errorType } = castError.errors[0];
 
         if (errorType === 'Unauthorized') {
           message = I18n.get('error.not.authorized');
         }
       }
 
-      LOGGER.error('Error while deleting station', error);
+      LOGGER.error('Error while deleting station', castError);
       this.props.handleNotification(message, 'error', 5);
       this.setState({ isModalProcessing: false });
     }
@@ -245,8 +247,10 @@ class Station extends React.Component<IProps, IState> {
     } catch (error) {
       let message = I18n.get('error.create.station');
 
-      if (error.errors) {
-        const { errorType } = error.errors[0];
+      const castError = error as any;
+
+      if (castError.errors) {
+        const { errorType } = castError.errors[0];
 
         if (errorType === 'Unauthorized') {
           message = I18n.get('error.not.authorized');
@@ -255,7 +259,7 @@ class Station extends React.Component<IProps, IState> {
         }
       }
 
-      LOGGER.error('Error while adding station', error);
+      LOGGER.error('Error while adding station', castError);
       this.props.handleNotification(message, 'error', 5);
       this.setState({ isModalProcessing: false });
     }

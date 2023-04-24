@@ -1273,16 +1273,16 @@ class AddEditEvent extends React.Component<IProps, IState> {
           <Row>
             <Col>
               <Breadcrumb>
-                <LinkContainer to="/sites" exact>
+                <LinkContainer to="/sites">
                   <Breadcrumb.Item>{I18n.get('text.sites')}</Breadcrumb.Item>
                 </LinkContainer>
-                <LinkContainer to={`/sites/${this.state.siteId}`} exact>
+                <LinkContainer to={`/sites/${this.state.siteId}`}>
                   <Breadcrumb.Item>{I18n.get('text.areas')}: {this.state.siteName}</Breadcrumb.Item>
                 </LinkContainer>
-                <LinkContainer to={`/areas/${this.state.areaId}/processes`} exact>
+                <LinkContainer to={`/areas/${this.state.areaId}/processes`}>
                   <Breadcrumb.Item>{I18n.get('info.processes')}: {this.state.areaName}</Breadcrumb.Item>
                 </LinkContainer>
-                <LinkContainer to={`/processes/${this.state.processId}`} exact>
+                <LinkContainer to={`/processes/${this.state.processId}`}>
                   <Breadcrumb.Item>{I18n.get('text.events')}: {this.state.processName}</Breadcrumb.Item>
                 </LinkContainer>
                 <Breadcrumb.Item active>
