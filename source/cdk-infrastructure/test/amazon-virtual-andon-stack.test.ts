@@ -3,8 +3,8 @@
 
 import { expect as expectCDK, matchTemplate, MatchStyle, SynthUtils } from '@aws-cdk/assert';
 import '@aws-cdk/assert/jest';
-import { AttributeType, Table } from '@aws-cdk/aws-dynamodb';
-import * as cdk from '@aws-cdk/core';
+import { AttributeType, Table } from 'aws-cdk-lib/aws-dynamodb';
+import * as cdk from 'aws-cdk-lib/core';
 import * as CdkInfrastructure from '../lib/amazon-virtual-andon-stack';
 import { addCfnSuppressRules } from '../utils/utils';
 
@@ -17,7 +17,7 @@ test('AVA Test Stack Snapshot', () => {
     solutionDisplayName: 'AVA Test',
     solutionId: 'SOxyz',
     solutionName: 'ava-test',
-    solutionVersion: 'v3.0.0'
+    solutionVersion: 'v3.0.1'
   });
 
   expect.assertions(1);

@@ -1,13 +1,15 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import { Construct, RemovalPolicy, Stack, ArnFormat, Duration } from '@aws-cdk/core';
-import { GraphqlApi, Schema, AuthorizationType, FieldLogLevel, UserPoolDefaultAction, MappingTemplate, DynamoDbDataSource, AppsyncFunction, Resolver, BaseResolverProps } from '@aws-cdk/aws-appsync';
-import { Table, AttributeType, BillingMode, TableEncryption, ProjectionType, CfnTable } from '@aws-cdk/aws-dynamodb';
-import { Role, ServicePrincipal, PolicyStatement, PolicyDocument, Effect } from '@aws-cdk/aws-iam';
-import { UserPool } from '@aws-cdk/aws-cognito';
-import { Function as LambdaFunction, Runtime, Code } from '@aws-cdk/aws-lambda';
-import { Bucket } from '@aws-cdk/aws-s3';
+import { ArnFormat, Duration, RemovalPolicy, Stack } from "aws-cdk-lib";
+import { AppsyncFunction, AuthorizationType, BaseResolverProps, DynamoDbDataSource, FieldLogLevel, GraphqlApi, MappingTemplate, Resolver, SchemaFile, UserPoolDefaultAction } from "aws-cdk-lib/aws-appsync";
+import { UserPool } from "aws-cdk-lib/aws-cognito";
+import { AttributeType, BillingMode, CfnTable, ProjectionType, Table, TableEncryption } from "aws-cdk-lib/aws-dynamodb";
+import { Effect, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { Code, Runtime, Function } from "aws-cdk-lib/aws-lambda";
+import { Bucket } from "aws-cdk-lib/aws-s3";
+import { NagSuppressions } from "cdk-nag";
+import { Construct } from "constructs";
 
 export interface AppSyncApiProps {
   readonly solutionDisplayName: string;
@@ -40,15 +42,28 @@ export class AppSyncApi extends Construct {
       path: '/'
     });
 
-    logRole.addToPrincipalPolicy(new PolicyStatement({
+    const logRolePolicy = new PolicyStatement({
       effect: Effect.ALLOW,
       actions: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
       resources: [Stack.of(this).formatArn({ service: 'logs', resource: 'log-group', resourceName: '*', arnFormat: ArnFormat.COLON_RESOURCE_NAME })]
-    }));
+    })
+
+    logRole.addToPrincipalPolicy(logRolePolicy);
+
+    NagSuppressions.addResourceSuppressions(
+      logRole,
+      [
+          {
+              id: "AwsSolutions-IAM5",
+              reason: "Cloudwatch logs policy needs access to all logs arns because it's creating log groups"
+          }
+      ],
+      true
+    );
 
     this.graphqlApi = new GraphqlApi(this, 'GraphqlApi', {
       name: 'ava-api',
-      schema: Schema.fromAsset(`${__dirname}/schema.graphql`),
+      schema: SchemaFile.fromAsset(`${__dirname}/schema.graphql`),
       authorizationConfig: {
         defaultAuthorization: {
           authorizationType: AuthorizationType.USER_POOL,
@@ -103,8 +118,19 @@ export class AppSyncApi extends Construct {
       }
     });
 
-    const avaResolverLambdaFn = new LambdaFunction(this, 'AppSyncResolverLambdaFunction', {
-      runtime: Runtime.NODEJS_14_X,
+    NagSuppressions.addResourceSuppressions(
+      avaResolverLambdaFnRole,
+      [
+          {
+              id: "AwsSolutions-IAM5",
+              reason: "Cloudwatch logs policy needs access to all logs arns because it's creating log groups"
+          }
+      ],
+      true
+    );
+
+    const avaResolverLambdaFn = new Function(this, 'AppSyncResolverLambdaFunction', {
+      runtime: Runtime.NODEJS_18_X,
       handler: 'appsync-lambda-resolver/index.handler',
       timeout: Duration.seconds(60),
       description: `${props.solutionDisplayName} (${props.solutionVersion}): Resolver for various AppSync functions`,
@@ -139,7 +165,7 @@ export class AppSyncApi extends Construct {
       createEventFunction: this.getFunction({ dataSource: dataHierarchyDataSource, name: 'CreateEventFunction', description: 'Create an event', reqTemplateStr: 'Mutation.create.req.vtl' }),
       updateEventFunction: this.getFunction({ dataSource: dataHierarchyDataSource, name: 'UpdateEventFunction', description: 'Update an event', reqTemplateStr: 'Mutation.updateEvent.req.vtl' }),
       deleteEventFunction: this.getFunction({ dataSource: dataHierarchyDataSource, name: 'DeleteEventFunction', description: 'Delete an event', reqTemplateStr: 'Mutation.delete.req.vtl' }),
-      handleEventSnsFunction: avaLambdaDataSource.createFunction({ name: 'HandleEventSnsFunction', description: 'Manages SNS Subscriptions to the main AVA Topic' }),
+      handleEventSnsFunction: avaLambdaDataSource.createFunction("HandleEventSNSFunction", { name: 'HandleEventSnsFunction', description: 'Manages SNS Subscriptions to the main AVA Topic' }),
       listIssuesByDeviceFunction: this.getFunction({ dataSource: issuesDataSource, name: 'ListIssuesByDeviceFunction', description: 'Get issues by device', reqTemplateStr: 'Query.issuesByDevice.req.vtl' })
     };
 
@@ -305,11 +331,11 @@ export class AppSyncApi extends Construct {
       resTemplateStr: 'Response.prev.vtl'
     });
     this.getResolver({ typeName: 'Mutation', fieldName: 'deleteRootCause', dataSource: dataHierarchyDataSource, reqTemplateStr: 'Mutation.delete.req.vtl' });
-    avaLambdaDataSource.createResolver({ typeName: 'Query', fieldName: 'getPrevDayIssuesStats' });
+    avaLambdaDataSource.createResolver("AvaLambdaDataSourceResolver", { typeName: 'Query', fieldName: 'getPrevDayIssuesStats' });
 
     // Create subscriptions
     ['onCreateIssue', 'onUpdateIssue', 'onPutPermission', 'onDeletePermission', 'onCreateRootCause', 'onDeleteRootCause'].forEach(fieldName => {
-      this.graphqlApi.createResolver({
+      this.graphqlApi.createResolver(`${fieldName}GraphQLApi`, {
         typeName: 'Subscription',
         dataSource: noneDataSource,
         fieldName,
@@ -321,6 +347,17 @@ export class AppSyncApi extends Construct {
         responseMappingTemplate: MappingTemplate.fromFile(`${__dirname}/resolver/Subscription.res.vtl`)
       });
     });
+
+    NagSuppressions.addResourceSuppressions(
+      this.graphqlApi,
+      [
+          {
+              id: "AwsSolutions-IAM5",
+              reason: "Needs these wildcards on actions to function properly"
+          }
+      ],
+      true
+  );
   }
 
   /**
@@ -418,10 +455,10 @@ export class AppSyncApi extends Construct {
     };
 
     if (props.dataSource) {
-      return props.dataSource.createResolver(createResolverProps);
+      return props.dataSource.createResolver(`${props.typeName}${props.fieldName}Resolver`, createResolverProps);
     }
 
-    return this.graphqlApi.createResolver(createResolverProps);
+    return this.graphqlApi.createResolver(`${props.typeName}${props.fieldName}Resolver`, createResolverProps);
   }
 
   /**
@@ -430,7 +467,7 @@ export class AppSyncApi extends Construct {
    * @returns AppsyncFunction object
    */
   private getFunction(props: IGetFunctionProps): AppsyncFunction {
-    return props.dataSource.createFunction({
+    return props.dataSource.createFunction(props.name, {
       name: props.name,
       description: props.description,
       requestMappingTemplate: MappingTemplate.fromFile(`${__dirname}/resolver/${props.reqTemplateStr}`),

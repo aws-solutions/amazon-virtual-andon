@@ -1,13 +1,16 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import { Construct, Aws, RemovalPolicy, CfnResource, CfnParameter, CfnCondition, Fn } from '@aws-cdk/core';
-import { Table } from '@aws-cdk/aws-dynamodb';
-import { Bucket, IBucket, BucketEncryption } from '@aws-cdk/aws-s3';
-import { CfnCrawler as GlueCrawler, Database as GlueDatabase, CfnJob as GlueJob, CfnTable as GlueTable, CfnWorkflow as GlueWorkflow, CfnTrigger as GlueTrigger } from '@aws-cdk/aws-glue';
-import { PolicyDocument, PolicyStatement, Role, ServicePrincipal, Effect, ManagedPolicy, AnyPrincipal } from '@aws-cdk/aws-iam';
-import { Schedule } from '@aws-cdk/aws-events';
+import { Aws, RemovalPolicy, CfnResource, CfnParameter, CfnCondition, Fn } from "aws-cdk-lib";
+import { Table } from 'aws-cdk-lib/aws-dynamodb';
+import { Bucket, IBucket, BucketEncryption, BlockPublicAccess, BucketPolicy } from 'aws-cdk-lib/aws-s3';
+import { CfnCrawler as GlueCrawler, CfnJob as GlueJob, CfnTable as GlueTable, CfnWorkflow as GlueWorkflow, CfnTrigger as GlueTrigger } from 'aws-cdk-lib/aws-glue';
+import { PolicyDocument, PolicyStatement, Role, ServicePrincipal, Effect, ManagedPolicy, AnyPrincipal } from 'aws-cdk-lib/aws-iam';
+import { Schedule } from 'aws-cdk-lib/aws-events';
 import { addCfnSuppressRules } from '../../../utils/utils';
+import { Construct } from "constructs";
+import { Database } from "@aws-cdk/aws-glue-alpha";
+import { NagSuppressions } from "cdk-nag";
 
 export interface DataAnalysisProps {
   readonly solutionDisplayName: string;
@@ -18,7 +21,6 @@ export interface DataAnalysisProps {
   readonly loggingLevel: string;
   readonly issuesTable: Table;
   readonly dataHierarchyTable: Table;
-  readonly logsBucket: Bucket;
 }
 
 /**
@@ -64,8 +66,7 @@ export class DataAnalysis extends Construct {
     this.glueOutputBucket = new Bucket(this, 'AvaGlueOutputBucket', {
       removalPolicy: RemovalPolicy.RETAIN,
       encryption: BucketEncryption.S3_MANAGED,
-      serverAccessLogsBucket: props.logsBucket,
-      serverAccessLogsPrefix: 'glue-output/',
+      serverAccessLogsPrefix: 'server-access-logs/',
       blockPublicAccess: {
         blockPublicAcls: true,
         blockPublicPolicy: true,
@@ -89,7 +90,18 @@ export class DataAnalysis extends Construct {
 
     (this.glueOutputBucket.policy!.node.defaultChild as CfnResource).cfnOptions.condition = this.glueWorkflowCondition;
 
-    const glueDatabase = new GlueDatabase(this, 'AvaGlueDatabase', { databaseName: 'amazon-virtual-andon-glue-database' });
+    NagSuppressions.addResourceSuppressions(
+        this.glueOutputBucket,
+        [
+            {
+                id: "AwsSolutions-S10",
+                reason: "Legacy code indicates that this is required to make the glue output process to work"
+            }
+        ],
+        true
+    );
+
+    const glueDatabase = new Database(this, 'AvaGlueDatabase', { databaseName: 'amazon-virtual-andon-glue-database' });
     (glueDatabase.node.defaultChild as CfnResource).cfnOptions.condition = this.glueWorkflowCondition;
     (glueDatabase.node.defaultChild as CfnResource).overrideLogicalId('AvaGlueDatabase');
     this.glueDatabaseName = glueDatabase.databaseName;
@@ -236,6 +248,21 @@ export class DataAnalysis extends Construct {
     });
     crawler.cfnOptions.condition = this.glueWorkflowCondition;
 
+    NagSuppressions.addResourceSuppressions(
+        crawlerRole,
+        [
+            {
+                id: "AwsSolutions-IAM4",
+                reason: "Legacy code requires managed policy, to be addressed in future"
+            },
+            {
+                id: "AwsSolutions-IAM5",
+                reason: "Legacy code requires wildcards on end of dynamo table ARNs, may not be necessary"
+            }
+        ],
+        true
+    );
+
     const cleanupJob = this.getCleanupJob();
     cleanupJob.cfnOptions.condition = this.glueWorkflowCondition;
 
@@ -336,6 +363,21 @@ export class DataAnalysis extends Construct {
       }
     });
 
+    NagSuppressions.addResourceSuppressions(
+        glueJobRole,
+        [
+            {
+                id: "AwsSolutions-IAM4",
+                reason: "Legacy code requires managed policy, to be addressed in future"
+            },
+            {
+                id: "AwsSolutions-IAM5",
+                reason: "Legacy code requires delete object on glue bucket but uses prefix"
+            }
+        ],
+        true
+    );
+
     (glueJobRole.node.defaultChild as CfnResource).cfnOptions.condition = this.glueWorkflowCondition;
 
     return new GlueJob(this, 'AvaEtlCleanupJob', {
@@ -412,6 +454,21 @@ export class DataAnalysis extends Construct {
 
     (glueJobRole.node.defaultChild as CfnResource).cfnOptions.condition = this.glueWorkflowCondition;
     addCfnSuppressRules(glueJobRole, [{ id: 'W11', reason: '* is required for the s3:ListAllMyBuckets permission' }]);
+
+    NagSuppressions.addResourceSuppressions(
+        glueJobRole,
+        [
+            {
+                id: "AwsSolutions-IAM4",
+                reason: "Legacy code requires managed policy, to be addressed in future"
+            },
+            {
+                id: "AwsSolutions-IAM5",
+                reason: "Legacy code requires listing all buckets in account"
+            }
+        ],
+        true
+    );
 
     return new GlueJob(this, 'AvaEtlDataExportJob', {
       role: glueJobRole.roleArn,

@@ -1,10 +1,11 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import { CfnResource, Resource, IConstruct, IAspect } from '@aws-cdk/core';
-import { Bucket } from '@aws-cdk/aws-s3';
+import { CfnResource, Resource, IAspect } from 'aws-cdk-lib';
+import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { CustomResourceActions, IAndonWebsiteConfig } from '../../solution-helper/lib/utils';
-import { CfnFunction } from '@aws-cdk/aws-lambda';
+import { CfnFunction } from 'aws-cdk-lib/aws-lambda';
+import { IConstruct } from 'constructs';
 
 /**
  * The CFN NAG suppress rule interface

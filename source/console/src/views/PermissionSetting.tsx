@@ -22,6 +22,7 @@ import Alert from 'react-bootstrap/Alert';
 import Tab from 'react-bootstrap/Tab';
 import ListGroup from 'react-bootstrap/ListGroup';
 import Spinner from 'react-bootstrap/Spinner';
+import {Buffer} from 'buffer';
 
 // Import graphql
 import { putPermission } from '../graphql/mutations';
@@ -257,15 +258,17 @@ class PermissionSetting extends React.Component<IProps, IState> {
     } catch (error) {
       let message = I18n.get('error.save.permission');
 
-      if (error.errors) {
-        const { errorType } = error.errors[0];
+      const castError = error as any;
+
+      if (castError.errors) {
+        const { errorType } = castError.errors[0];
 
         if (errorType === 'Unauthorized') {
           message = I18n.get('error.not.authorized');
         }
       }
 
-      LOGGER.error('Error while saving permission', error);
+      LOGGER.error('Error while saving permission', castError);
       this.props.handleNotification(message, 'error', 5);
       this.setState({ isLoading: false });
     }

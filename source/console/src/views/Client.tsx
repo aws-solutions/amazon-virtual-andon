@@ -26,6 +26,7 @@ import Modal from 'react-bootstrap/Modal';
 import Table from 'react-bootstrap/Table'
 import { BsFillExclamationCircleFill } from 'react-icons/bs';
 import { RiArrowGoBackFill } from 'react-icons/ri';
+import {Buffer} from 'buffer';
 
 // Import graphql
 import { getPermission } from '../graphql/queries';
@@ -979,7 +980,7 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
       return;
     }
 
-    const promises = [];
+    const promises: Promise<void>[] = [];
 
     // If there's processing events, it won't publish messages for the event anymore.
     if (this.processingEvents.filter(processingEvent => processingEvent.id === event.id).length === 0) {

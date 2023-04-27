@@ -19,6 +19,7 @@ import Table from 'react-bootstrap/Table';
 import ProgressBar from 'react-bootstrap/ProgressBar';
 import Alert from 'react-bootstrap/Alert';
 import Modal from 'react-bootstrap/Modal';
+import {Buffer} from 'buffer';
 
 // Import custom setting
 import { LOGGING_LEVEL, CustomError, sortByName, makeVisibleBySearchKeyword } from '../util/CustomUtil';
@@ -157,17 +158,19 @@ class Permission extends React.Component<IProps, IState> {
     } catch (error) {
       let message = I18n.get('error.get.permissions');
 
-      if (error instanceof CustomError) {
-        message = error.message;
-      } else if (error.errors) {
-        const { errorType } = error.errors[0];
+      const castError = error as any;
+
+      if (castError instanceof CustomError) {
+        message = castError.message;
+      } else if (castError.errors) {
+        const { errorType } = castError.errors[0];
 
         if (errorType === 'Unauthorized') {
           message = I18n.get('error.not.authorized');
         }
       }
 
-      LOGGER.error('Error occurred while getting permissions.', error);
+      LOGGER.error('Error occurred while getting permissions.', castError);
       this.setState({ error: message });
     }
 
@@ -256,15 +259,17 @@ class Permission extends React.Component<IProps, IState> {
     } catch (error) {
       let message = I18n.get('error.delete.permission');
 
-      if (error.errors) {
-        const { errorType } = error.errors[0];
+      const castError = error as any;
+
+      if (castError.errors) {
+        const { errorType } = castError.errors[0];
 
         if (errorType === 'Unauthorized') {
           message = I18n.get('error.not.authorized');
         }
       }
 
-      LOGGER.error('Error while deleting permission', error);
+      LOGGER.error('Error while deleting permission', castError);
       this.props.handleNotification(I18n.get(message), 'error', 5);
       this.setState({ isModalProcessing: false });
     }

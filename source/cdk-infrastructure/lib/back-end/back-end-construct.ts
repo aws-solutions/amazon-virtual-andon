@@ -1,18 +1,20 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import { Construct, Duration, Aws, CfnResource, Stack, ArnFormat } from '@aws-cdk/core';
-import { Bucket } from '@aws-cdk/aws-s3';
-import { Runtime, Code, Function as LambdaFunction } from '@aws-cdk/aws-lambda';
 import { AppSyncApi } from './appsync-api/appsync-api-construct';
-import { UserPool } from '@aws-cdk/aws-cognito';
-import { Effect, PolicyStatement, ServicePrincipal, Role, PolicyDocument } from '@aws-cdk/aws-iam';
 import { IotToLambda } from '@aws-solutions-constructs/aws-iot-lambda';
-import { Topic } from '@aws-cdk/aws-sns';
-import { Alias } from '@aws-cdk/aws-kms'
 import { DataAnalysis } from './data-analysis/data-analysis-construct';
 import { ExternalIntegrations } from './external-integrations/external-integrations-construct';
 import { IotConstants } from '../../utils/utils';
+import { UserPool } from 'aws-cdk-lib/aws-cognito';
+import { Bucket } from 'aws-cdk-lib/aws-s3';
+import { Code, Function, Runtime } from 'aws-cdk-lib/aws-lambda';
+import { Construct } from 'constructs';
+import { ArnFormat, Aws, CfnResource, Duration, Stack } from 'aws-cdk-lib';
+import { Topic } from 'aws-cdk-lib/aws-sns';
+import { Alias } from 'aws-cdk-lib/aws-kms';
+import { Effect, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { NagSuppressions } from 'cdk-nag';
 
 export interface BackEndProps {
     readonly userPool: UserPool;
@@ -22,8 +24,7 @@ export interface BackEndProps {
     readonly solutionDisplayName: string;
     readonly solutionId: string;
     readonly loggingLevel: string;
-    readonly logsBucket: Bucket;
-    readonly solutionHelperLambda: LambdaFunction;
+    readonly solutionHelperLambda: Function;
     readonly iotEndpointAddress: string;
 }
 
@@ -114,7 +115,7 @@ export class BackEnd extends Construct {
                 }
             },
             lambdaFunctionProps: {
-                runtime: Runtime.NODEJS_14_X,
+                runtime: Runtime.NODEJS_18_X,
                 handler: 'ava-issue-handler/index.handler',
                 timeout: Duration.seconds(60),
                 description: `${props.solutionDisplayName} (${props.solutionVersion}): Handles issues posted to the '${IotConstants.ISSUES_TOPIC}' IoT Topic`,
@@ -132,6 +133,28 @@ export class BackEnd extends Construct {
                 }
             }
         });
+        
+        NagSuppressions.addResourceSuppressions(
+            handleIssuesFunctionRole,
+            [
+                {
+                    id: "AwsSolutions-IAM5",
+                    reason: "Cloudwatch logs policy needs access to all logs arns because it's creating log groups"
+                }
+            ],
+            true
+        );
+
+        NagSuppressions.addResourceSuppressions(
+            this.iotToLambda,
+            [
+                {
+                    id: "AwsSolutions-IAM5",
+                    reason: "Cloudwatch logs policy needs access to all logs arns because it's creating log groups"
+                }
+            ],
+            true
+        );
 
         this.iotResourcePolicy = new CfnResource(this, 'IoTResourcePolicy', {
             type: 'AWS::IoT::Policy',
@@ -175,8 +198,7 @@ export class BackEnd extends Construct {
             sourceCodeKeyPrefix: props.sourceCodeKeyPrefix,
             loggingLevel: props.loggingLevel,
             issuesTable: this.appsyncApi.issuesTable,
-            dataHierarchyTable: this.appsyncApi.dataHierarchyTable,
-            logsBucket: props.logsBucket
+            dataHierarchyTable: this.appsyncApi.dataHierarchyTable
         });
 
         this.externalIntegrationsConstruct = new ExternalIntegrations(this, 'ExternalIntegrations', {
