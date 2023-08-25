@@ -297,24 +297,7 @@ class RootCause extends React.Component<IProps, IState> {
                   result: I18n.get('text.success')
                 });
               } catch (error) {
-                let message = I18n.get('text.failure');
-
-                const castError = error as any;
-
-                if (castError.errors) {
-                  const { errorType } = castError.errors[0];
-
-                  if (errorType === 'Unauthorized') {
-                    message = I18n.get('error.not.authorized');
-                  } else if (errorType === 'DataDuplicatedError') {
-                    message = I18n.get('error.duplicate.rootcause');
-                  }
-                }
-
-                uploadResult.push({
-                  name: rootCause,
-                  result: message
-                });
+                errorMessage(error, uploadResult, rootCause);
               }
             } else {
               uploadResult.push({
@@ -661,3 +644,24 @@ class RootCause extends React.Component<IProps, IState> {
 }
 
 export default RootCause;
+
+function errorMessage(error: unknown, uploadResult: IUploadResult[], rootCause: string) {
+  let message = I18n.get('text.failure');
+
+  const castError = error as any;
+
+  if (castError.errors) {
+    const { errorType } = castError.errors[0];
+
+    if (errorType === 'Unauthorized') {
+      message = I18n.get('error.not.authorized');
+    } else if (errorType === 'DataDuplicatedError') {
+      message = I18n.get('error.duplicate.rootcause');
+    }
+  }
+
+  uploadResult.push({
+    name: rootCause,
+    result: message
+  });
+}

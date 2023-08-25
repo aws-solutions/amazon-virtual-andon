@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import { Aws, CfnCondition, CfnOutput, CfnParameter, StackProps, Fn, Stack, CfnMapping, Tags, Aspects } from 'aws-cdk-lib';
+import { Aws, CfnCondition, CfnOutput, CfnParameter, StackProps, Fn, Stack, CfnMapping, Tags, Aspects, IStackSynthesizer } from 'aws-cdk-lib';
 import { FrontEnd } from './front-end/front-end-construct';
 import { CommonResources } from './common-resources/common-resources-construct';
 import { BackEnd } from './back-end/back-end-construct';
@@ -18,6 +18,7 @@ export interface AmazonVirtualAndonStackProps extends StackProps {
   readonly solutionVersion: string;
   readonly solutionDisplayName: string;
   readonly solutionAssetHostingBucketNamePrefix: string;
+  readonly synthesizer?: IStackSynthesizer;
 }
 
 export class AmazonVirtualAndonStack extends Stack {

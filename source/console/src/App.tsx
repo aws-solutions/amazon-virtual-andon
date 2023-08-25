@@ -48,7 +48,7 @@ export enum AppSubscriptionTypes {
 const LOGGER = new Logger('App', LOGGING_LEVEL);
 
 // Declare Amazon Virtual Andon console configuration
-declare var andon_config: any;
+declare let andon_config: any;
 Amplify.addPluggable(new AWSIoTProvider({
   aws_pubsub_region: andon_config.aws_project_region,
   aws_pubsub_endpoint: andon_config.aws_iot_endpoint + '/mqtt'

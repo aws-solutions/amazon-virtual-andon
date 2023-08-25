@@ -143,58 +143,66 @@ class Observer extends React.Component<IProps, IState, RouteComponentProps> {
     try {
       switch (subscriptionType) {
         case ObserverSubscriptionTypes.CREATE_ISSUE:
-          if (this.createIssueSubscription) { this.createIssueSubscription.unsubscribe(); }
-
-          // @ts-ignore
-          this.createIssueSubscription = API.graphql(graphqlOperation(onCreateIssue)).subscribe({
-            next: (response: any) => {
-              const { issues, selectedSite, selectedArea, showIssue } = this.state;
-              const newIssue = response.value.data.onCreateIssue;
-              newIssue.visible = true;
-
-              if (showIssue && selectedSite.name === newIssue.siteName && (selectedArea.name === newIssue.areaName || selectedArea.name === "all")) {
-                const updatedIssues = [...issues, newIssue];
-                this.setState({ issues: updatedIssues });
-
-                this.props.handleNotification(`${I18n.get('text.issue')}: ${newIssue.deviceName}`, 'info', 5);
-              }
-            },
-            error: async (e: any) => {
-              await handleSubscriptionError(e, subscriptionType, this.configureSubscription, delayMS);
-            }
-          });
+          this.createIssue(subscriptionType, delayMS);
           break;
         case ObserverSubscriptionTypes.UPDATE_ISSUE:
-          if (this.updateIssueSubscription) { this.updateIssueSubscription.unsubscribe(); }
-
-          // @ts-ignore
-          this.updateIssueSubscription = API.graphql(graphqlOperation(onUpdateIssue)).subscribe({
-            next: (response: any) => {
-              const { issues, selectedSite, selectedArea, showIssue } = this.state;
-              let updatedIssue = response.value.data.onUpdateIssue;
-
-              if (showIssue && selectedSite.name === updatedIssue.siteName && (selectedArea.name === updatedIssue.areaName || selectedArea.name === 'all')) {
-                updatedIssue.visible = ('acknowledged' === updatedIssue.status);
-
-                const issueIndex = issues.findIndex(issue => issue.id === updatedIssue.id);
-                const updatedIssues = [
-                  ...issues.slice(0, issueIndex),
-                  updatedIssue,
-                  ...issues.slice(issueIndex + 1)
-                ];
-
-                this.setState({ issues: updatedIssues });
-              }
-            },
-            error: async (e: any) => {
-              await handleSubscriptionError(e, subscriptionType, this.configureSubscription, delayMS);
-            }
-          })
+          this.updateIssue(subscriptionType, delayMS);
           break;
       }
     } catch (err) {
       console.error('Unable to configure subscription', err);
     }
+  }
+
+  private updateIssue(subscriptionType: ObserverSubscriptionTypes, delayMS: number) {
+    if (this.updateIssueSubscription) { this.updateIssueSubscription.unsubscribe(); }
+
+    // @ts-ignore
+    this.updateIssueSubscription = API.graphql(graphqlOperation(onUpdateIssue)).subscribe({
+      next: (response: any) => {
+        const { issues, selectedSite, selectedArea, showIssue } = this.state;
+        let updatedIssue = response.value.data.onUpdateIssue;
+
+        if (showIssue && selectedSite.name === updatedIssue.siteName && (selectedArea.name === updatedIssue.areaName || selectedArea.name === 'all')) {
+          updatedIssue.visible = ('acknowledged' === updatedIssue.status);
+
+          const issueIndex = issues.findIndex(issue => issue.id === updatedIssue.id);
+          const updatedIssues = [
+            ...issues.slice(0, issueIndex),
+            updatedIssue,
+            ...issues.slice(issueIndex + 1)
+          ];
+
+          this.setState({ issues: updatedIssues });
+        }
+      },
+      error: async (e: any) => {
+        await handleSubscriptionError(e, subscriptionType, this.configureSubscription, delayMS);
+      }
+    });
+  }
+
+  private createIssue(subscriptionType: ObserverSubscriptionTypes, delayMS: number) {
+    if (this.createIssueSubscription) { this.createIssueSubscription.unsubscribe(); }
+
+    // @ts-ignore
+    this.createIssueSubscription = API.graphql(graphqlOperation(onCreateIssue)).subscribe({
+      next: (response: any) => {
+        const { issues, selectedSite, selectedArea, showIssue } = this.state;
+        const newIssue = response.value.data.onCreateIssue;
+        newIssue.visible = true;
+
+        if (showIssue && selectedSite.name === newIssue.siteName && (selectedArea.name === newIssue.areaName || selectedArea.name === "all")) {
+          const updatedIssues = [...issues, newIssue];
+          this.setState({ issues: updatedIssues });
+
+          this.props.handleNotification(`${I18n.get('text.issue')}: ${newIssue.deviceName}`, 'info', 5);
+        }
+      },
+      error: async (e: any) => {
+        await handleSubscriptionError(e, subscriptionType, this.configureSubscription, delayMS);
+      }
+    });
   }
 
   /**

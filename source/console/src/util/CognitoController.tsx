@@ -5,7 +5,7 @@
 import { I18n } from 'aws-amplify';
 import { Logger, ICredentials } from '@aws-amplify/core';
 import Auth from '@aws-amplify/auth';
-import AWS, { AWSError, Request, Response } from 'aws-sdk';
+import AWS, { AWSError, Response } from 'aws-sdk';
 
 // Import custom setting including customized Amplify, footer, and util
 import { LOGGING_LEVEL, CustomError, validateEmailAddress } from './CustomUtil';
@@ -21,7 +21,7 @@ const UNAUTHORIZED_ERROR = {
 };
 
 // Declare Amazon Virtual Andon console configuration
-declare var andon_config: any;
+declare let andon_config: any;
 
 /**
  * Amazon Cognito controller class.

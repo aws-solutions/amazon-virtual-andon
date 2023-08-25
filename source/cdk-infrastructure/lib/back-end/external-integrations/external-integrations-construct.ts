@@ -174,8 +174,8 @@ export class ExternalIntegrations extends Construct {
       properties: configureDetectedAnomaliesBucketNotificationCustomResourceProps
     });
 
-    (configureBucketNotificationCustomResource.node.defaultChild as CfnResource).addDependsOn(solutionHelperPutBucketNotificationPolicy.node.defaultChild as CfnResource);
-    (configureBucketNotificationCustomResource.node.defaultChild as CfnResource).addDependsOn(externalIntegrationsIotToLambda.lambdaFunction.node.defaultChild as CfnResource);
+    (configureBucketNotificationCustomResource.node.defaultChild as CfnResource).addDependency(solutionHelperPutBucketNotificationPolicy.node.defaultChild as CfnResource);
+    (configureBucketNotificationCustomResource.node.defaultChild as CfnResource).addDependency(externalIntegrationsIotToLambda.lambdaFunction.node.defaultChild as CfnResource);
     (configureBucketNotificationCustomResource.node.defaultChild as CfnResource).cfnOptions.condition = anomalyDetectionBucketCondition;
 
     this.externalIntegrationsIotToLambda = externalIntegrationsIotToLambda;

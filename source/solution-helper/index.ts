@@ -274,13 +274,7 @@ async function copyWebsite(sourceBucket: string, sourceKey: string, sourceManife
       logger.log(LogLevel.INFO, 'Getting manifest file completed.');
       break;
     } catch (error) {
-      if (retry === retryCount) {
-        logger.log(LogLevel.ERROR, 'Error occurred while getting manifest file.', error);
-        throw error;
-      } else {
-        logger.log(LogLevel.INFO, 'Waiting for retry...');
-        await sleep(retry);
-      }
+      await getManifestFileError(retry, retryCount, error);
     }
   }
 
@@ -301,13 +295,7 @@ async function copyWebsite(sourceBucket: string, sourceKey: string, sourceManife
 
         break;
       } catch (error) {
-        if (retry === retryCount) {
-          logger.log(LogLevel.ERROR, 'Error occurred while copying website assets.', error);
-          throw error;
-        } else {
-          logger.log(LogLevel.INFO, 'Waiting for retry...');
-          await sleep(retry);
-        }
+        await copyObjectsError(retry, retryCount, error);
       }
     }
   }
@@ -329,6 +317,26 @@ async function copyWebsite(sourceBucket: string, sourceKey: string, sourceManife
   await s3.putBucketCors(putCorsParams).promise();
 
   return { Message: 'Copying website assets completed.' };
+}
+
+async function copyObjectsError(retry: number, retryCount: number, error: any) {
+  if (retry === retryCount) {
+    logger.log(LogLevel.ERROR, 'Error occurred while copying website assets.', error);
+    throw error;
+  } else {
+    logger.log(LogLevel.INFO, 'Waiting for retry...');
+    await sleep(retry);
+  }
+}
+
+async function getManifestFileError(retry: number, retryCount: number, error: any) {
+  if (retry === retryCount) {
+    logger.log(LogLevel.ERROR, 'Error occurred while getting manifest file.', error);
+    throw error;
+  } else {
+    logger.log(LogLevel.INFO, 'Waiting for retry...');
+    await sleep(retry);
+  }
 }
 
 /**

@@ -35,6 +35,7 @@ function getProps(): AmazonVirtualAndonStackProps {
     const solutionName = SOLUTION_NAME_PLACEHOLDER;
     const solutionAssetHostingBucketNamePrefix = SOLUTION_BUCKET_NAME_PLACEHOLDER;
     const description = `(${solutionId}) - ${solutionDisplayName}. Version ${solutionVersion}`;
+    const synthesizer = new cdk.DefaultStackSynthesizer({generateBootstrapVersionRule: false});
 
     return {
         description,
@@ -42,6 +43,7 @@ function getProps(): AmazonVirtualAndonStackProps {
         solutionName,
         solutionDisplayName,
         solutionVersion,
-        solutionAssetHostingBucketNamePrefix
+        solutionAssetHostingBucketNamePrefix,
+        synthesizer
     };
 }

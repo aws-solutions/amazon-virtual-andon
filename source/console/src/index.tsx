@@ -38,7 +38,7 @@ const dict: any = {
 I18n.putVocabularies(dict);
 
 // Declare Amazon Virtual Andon console configuration
-declare var andon_config: any;
+declare let andon_config: any;
 
 // Set the default locale cookie
 const cookies = new Cookies();

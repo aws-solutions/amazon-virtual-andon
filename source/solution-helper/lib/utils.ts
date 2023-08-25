@@ -1,3 +1,5 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
 /**
  * The actions this custom resource handler can support
  */

@@ -19,7 +19,7 @@ import { EventSubscriptionTypes } from '../views/Event';
 import { ObserverSubscriptionTypes } from '../views/Observer';
 
 // Declare Amazon Virtual Andon console configuration
-declare var andon_config: any;
+declare let andon_config: any;
 
 // Global logging level
 export const LOGGING_LEVEL = 'DEBUG';
@@ -82,7 +82,7 @@ export function validateGeneralInput(input: string, minLength: number, maxLength
   if (input === '' && minLength === 0) { return true; }
 
   // Due to supporting multi-languages since v2.1, removed alphanumeric validation.
-  if (input.length > maxLength || input.length < minLength || input.trimLeft().trimRight() === '') {
+  if (input.length > maxLength || input.length < minLength || input.trimStart().trimEnd() === '') {
     return false;
   }
 
