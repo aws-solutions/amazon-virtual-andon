@@ -1002,13 +1002,13 @@ class AddEditEvent extends React.Component<IProps, IState> {
    * to be deleted, or existing
    * @param {string} parentId The ID of the parent event to filter by
    * @param {number} indent A number representing how deep in the nested event tree we are currently displaying
-   * @returns {JSX.Element[]} A list of JSX elements to be displayed in the component
+   * @returns {React.JSX.Element[]} A list of React.JSX elements to be displayed in the component
    */
-  displaySubEvents(parentId: string, indent: number = 0): JSX.Element[] {
+  displaySubEvents(parentId: string, indent: number = 0): React.JSX.Element[] {
     if (!this.state.showSubEventModal) { return []; }
 
     const MAX_INDENT = 1;
-    const output: JSX.Element[] = [];
+    const output: React.JSX.Element[] = [];
 
     const children = [
       ...this.state.existingSubEvents.filter(subEvent => subEvent.parentId === parentId),
@@ -1017,7 +1017,7 @@ class AddEditEvent extends React.Component<IProps, IState> {
     ];
 
     for (const child of children) {
-      let listItemContent: JSX.Element;
+      let listItemContent: React.JSX.Element;
       if (this.state.existingSubEvents.find(e => e.id === child.id)) {
         // If this is an existing sub event, only option is to mark it for deletion or add a sub event under it
         listItemContent = (<>
@@ -1104,36 +1104,7 @@ class AddEditEvent extends React.Component<IProps, IState> {
 
       let subEventImgContent;
 
-      if (this.state.imageSelectSubEventId === child.id) {
-        subEventImgContent = (
-          <div className="sub-event-image-select-container">
-            <div className="sub-event-image-library-container">
-              {this.state.eventImgKeys.map(imgKey => {
-                return (
-                  <AmplifyS3Image
-                    key={`library-img-${imgKey}`}
-                    className={`amplify-s3-image event-image ${imgKey === child.eventImgKey ? 'selected' : ''}`}
-                    imgKey={imgKey}
-                    onClick={() => this.onSelectSubEventImage(imgKey)}>
-                  </AmplifyS3Image>
-                )
-              })}
-            </div>
-            <div className="sub-event-image-button-container">
-              <div className="div-upload-new-image-button" key="div-upload-new-image-button">
-                <Button id="upload-new-image" variant="outline-primary" disabled={this.state.isLoading || this.state.isModalProcessing}>{I18n.get('text.event.image.upload')}</Button>
-                <input
-                  title={I18n.get('text.event.image.upload')}
-                  type="file"
-                  accept="image/*"
-                  onChange={this.onPickImageToUpload}
-                  disabled={this.state.isLoading || this.state.isModalProcessing}
-                />
-              </div>
-            </div>
-          </div>
-        );
-      }
+      subEventImgContent = this.settingSubEventImgContent(child, subEventImgContent);
 
       output.push(
         <ListGroup.Item key={`sub-event-${child.id}`}>
@@ -1149,6 +1120,39 @@ class AddEditEvent extends React.Component<IProps, IState> {
     }
 
     return output;
+  }
+
+  private settingSubEventImgContent(child: any, subEventImgContent: any) {
+    if (this.state.imageSelectSubEventId === child.id) {
+      subEventImgContent = (
+        <div className="sub-event-image-select-container">
+          <div className="sub-event-image-library-container">
+            {this.state.eventImgKeys.map(imgKey => {
+              return (
+                <AmplifyS3Image
+                  key={`library-img-${imgKey}`}
+                  className={`amplify-s3-image event-image ${imgKey === child.eventImgKey ? 'selected' : ''}`}
+                  imgKey={imgKey}
+                  onClick={() => this.onSelectSubEventImage(imgKey)}>
+                </AmplifyS3Image>
+              );
+            })}
+          </div>
+          <div className="sub-event-image-button-container">
+            <div className="div-upload-new-image-button" key="div-upload-new-image-button">
+              <Button id="upload-new-image" variant="outline-primary" disabled={this.state.isLoading || this.state.isModalProcessing}>{I18n.get('text.event.image.upload')}</Button>
+              <input
+                title={I18n.get('text.event.image.upload')}
+                type="file"
+                accept="image/*"
+                onChange={this.onPickImageToUpload}
+                disabled={this.state.isLoading || this.state.isModalProcessing} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return subEventImgContent;
   }
 
   /**

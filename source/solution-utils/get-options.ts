@@ -1,3 +1,5 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
 /**
  * If the SOLUTION_ID and SOLUTION_VERSION environment variables are set, this will return 
  * an object with a custom user agent string. Otherwise, the object returned will be empty

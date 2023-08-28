@@ -3,9 +3,9 @@
 
 import { Aws, RemovalPolicy, CfnResource, CfnParameter, CfnCondition, Fn } from "aws-cdk-lib";
 import { Table } from 'aws-cdk-lib/aws-dynamodb';
-import { Bucket, IBucket, BucketEncryption, BlockPublicAccess, BucketPolicy } from 'aws-cdk-lib/aws-s3';
+import { Bucket, IBucket, BucketEncryption } from 'aws-cdk-lib/aws-s3';
 import { CfnCrawler as GlueCrawler, CfnJob as GlueJob, CfnTable as GlueTable, CfnWorkflow as GlueWorkflow, CfnTrigger as GlueTrigger } from 'aws-cdk-lib/aws-glue';
-import { PolicyDocument, PolicyStatement, Role, ServicePrincipal, Effect, ManagedPolicy, AnyPrincipal } from 'aws-cdk-lib/aws-iam';
+import { PolicyDocument, PolicyStatement, Role, ServicePrincipal, Effect, ManagedPolicy } from 'aws-cdk-lib/aws-iam';
 import { Schedule } from 'aws-cdk-lib/aws-events';
 import { addCfnSuppressRules } from '../../../utils/utils';
 import { Construct } from "constructs";
@@ -66,6 +66,7 @@ export class DataAnalysis extends Construct {
     this.glueOutputBucket = new Bucket(this, 'AvaGlueOutputBucket', {
       removalPolicy: RemovalPolicy.RETAIN,
       encryption: BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
       serverAccessLogsPrefix: 'server-access-logs/',
       blockPublicAccess: {
         blockPublicAcls: true,
@@ -78,15 +79,6 @@ export class DataAnalysis extends Construct {
     (this.glueOutputBucket.node.defaultChild as CfnResource).cfnOptions.condition = this.glueWorkflowCondition;
     (this.glueOutputBucket.node.defaultChild as CfnResource).overrideLogicalId('AvaGlueOutputBucket');
 
-    this.glueOutputBucket.addToResourcePolicy(new PolicyStatement({
-      effect: Effect.DENY,
-      actions: ['s3:*'],
-      resources: [this.glueOutputBucket.bucketArn, this.glueOutputBucket.arnForObjects('*')],
-      conditions: {
-        'Bool': { 'aws:SecureTransport': 'False' }
-      },
-      principals: [new AnyPrincipal()]
-    }));
 
     (this.glueOutputBucket.policy!.node.defaultChild as CfnResource).cfnOptions.condition = this.glueWorkflowCondition;
 

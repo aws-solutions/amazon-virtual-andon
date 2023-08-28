@@ -171,13 +171,7 @@ class DataTable extends React.Component<IProps, IState> {
         if (searchKeyword === '') {
           datum.visible = true;
         } else {
-          for (let header of props.headers) {
-            const value = datum[header.key];
-            if (`${value}`.includes(searchKeyword)) {
-              datum.visible = true;
-              break;
-            }
-          }
+          checkForSearchKeyword(props, datum, searchKeyword);
         }
       }
 
@@ -222,11 +216,11 @@ class DataTable extends React.Component<IProps, IState> {
    * Get pagination components.
    * The default maximum pages to show at pagination is 5.
    * When there are more than 5 pages data, pagination will only show 5 pagination pages.
-   * @return {JSX.Element[]} Pagination components
+   * @return {React.JSX.Element[]} Pagination components
    */
-  getPagination(): JSX.Element[] {
+  getPagination(): React.JSX.Element[] {
     const { currentPage, lastPage } = this.state;
-    const pagination: JSX.Element[] = [];
+    const pagination: React.JSX.Element[] = [];
 
     /**
      * 1) If there's no data, it returns only disabled page 1.
@@ -674,3 +668,13 @@ class DataTable extends React.Component<IProps, IState> {
 }
 
 export default DataTable;
+
+function checkForSearchKeyword(props: IProps, datum: any, searchKeyword: string) {
+  for (let header of props.headers) {
+    const value = datum[header.key];
+    if (`${value}`.includes(searchKeyword)) {
+      datum.visible = true;
+      break;
+    }
+  }
+}

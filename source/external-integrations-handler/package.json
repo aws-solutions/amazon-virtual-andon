@@ -1,6 +1,10 @@
 {
   "name": "external-integrations-handler",
-  "version": "3.0.1",
+  "version": "3.0.2",
+  "author": {
+    "name": "Amazon Web Services",
+    "url": "https://aws.amazon.com/solutions"
+  },
   "description": "Handles issues created by external integrations",
   "main": "index.js",
   "dependencies": {

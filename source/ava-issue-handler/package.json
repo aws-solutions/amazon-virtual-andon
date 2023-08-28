@@ -1,6 +1,10 @@
 {
   "name": "ava-issue-handler",
-  "version": "3.0.1",
+  "version": "3.0.2",
+  "author": {
+    "name": "Amazon Web Services",
+    "url": "https://aws.amazon.com/solutions"
+  },
   "description": "Amazon Virtual Andon issue handler",
   "main": "index.js",
   "dependencies": {

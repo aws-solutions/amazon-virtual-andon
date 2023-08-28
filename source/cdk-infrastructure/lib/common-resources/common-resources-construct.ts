@@ -2,11 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { SolutionHelper } from './solution-helper/solution-helper-construct';
-import { addCfnSuppressRules } from '../../utils/utils';
 import { Construct } from 'constructs';
-import { BlockPublicAccess, Bucket, BucketPolicy, BucketEncryption } from 'aws-cdk-lib/aws-s3';
-import { PolicyDocument, PolicyStatement, Effect, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
-import { RemovalPolicy } from 'aws-cdk-lib';
 import { NagSuppressions } from 'cdk-nag';
 
 export interface CommonResourcesProps {

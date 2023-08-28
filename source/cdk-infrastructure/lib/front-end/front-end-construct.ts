@@ -476,6 +476,6 @@ export class FrontEnd extends Construct {
         });
 
         (customResource.node.defaultChild as CfnResource).cfnOptions.condition = this.cognitoSAMLCondition;
-        (customResource.node.defaultChild as CfnResource).addDependsOn(putWebsiteConfigCustomResource.node.defaultChild as CfnResource);
+        (customResource.node.defaultChild as CfnResource).addDependency(putWebsiteConfigCustomResource.node.defaultChild as CfnResource);
     }
 }

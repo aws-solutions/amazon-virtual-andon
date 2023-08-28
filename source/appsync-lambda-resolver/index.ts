@@ -55,50 +55,7 @@ export async function handler(event: IAppSyncResolverRequest): Promise<any> {
 
         logger.log(LogLevel.INFO, `Total number of subscriptions for event: ${subscriptionsForEvent.length}`);
 
-        for (let i = 0; i < subscriptionsForEvent.length; i++) {
-          logger.log(LogLevel.INFO, `Handling subscription #${i + 1} of ${subscriptionsForEvent.length} total subscriptions`);
-          logger.log(LogLevel.VERBOSE, 'Handling subscription', JSON.stringify(subscriptionsForEvent, null, 2));
-
-          let subscription: IAvaTopicSubscription = await getSubscriptionFromDataHierarchyTable(subscriptionsForEvent[i]);
-          let subscriptionUpdated = false;
-
-          if (!subscription) {
-            logger.log(LogLevel.INFO, 'Subscription did not exist. It will need to be created');
-
-            // Set the base attributes of the subscription. 
-            // `placeholder-event-id` is included just in case this endpoint will be
-            // removed from all events. You cannot set a filter policy with an empty array
-            subscription = {
-              protocol: subscriptionsForEvent[i].protocol,
-              endpoint: subscriptionsForEvent[i].endpoint,
-              filterPolicy: { eventId: ['placeholder-event-id', eventId] }
-            }
-
-            // Create the new subscription
-            const subscriptionArn = await subscribeToIssueNotificationTopic(subscription);
-
-            // Update the subscription object with the newly created SubscriptionArn
-            subscription.subscriptionArn = subscriptionArn;
-            subscriptionUpdated = true;
-          } else {
-            logger.log(LogLevel.INFO, 'Subscription already existed');
-
-            if (subscription.filterPolicy.eventId.includes(eventId)) {
-              logger.log(LogLevel.INFO, `Filter policy already included event ID (${eventId}). No need to update`);
-            } else {
-              logger.log(LogLevel.INFO, `Filter policy will be updated to include event ID (${eventId})`);
-              subscription.filterPolicy.eventId.push(eventId);
-
-              await updateSubscriptionFilterPolicy(subscription);
-              subscriptionUpdated = true;
-            }
-          }
-
-          if (subscriptionUpdated && subscription.subscriptionArn && subscription.subscriptionArn.trim() !== '') {
-            logger.log(LogLevel.INFO, 'Persisting subscription details in the Data Hierarchy table');
-            await persistSubscriptionInDataHierarchyTable(subscription);
-          }
-        }
+        await handleSubscription(subscriptionsForEvent, eventId);
 
         await cleanupPreviousSubscriptions(subscriptionsForEvent, event.arguments.previousSms, event.arguments.previousEmail, eventId);
         break;
@@ -111,6 +68,53 @@ export async function handler(event: IAppSyncResolverRequest): Promise<any> {
     return event.prev.result;
   } else {
     return getPrevDayIssuesStats();
+  }
+}
+
+async function handleSubscription(subscriptionsForEvent: IAvaTopicSubscription[], eventId: any) {
+  for (let i = 0; i < subscriptionsForEvent.length; i++) {
+    logger.log(LogLevel.INFO, `Handling subscription #${i + 1} of ${subscriptionsForEvent.length} total subscriptions`);
+    logger.log(LogLevel.VERBOSE, 'Handling subscription', JSON.stringify(subscriptionsForEvent, null, 2));
+
+    let subscription: IAvaTopicSubscription = await getSubscriptionFromDataHierarchyTable(subscriptionsForEvent[i]);
+    let subscriptionUpdated = false;
+
+    if (!subscription) {
+      logger.log(LogLevel.INFO, 'Subscription did not exist. It will need to be created');
+
+      // Set the base attributes of the subscription. 
+      // `placeholder-event-id` is included just in case this endpoint will be
+      // removed from all events. You cannot set a filter policy with an empty array
+      subscription = {
+        protocol: subscriptionsForEvent[i].protocol,
+        endpoint: subscriptionsForEvent[i].endpoint,
+        filterPolicy: { eventId: ['placeholder-event-id', eventId] }
+      };
+
+      // Create the new subscription
+      const subscriptionArn = await subscribeToIssueNotificationTopic(subscription);
+
+      // Update the subscription object with the newly created SubscriptionArn
+      subscription.subscriptionArn = subscriptionArn;
+      subscriptionUpdated = true;
+    } else {
+      logger.log(LogLevel.INFO, 'Subscription already existed');
+
+      if (subscription.filterPolicy.eventId.includes(eventId)) {
+        logger.log(LogLevel.INFO, `Filter policy already included event ID (${eventId}). No need to update`);
+      } else {
+        logger.log(LogLevel.INFO, `Filter policy will be updated to include event ID (${eventId})`);
+        subscription.filterPolicy.eventId.push(eventId);
+
+        await updateSubscriptionFilterPolicy(subscription);
+        subscriptionUpdated = true;
+      }
+    }
+
+    if (subscriptionUpdated && subscription.subscriptionArn && subscription.subscriptionArn.trim() !== '') {
+      logger.log(LogLevel.INFO, 'Persisting subscription details in the Data Hierarchy table');
+      await persistSubscriptionInDataHierarchyTable(subscription);
+    }
   }
 }
 
@@ -267,6 +271,10 @@ async function cleanupPreviousSubscriptions(currentSubscriptionsForEvent: IAvaTo
 
   logger.log(LogLevel.INFO, `Found ${subscriptionsToClean.length} subscription(s) to clean`);
 
+  await cleanupSubscriptions(subscriptionsToClean, eventId);
+}
+
+async function cleanupSubscriptions(subscriptionsToClean: IAvaTopicSubscription[], eventId: string) {
   for (let i = 0; i < subscriptionsToClean.length; i++) {
     logger.log(LogLevel.INFO, `Handling #${i + 1} of ${subscriptionsToClean.length} subscription(s) to clean`);
 
@@ -331,23 +339,7 @@ async function getPrevDayIssuesStats(): Promise<IGetPrevDayIssuesStatsOutput> {
       const resp = await ddbDocClient.query(queryParams).promise();
 
       if (resp.Items) {
-        for (const item of resp.Items) {
-          switch (item.status) {
-            case 'closed':
-              output.closed += 1;
-              break;
-            case 'open':
-              output.open += 1;
-              break;
-            case 'acknowledged':
-              output.acknowledged += 1;
-              break;
-          }
-
-          if (item.createdAt >= threeHoursAgo.toISOString()) {
-            output.lastThreeHours += 1;
-          }
-        }
+        sortOutIssuesStats(resp, output, threeHoursAgo);
       }
 
       queryParams.ExclusiveStartKey = resp.LastEvaluatedKey;
@@ -355,6 +347,26 @@ async function getPrevDayIssuesStats(): Promise<IGetPrevDayIssuesStatsOutput> {
   }
 
   return output;
+}
+
+function sortOutIssuesStats(resp, output: IGetPrevDayIssuesStatsOutput, threeHoursAgo: moment.Moment) {
+  for (const item of resp.Items) {
+    switch (item.status) {
+      case 'closed':
+        output.closed += 1;
+        break;
+      case 'open':
+        output.open += 1;
+        break;
+      case 'acknowledged':
+        output.acknowledged += 1;
+        break;
+    }
+
+    if (item.createdAt >= threeHoursAgo.toISOString()) {
+      output.lastThreeHours += 1;
+    }
+  }
 }
 
 /**
