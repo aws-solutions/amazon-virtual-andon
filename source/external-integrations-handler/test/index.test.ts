@@ -66,7 +66,7 @@ describe('S3 Event', function () {
     process.env = { ...OLD_ENV };
     jest.resetModules();
     jest.clearAllMocks();
-    jest.useFakeTimers('modern');
+    jest.useFakeTimers();
     jest.setSystemTime(Date.parse(FIXED_DATE));
   });
 
@@ -157,7 +157,7 @@ describe('S3 Event - Error checking', function () {
     process.env = { ...OLD_ENV };
     jest.resetModules();
     jest.clearAllMocks();
-    jest.useFakeTimers('modern');
+    jest.useFakeTimers();
     jest.setSystemTime(Date.parse(FIXED_DATE));
   });
 
@@ -584,7 +584,7 @@ describe('S3 Event - Error checking', function () {
     process.env = { ...OLD_ENV };
     jest.resetModules();
     jest.clearAllMocks();
-    jest.useFakeTimers('modern');
+    jest.useFakeTimers();
     jest.setSystemTime(Date.parse(FIXED_DATE));
   });
 
@@ -622,7 +622,7 @@ describe('IoT Event', function () {
     process.env = { ...OLD_ENV };
     jest.resetModules();
     jest.clearAllMocks();
-    jest.useFakeTimers('modern');
+    jest.useFakeTimers();
     jest.setSystemTime(Date.parse(FIXED_DATE));
   });
 
@@ -730,7 +730,7 @@ describe('IoT Event - Error checking', function () {
     process.env = { ...OLD_ENV };
     jest.resetModules();
     jest.clearAllMocks();
-    jest.useFakeTimers('modern');
+    jest.useFakeTimers();
     jest.setSystemTime(Date.parse(FIXED_DATE));
   });
 

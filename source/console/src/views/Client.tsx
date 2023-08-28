@@ -26,6 +26,7 @@ import Modal from 'react-bootstrap/Modal';
 import Table from 'react-bootstrap/Table'
 import { BsFillExclamationCircleFill } from 'react-icons/bs';
 import { RiArrowGoBackFill } from 'react-icons/ri';
+import {Buffer} from 'buffer';
 
 // Import graphql
 import { getPermission } from '../graphql/queries';
@@ -195,19 +196,7 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
       try {
         const avaCache = localStorage.getItem('ava_cache');
 
-        if (avaCache) {
-          const selectedSite = this.getLocalStorage('selectedSite');
-          const selectedArea = this.getLocalStorage('selectedArea');
-          const selectedProcess = this.getLocalStorage('selectedProcess');
-          const selectedStation = this.getLocalStorage('selectedStation');
-          const selectedDevice = this.getLocalStorage('selectedDevice');
-
-          this.setState({ selectedSite: selectedSite ? selectedSite : EMPTY_SELECT });
-          this.setState({ selectedArea: selectedArea ? selectedArea : EMPTY_SELECT });
-          this.setState({ selectedProcess: selectedProcess ? selectedProcess : EMPTY_SELECT });
-          this.setState({ selectedStation: selectedStation ? selectedStation : EMPTY_SELECT });
-          this.setState({ selectedDevice: selectedDevice ? selectedDevice : EMPTY_SELECT });
-        }
+        this.setupResourceInfo(avaCache);
       } catch (error) {
         LOGGER.error('Error to get site, area, process, station, and device cache.');
         LOGGER.debug(error);
@@ -227,6 +216,22 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
     await this.configureSubscription(ClientSubscriptionTypes.DELETE_ISSUE);
   }
 
+  private setupResourceInfo(avaCache: string | null) {
+    if (avaCache) {
+      const selectedSite = this.getLocalStorage('selectedSite');
+      const selectedArea = this.getLocalStorage('selectedArea');
+      const selectedProcess = this.getLocalStorage('selectedProcess');
+      const selectedStation = this.getLocalStorage('selectedStation');
+      const selectedDevice = this.getLocalStorage('selectedDevice');
+
+      this.setState({ selectedSite: selectedSite ? selectedSite : EMPTY_SELECT });
+      this.setState({ selectedArea: selectedArea ? selectedArea : EMPTY_SELECT });
+      this.setState({ selectedProcess: selectedProcess ? selectedProcess : EMPTY_SELECT });
+      this.setState({ selectedStation: selectedStation ? selectedStation : EMPTY_SELECT });
+      this.setState({ selectedDevice: selectedDevice ? selectedDevice : EMPTY_SELECT });
+    }
+  }
+
   /**
    * Configures the subscription for the supplied `subscriptionType`
    * @param subscriptionType The type of subscription to configure
@@ -236,44 +241,7 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
     try {
       switch (subscriptionType) {
         case ClientSubscriptionTypes.CREATE_ISSUE:
-          if (this.createIssueSubscription) { this.createIssueSubscription.unsubscribe(); }
-
-          // @ts-ignore
-          this.createIssueSubscription = API.graphql(graphqlOperation(onCreateIssue)).subscribe({
-            next: (response: any) => {
-              const { issues, selectedSite, selectedArea, selectedProcess, selectedStation, selectedDevice } = this.state;
-              let { events } = this.state;
-              const newIssue = response.value.data.onCreateIssue;
-              const updatedIssues = [...issues, newIssue];
-
-              if (selectedSite.name === newIssue.siteName && selectedArea.name === newIssue.areaName
-                && selectedProcess.name === newIssue.processName && selectedStation.name === newIssue.stationName
-                && selectedDevice.name === newIssue.deviceName) {
-                events.filter((event: IEvent) => event.id === newIssue.eventId)
-                  .forEach((event: IEvent) => {
-                    event.isActive = true;
-                    event.activeIssueId = newIssue.id;
-                    event.updateIssueVersion = newIssue.version;
-                    event.createIssueTime = newIssue.created;
-                    event.createIssueTimeUtc = newIssue.createdAt;
-                    event.isOpen = true;
-                    event.isAcknowledged = false;
-                    event.isClosedRejected = false;
-                    event.issueAdditionalDetails = newIssue.additionalDetails;
-
-                    this.processingEvents = this.processingEvents.filter(processingEvent => processingEvent.id !== event.id);
-                  });
-              }
-
-              this.setState({
-                issues: updatedIssues,
-                events
-              });
-            },
-            error: async (e: any) => {
-              await handleSubscriptionError(e, subscriptionType, this.configureSubscription, delayMS);
-            }
-          });
+          this.createIssue(subscriptionType, delayMS);
           break;
         case ClientSubscriptionTypes.DELETE_ISSUE:
           if (this.deletePermissionSubscription) { this.deletePermissionSubscription.unsubscribe(); }
@@ -310,58 +278,103 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
           });
           break;
         case ClientSubscriptionTypes.UPDATE_ISSUE:
-          if (this.updateIssueSubscription) { this.updateIssueSubscription.unsubscribe(); }
-          // @ts-ignore
-          this.updateIssueSubscription = API.graphql(graphqlOperation(onUpdateIssue)).subscribe({
-            next: (response: any) => {
-              const { issues, selectedSite, selectedArea, selectedProcess, selectedStation, selectedDevice } = this.state;
-              let { events } = this.state;
-              const updatedIssue = response.value.data.onUpdateIssue;
-              const issueIndex = issues.findIndex(issue => issue.id === updatedIssue.id);
-              const updatedIssues = [
-                ...issues.slice(0, issueIndex),
-                updatedIssue,
-                ...issues.slice(issueIndex + 1)
-              ];
-
-              if (selectedSite.name === updatedIssue.siteName && selectedArea.name === updatedIssue.areaName
-                && selectedProcess.name === updatedIssue.processName && selectedStation.name === updatedIssue.stationName
-                && selectedDevice.name === updatedIssue.deviceName) {
-                events.filter((event: IEvent) => event.id === updatedIssue.eventId)
-                  .forEach((event: IEvent) => {
-                    if (['closed', 'rejected'].includes(updatedIssue.status)) {
-                      event.isActive = false;
-                      event.isAcknowledged = false;
-                      event.isClosedRejected = true;
-                      event.activeIssueId = '';
-                      delete event.createIssueTimeUtc;
-                      event.isOpen = false;
-                    } else if (updatedIssue.status === 'acknowledged') {
-                      event.updateIssueVersion = updatedIssue.version;
-                      event.createIssueTime = updatedIssue.created;
-                      delete event.createIssueTimeUtc;
-                      event.isAcknowledged = true;
-                      event.isOpen = false;
-                    }
-
-                    this.processingEvents = this.processingEvents.filter(processingEvent => processingEvent.id !== event.id);
-                  });
-              }
-
-              this.setState({
-                issues: updatedIssues,
-                events
-              });
-            },
-            error: async (e: any) => {
-              await handleSubscriptionError(e, subscriptionType, this.configureSubscription, delayMS);
-            }
-          });
+          this.updateIssue(subscriptionType, delayMS);
           break;
       }
     } catch (err) {
       console.error('Unable to configure subscription', err);
     }
+  }
+
+  private updateIssue(subscriptionType: ClientSubscriptionTypes, delayMS: number) {
+    if (this.updateIssueSubscription) { this.updateIssueSubscription.unsubscribe(); }
+    // @ts-ignore
+    this.updateIssueSubscription = API.graphql(graphqlOperation(onUpdateIssue)).subscribe({
+      next: (response: any) => {
+        const { issues, selectedSite, selectedArea, selectedProcess, selectedStation, selectedDevice } = this.state;
+        let { events } = this.state;
+        const updatedIssue = response.value.data.onUpdateIssue;
+        const issueIndex = issues.findIndex(issue => issue.id === updatedIssue.id);
+        const updatedIssues = [
+          ...issues.slice(0, issueIndex),
+          updatedIssue,
+          ...issues.slice(issueIndex + 1)
+        ];
+
+        if (selectedSite.name === updatedIssue.siteName && selectedArea.name === updatedIssue.areaName
+          && selectedProcess.name === updatedIssue.processName && selectedStation.name === updatedIssue.stationName
+          && selectedDevice.name === updatedIssue.deviceName) {
+          events.filter((event: IEvent) => event.id === updatedIssue.eventId)
+            .forEach((event: IEvent) => {
+              if (['closed', 'rejected'].includes(updatedIssue.status)) {
+                event.isActive = false;
+                event.isAcknowledged = false;
+                event.isClosedRejected = true;
+                event.activeIssueId = '';
+                delete event.createIssueTimeUtc;
+                event.isOpen = false;
+              } else if (updatedIssue.status === 'acknowledged') {
+                event.updateIssueVersion = updatedIssue.version;
+                event.createIssueTime = updatedIssue.created;
+                delete event.createIssueTimeUtc;
+                event.isAcknowledged = true;
+                event.isOpen = false;
+              }
+
+              this.processingEvents = this.processingEvents.filter(processingEvent => processingEvent.id !== event.id);
+            });
+        }
+
+        this.setState({
+          issues: updatedIssues,
+          events
+        });
+      },
+      error: async (e: any) => {
+        await handleSubscriptionError(e, subscriptionType, this.configureSubscription, delayMS);
+      }
+    });
+  }
+
+  private createIssue(subscriptionType: ClientSubscriptionTypes, delayMS: number) {
+    if (this.createIssueSubscription) { this.createIssueSubscription.unsubscribe(); }
+
+    // @ts-ignore
+    this.createIssueSubscription = API.graphql(graphqlOperation(onCreateIssue)).subscribe({
+      next: (response: any) => {
+        const { issues, selectedSite, selectedArea, selectedProcess, selectedStation, selectedDevice } = this.state;
+        let { events } = this.state;
+        const newIssue = response.value.data.onCreateIssue;
+        const updatedIssues = [...issues, newIssue];
+
+        if (selectedSite.name === newIssue.siteName && selectedArea.name === newIssue.areaName
+          && selectedProcess.name === newIssue.processName && selectedStation.name === newIssue.stationName
+          && selectedDevice.name === newIssue.deviceName) {
+          events.filter((event: IEvent) => event.id === newIssue.eventId)
+            .forEach((event: IEvent) => {
+              event.isActive = true;
+              event.activeIssueId = newIssue.id;
+              event.updateIssueVersion = newIssue.version;
+              event.createIssueTime = newIssue.created;
+              event.createIssueTimeUtc = newIssue.createdAt;
+              event.isOpen = true;
+              event.isAcknowledged = false;
+              event.isClosedRejected = false;
+              event.issueAdditionalDetails = newIssue.additionalDetails;
+
+              this.processingEvents = this.processingEvents.filter(processingEvent => processingEvent.id !== event.id);
+            });
+        }
+
+        this.setState({
+          issues: updatedIssues,
+          events
+        });
+      },
+      error: async (e: any) => {
+        await handleSubscriptionError(e, subscriptionType, this.configureSubscription, delayMS);
+      }
+    });
   }
 
   /**
@@ -979,7 +992,7 @@ class Client extends React.Component<IProps, IState, RouteComponentProps> {
       return;
     }
 
-    const promises = [];
+    const promises: Promise<void>[] = [];
 
     // If there's processing events, it won't publish messages for the event anymore.
     if (this.processingEvents.filter(processingEvent => processingEvent.id === event.id).length === 0) {

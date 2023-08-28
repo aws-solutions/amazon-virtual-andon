@@ -22,6 +22,7 @@ import Alert from 'react-bootstrap/Alert';
 import Tab from 'react-bootstrap/Tab';
 import ListGroup from 'react-bootstrap/ListGroup';
 import Spinner from 'react-bootstrap/Spinner';
+import {Buffer} from 'buffer';
 
 // Import graphql
 import { putPermission } from '../graphql/mutations';
@@ -257,15 +258,17 @@ class PermissionSetting extends React.Component<IProps, IState> {
     } catch (error) {
       let message = I18n.get('error.save.permission');
 
-      if (error.errors) {
-        const { errorType } = error.errors[0];
+      const castError = error as any;
+
+      if (castError.errors) {
+        const { errorType } = castError.errors[0];
 
         if (errorType === 'Unauthorized') {
           message = I18n.get('error.not.authorized');
         }
       }
 
-      LOGGER.error('Error while saving permission', error);
+      LOGGER.error('Error while saving permission', castError);
       this.props.handleNotification(message, 'error', 5);
       this.setState({ isLoading: false });
     }
@@ -373,86 +376,19 @@ class PermissionSetting extends React.Component<IProps, IState> {
     if (userPermissions) {
       switch (type) {
         case AVAPermissionTypes.Site:
-          if (permissionEnabled) {
-            userPermissions.areas.push(...siteData.areas);
-            userPermissions.processes.push(...siteData.processes);
-            userPermissions.stations.push(...siteData.stations);
-            userPermissions.devices.push(...siteData.devices);
-            userPermissions.sites.push({ id, name: siteData.siteName });
-          } else {
-            siteData.areas.forEach(x => userPermissions.areas = userPermissions.areas.filter(y => y.id !== x.id));
-            siteData.processes.forEach(x => userPermissions.processes = userPermissions.processes.filter(y => y.id !== x.id));
-            siteData.stations.forEach(x => userPermissions.stations = userPermissions.stations.filter(y => y.id !== x.id));
-            siteData.devices.forEach(x => userPermissions.devices = userPermissions.devices.filter(y => y.id !== x.id));
-            userPermissions.sites = userPermissions.sites.filter(y => y.id !== id);
-          }
+          sitePermissions(permissionEnabled, userPermissions, siteData, id);
           break;
         case AVAPermissionTypes.Area:
-          const area = siteData.areas.find(a => a.id === id)!;
-
-          if (permissionEnabled) {
-            userPermissions.sites.push({ id: area.parentId!, name: siteData.siteName });
-            userPermissions.areas.push(area);
-            userPermissions.processes.push(...siteData.processes.filter(p => p.parentId === id));
-            siteData.stations
-              .filter(s => s.parentId === id)
-              .forEach(s => {
-                userPermissions.stations.push(s);
-                userPermissions.devices.push(...siteData.devices.filter(d => d.parentId === s.id));
-              });
-          } else {
-            userPermissions.areas = userPermissions.areas.filter(a => a.id !== id);
-            userPermissions.processes = userPermissions.processes.filter(p => p.parentId !== id);
-            userPermissions.stations = userPermissions.stations.filter(s => s.parentId !== id);
-
-            // Filter out any device that belongs to a station under the area that was unchecked
-            userPermissions.devices = userPermissions.devices.filter(d => {
-              const stationWithDevice = siteData.stations.find(s => s.id === d.parentId);
-              if (stationWithDevice) {
-                return stationWithDevice.parentId !== id;
-              }
-
-              return true;
-            });
-          }
+          areaPermissions(siteData, id, permissionEnabled, userPermissions);
           break;
         case AVAPermissionTypes.Process:
-          const process = siteData.processes.find(p => p.id === id)!;
-          const processArea = siteData.areas.find(a => a.id === process.parentId)!;
-          if (permissionEnabled) {
-            userPermissions.processes.push(process);
-            userPermissions.areas.push(processArea);
-            userPermissions.sites.push({ id: processArea.parentId!, name: siteData.siteName });
-          } else {
-            userPermissions.processes = userPermissions.processes.filter(p => p.id !== id);
-          }
+          processPermissions(siteData, id, permissionEnabled, userPermissions);
           break;
         case AVAPermissionTypes.Station:
-          const station = siteData.stations.find(s => s.id === id)!;
-          const stationArea = siteData.areas.find(a => a.id === station.parentId)!;
-
-          if (permissionEnabled) {
-            userPermissions.stations.push(station);
-            userPermissions.areas.push(stationArea);
-            userPermissions.sites.push({ id: stationArea.parentId!, name: siteData.siteName });
-            userPermissions.devices.push(...siteData.devices.filter(d => d.parentId === id));
-          } else {
-            userPermissions.devices = userPermissions.devices.filter(d => d.parentId !== id);
-            userPermissions.stations = userPermissions.stations.filter(s => s.id !== id);
-          }
+          stationPermissions(siteData, id, permissionEnabled, userPermissions);
           break;
         case AVAPermissionTypes.Device:
-          const device = siteData.devices.find(d => d.id === id)!;
-          const deviceStation = siteData.stations.find(s => s.id === device.parentId)!;
-          const deviceArea = siteData.areas.find(a => a.id === deviceStation.parentId)!;
-          if (permissionEnabled) {
-            userPermissions.devices.push(device);
-            userPermissions.stations.push(deviceStation);
-            userPermissions.areas.push(deviceArea);
-            userPermissions.sites.push({ id: deviceArea.parentId!, name: siteData.siteName });
-          } else {
-            userPermissions.devices = userPermissions.devices.filter(d => d.id !== id);
-          }
+          devicePermissions(siteData, id, permissionEnabled, userPermissions);
           break;
       }
 
@@ -780,3 +716,90 @@ class PermissionSetting extends React.Component<IProps, IState> {
 }
 
 export default PermissionSetting;
+
+function devicePermissions(siteData: ISiteData, id: string, permissionEnabled: boolean, userPermissions: any) {
+  const device = siteData.devices.find(d => d.id === id)!;
+  const deviceStation = siteData.stations.find(s => s.id === device.parentId)!;
+  const deviceArea = siteData.areas.find(a => a.id === deviceStation.parentId)!;
+  if (permissionEnabled) {
+    userPermissions.devices.push(device);
+    userPermissions.stations.push(deviceStation);
+    userPermissions.areas.push(deviceArea);
+    userPermissions.sites.push({ id: deviceArea.parentId!, name: siteData.siteName });
+  } else {
+    userPermissions.devices = userPermissions.devices.filter(d => d.id !== id);
+  }
+}
+
+function stationPermissions(siteData: ISiteData, id: string, permissionEnabled: boolean, userPermissions: any) {
+  const station = siteData.stations.find(s => s.id === id)!;
+  const stationArea = siteData.areas.find(a => a.id === station.parentId)!;
+
+  if (permissionEnabled) {
+    userPermissions.stations.push(station);
+    userPermissions.areas.push(stationArea);
+    userPermissions.sites.push({ id: stationArea.parentId!, name: siteData.siteName });
+    userPermissions.devices.push(...siteData.devices.filter(d => d.parentId === id));
+  } else {
+    userPermissions.devices = userPermissions.devices.filter(d => d.parentId !== id);
+    userPermissions.stations = userPermissions.stations.filter(s => s.id !== id);
+  }
+}
+
+function processPermissions(siteData: ISiteData, id: string, permissionEnabled: boolean, userPermissions: any) {
+  const process = siteData.processes.find(p => p.id === id)!;
+  const processArea = siteData.areas.find(a => a.id === process.parentId)!;
+  if (permissionEnabled) {
+    userPermissions.processes.push(process);
+    userPermissions.areas.push(processArea);
+    userPermissions.sites.push({ id: processArea.parentId!, name: siteData.siteName });
+  } else {
+    userPermissions.processes = userPermissions.processes.filter(p => p.id !== id);
+  }
+}
+
+function areaPermissions(siteData: ISiteData, id: string, permissionEnabled: boolean, userPermissions: any) {
+  const area = siteData.areas.find(a => a.id === id)!;
+
+  if (permissionEnabled) {
+    userPermissions.sites.push({ id: area.parentId!, name: siteData.siteName });
+    userPermissions.areas.push(area);
+    userPermissions.processes.push(...siteData.processes.filter(p => p.parentId === id));
+    siteData.stations
+      .filter(s => s.parentId === id)
+      .forEach(s => {
+        userPermissions.stations.push(s);
+        userPermissions.devices.push(...siteData.devices.filter(d => d.parentId === s.id));
+      });
+  } else {
+    userPermissions.areas = userPermissions.areas.filter(a => a.id !== id);
+    userPermissions.processes = userPermissions.processes.filter(p => p.parentId !== id);
+    userPermissions.stations = userPermissions.stations.filter(s => s.parentId !== id);
+
+    // Filter out any device that belongs to a station under the area that was unchecked
+    userPermissions.devices = userPermissions.devices.filter(d => {
+      const stationWithDevice = siteData.stations.find(s => s.id === d.parentId);
+      if (stationWithDevice) {
+        return stationWithDevice.parentId !== id;
+      }
+
+      return true;
+    });
+  }
+}
+
+function sitePermissions(permissionEnabled: boolean, userPermissions: any, siteData: ISiteData, id: string) {
+  if (permissionEnabled) {
+    userPermissions.areas.push(...siteData.areas);
+    userPermissions.processes.push(...siteData.processes);
+    userPermissions.stations.push(...siteData.stations);
+    userPermissions.devices.push(...siteData.devices);
+    userPermissions.sites.push({ id, name: siteData.siteName });
+  } else {
+    siteData.areas.forEach(x => userPermissions.areas = userPermissions.areas.filter(y => y.id !== x.id));
+    siteData.processes.forEach(x => userPermissions.processes = userPermissions.processes.filter(y => y.id !== x.id));
+    siteData.stations.forEach(x => userPermissions.stations = userPermissions.stations.filter(y => y.id !== x.id));
+    siteData.devices.forEach(x => userPermissions.devices = userPermissions.devices.filter(y => y.id !== x.id));
+    userPermissions.sites = userPermissions.sites.filter(y => y.id !== id);
+  }
+}

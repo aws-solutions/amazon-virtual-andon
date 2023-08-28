@@ -261,15 +261,17 @@ class Event extends React.Component<IProps, IState> {
     } catch (error) {
       let message = I18n.get('error.delete.event');
 
-      if (error.errors) {
-        const { errorType } = error.errors[0];
+      const castError = error as any;
+
+      if (castError.errors) {
+        const { errorType } = castError.errors[0];
 
         if (errorType === 'Unauthorized') {
           message = I18n.get('error.not.authorized');
         }
       }
 
-      LOGGER.error('Error while delete event', error);
+      LOGGER.error('Error while delete event', castError);
       this.props.handleNotification(message, 'error', 5);
       this.setState({ isModalProcessing: false });
     }
@@ -307,12 +309,7 @@ class Event extends React.Component<IProps, IState> {
       eventEmail = event.email ? event.email : '';
       eventImgKey = event.eventImgKey ? event.eventImgKey : '';
 
-      for (const priority in EventPriority) {
-        if (priority === event.priority) {
-          eventPriority = EventPriority[priority as keyof typeof EventPriority];
-          break;
-        }
-      }
+      eventPriority = revaluatePriority(event, eventPriority);
     }
 
     await this.loadEventImages();
@@ -334,14 +331,6 @@ class Event extends React.Component<IProps, IState> {
     });
   }
 
-  /**
-   * Get unique root causes from the provided array.
-   * @param {string[]} rootCauses - Array to get unique root causes
-   * @return {string[]} Unique root causes array
-   */
-  getUniqueRootCauses(rootCauses: string[]): string[] {
-    return Array.from(new Set(rootCauses));
-  }
 
   /**
    * Handle the search keyword change to filter the events result.
@@ -591,3 +580,13 @@ class Event extends React.Component<IProps, IState> {
 }
 
 export default Event;
+
+function revaluatePriority(event: IEvent, eventPriority: EventPriority) {
+  for (const priority in EventPriority) {
+    if (priority === event.priority) {
+      eventPriority = EventPriority[priority as keyof typeof EventPriority];
+      break;
+    }
+  }
+  return eventPriority;
+}

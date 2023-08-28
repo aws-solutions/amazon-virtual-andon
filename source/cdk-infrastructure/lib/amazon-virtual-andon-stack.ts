@@ -1,12 +1,15 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import { Construct, Stack, StackProps, CfnParameter, CfnMapping, Aws, CfnOutput, CfnCondition, Fn, Tags, Aspects } from '@aws-cdk/core';
+import { Aws, CfnCondition, CfnOutput, CfnParameter, StackProps, Fn, Stack, CfnMapping, Tags, Aspects, IStackSynthesizer } from 'aws-cdk-lib';
 import { FrontEnd } from './front-end/front-end-construct';
 import { CommonResources } from './common-resources/common-resources-construct';
 import { BackEnd } from './back-end/back-end-construct';
 import { CustomResourceActions } from '../../solution-helper/lib/utils';
 import { ISetupPutWebsiteConfigCustomResourceProps, LambdaFunctionAspect } from '../utils/utils';
+import { Construct } from 'constructs';
+import { applyAppRegistry } from './appregistry/application-resource';
+import { NagSuppressions } from 'cdk-nag';
 
 export interface AmazonVirtualAndonStackProps extends StackProps {
   readonly description: string;
@@ -15,11 +18,14 @@ export interface AmazonVirtualAndonStackProps extends StackProps {
   readonly solutionVersion: string;
   readonly solutionDisplayName: string;
   readonly solutionAssetHostingBucketNamePrefix: string;
+  readonly synthesizer?: IStackSynthesizer;
 }
 
 export class AmazonVirtualAndonStack extends Stack {
   constructor(scope: Construct, id: string, props: AmazonVirtualAndonStackProps) {
     super(scope, id, props);
+
+    this.node.setContext("@aws-cdk/aws-s3:serverAccessLogsUseBucketPolicy", true);
 
     const administratorEmail = new CfnParameter(this, 'AdministratorEmail', {
       description: '(Required) Email address for Amazon Virtual Andon administrator.',
@@ -70,6 +76,9 @@ export class AmazonVirtualAndonStack extends Stack {
 
     const sourceCodeBucketName = `${solutionMapping.findInMap('Config', 'S3BucketPrefix')}-${Aws.REGION}`;
 
+    // Register this application in App Registry
+    applyAppRegistry(this, props);
+
     const commonResources = new CommonResources(this, 'CommonResources', {
       defaultLanguage: defaultLanguage.valueAsString,
       sendAnonymousData: solutionMapping.findInMap('Config', 'AnonymousUsage'),
@@ -84,7 +93,6 @@ export class AmazonVirtualAndonStack extends Stack {
     const frontEnd = new FrontEnd(this, 'FrontEnd', {
       anonymousDataUUID: commonResources.solutionHelper.anonymousDataUUID,
       administratorEmail: administratorEmail.valueAsString,
-      logsBucket: commonResources.logsBucket,
       sendAnonymousData: solutionMapping.findInMap('Config', 'AnonymousUsage'),
       solutionDisplayName: props.solutionDisplayName,
       solutionId: props.solutionId,
@@ -101,7 +109,6 @@ export class AmazonVirtualAndonStack extends Stack {
       sourceCodeBucketName,
       sourceCodeKeyPrefix: solutionMapping.findInMap('Config', 'S3KeyPrefix'),
       userPool: frontEnd.userPool,
-      logsBucket: commonResources.logsBucket,
       loggingLevel: loggingLevel.valueAsString,
       solutionHelperLambda: commonResources.solutionHelper.solutionHelperLambda,
       iotEndpointAddress: commonResources.solutionHelper.iotEndpointAddress
@@ -189,6 +196,28 @@ export class AmazonVirtualAndonStack extends Stack {
       }
     };
 
+    NagSuppressions.addResourceSuppressions(
+      commonResources.solutionHelper.solutionHelperLambda.role!,
+      [
+          {
+              id: "AwsSolutions-IAM5",
+              reason: "Solution helper construct needs wildcard permissions for creating log groups and on s3 helper functions to access s3 assets (just on actions)"
+          }
+      ],
+      true
+    );
+
+    NagSuppressions.addStackSuppressions(
+      backEnd.externalIntegrationsConstruct.externalIntegrationsIotToLambda.lambdaFunction.role!.stack,
+      [
+          {
+              id: "AwsSolutions-IAM5",
+              reason: "Legacy code requires wildcard on bucket items with prefix"
+          }
+      ],
+      true
+    );
+
     new CfnOutput(this, 'AmazonVirtualAndonConsole', { description: `${props.solutionDisplayName} console URL`, value: `https://${frontEnd.websiteDistribution.domainName}` }); // NOSONAR: typescript:S1848
     new CfnOutput(this, 'WebsiteAssetBucket', { description: 'Amazon Virtual Andon web site assets bucket', value: frontEnd.websiteHostingBucket.bucketName }); // NOSONAR: typescript:S1848
     new CfnOutput(this, 'GraphQLEndpoint', { description: 'Amazon Virtual Andon GraphQL endpoint', value: backEnd.appsyncApi.graphqlApi.graphqlUrl });  // NOSONAR: typescript:S1848
@@ -205,4 +234,6 @@ export class AmazonVirtualAndonStack extends Stack {
 
     return (Fn.conditionIf(condition.logicalId, 'No', 'Yes') as unknown) as 'Yes' | 'No';
   }
+
+ 
 }

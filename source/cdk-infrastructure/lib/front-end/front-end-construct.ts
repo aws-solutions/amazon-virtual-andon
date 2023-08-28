@@ -1,23 +1,24 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import { Construct, Duration, Stack, ArnFormat, CfnParameter, CfnCondition, Fn, CfnResource, CfnOutput, Aws, CustomResource } from '@aws-cdk/core';
-import { Bucket } from '@aws-cdk/aws-s3';
-import { UserPool, CfnUserPool, UserPoolClient, CfnUserPoolClient, CfnIdentityPool, CfnIdentityPoolRoleAttachment, CfnUserPoolGroup, CfnUserPoolUser, CfnUserPoolUserToGroupAttachment, UserPoolDomain, CfnUserPoolIdentityProvider, OAuthScope } from '@aws-cdk/aws-cognito';
+import { UserPool, CfnUserPool, UserPoolClient, CfnUserPoolClient, CfnIdentityPool, CfnIdentityPoolRoleAttachment, CfnUserPoolGroup, CfnUserPoolUser, CfnUserPoolUserToGroupAttachment, UserPoolDomain, CfnUserPoolIdentityProvider, OAuthScope } from 'aws-cdk-lib/aws-cognito';
 import { CloudFrontToS3 } from '@aws-solutions-constructs/aws-cloudfront-s3';
-import { Distribution } from '@aws-cdk/aws-cloudfront';
-import { Role, FederatedPrincipal, Policy, PolicyDocument, PolicyStatement, Effect, ServicePrincipal } from '@aws-cdk/aws-iam';
 import { addCfnSuppressRules, IotConstants, ISetupPutWebsiteConfigCustomResourceProps } from '../../utils/utils';
 import { buildUserPool, buildUserPoolClient, buildIdentityPool } from '@aws-solutions-constructs/core';
 import { IPutWebsiteConfigRequestProps } from '../../../solution-helper/lib/utils';
-import { Code, Function as LambdaFunction, Runtime, CfnPermission as LambdaPermission } from '@aws-cdk/aws-lambda';
+import { Distribution } from 'aws-cdk-lib/aws-cloudfront';
+import { Construct } from 'constructs';
+import { Bucket, BucketAccessControl, BucketEncryption } from 'aws-cdk-lib/aws-s3';
+import { Effect, FederatedPrincipal, Policy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { ArnFormat, Aws, CfnCondition, CfnOutput, CfnParameter, CfnResource, CustomResource, Duration, Fn, Stack } from 'aws-cdk-lib';
+import { CfnPermission, Code, Function, Runtime } from 'aws-cdk-lib/aws-lambda';
+import { NagSuppressions } from 'cdk-nag';
 
 export interface IFrontEndProps {
     readonly sourceCodeBucketName: string;
     readonly sourceCodeKeyPrefix: string;
     readonly administratorEmail: string;
     readonly solutionDisplayName: string;
-    readonly logsBucket: Bucket;
     readonly sendAnonymousData: string;
     readonly anonymousDataUUID: string;
     readonly solutionVersion: string;
@@ -49,13 +50,15 @@ export class FrontEnd extends Construct {
 
         const cloudFrontToS3 = new CloudFrontToS3(this, 'DistributionToS3', {
             bucketProps: {
-                serverAccessLogsBucket: props.logsBucket,
-                serverAccessLogsPrefix: 'hosting-s3/'
+                versioned: true,
+                encryption: BucketEncryption.S3_MANAGED,
+                accessControl: BucketAccessControl.PRIVATE,
+                enforceSSL: true,
+                autoDeleteObjects: false
             },
             cloudFrontDistributionProps: {
                 comment: 'Website Distribution for Amazon Virtual Andon',
                 enableLogging: true,
-                logBucket: props.logsBucket,
                 logFilePrefix: 'hosting-cloudfront/',
                 errorResponses: [
                     { httpStatus: 403, responseHttpStatus: 200, responsePagePath: '/index.html' },
@@ -66,6 +69,23 @@ export class FrontEnd extends Construct {
         });
         this.websiteDistribution = cloudFrontToS3.cloudFrontWebDistribution;
         this.websiteHostingBucket = cloudFrontToS3.s3Bucket!;
+
+        NagSuppressions.addResourceSuppressions(
+            cloudFrontToS3,
+            [
+                {
+                    id: "AwsSolutions-S1",
+                    reason: "The bucket doesn't have server access logs enabled because it is a logging bucket itself"
+                },
+                { id: "AwsSolutions-CFR1", reason: "The solution does not control geo restriction." },
+                { id: "AwsSolutions-CFR2", reason: "No need to enable WAF." },
+                {
+                    id: "AwsSolutions-CFR4",
+                    reason: "No control on the solution side as it is using the CloudFront default certificate."
+                }
+            ],
+            true
+        );
 
         this.userPool = buildUserPool(this, {
             userPoolName: 'ava-userpool',
@@ -93,6 +113,17 @@ export class FrontEnd extends Construct {
             },
             selfSignUpEnabled: false
         });
+
+        NagSuppressions.addResourceSuppressions(
+            this.userPool,
+            [
+                {
+                    id: "AwsSolutions-COG2",
+                    reason: "MFA not required for this version of the solution"
+                }
+            ],
+            true
+        );
 
         this.userPoolClient = buildUserPoolClient(this, this.userPool, {
             userPool: this.userPool,
@@ -199,6 +230,17 @@ export class FrontEnd extends Construct {
 
         addCfnSuppressRules(avaIotPolicy, [{ id: 'W12', reason: 'To connect IoT and attach IoT policy to Cognito identity cannot specify the specific resources.' }]);
 
+        NagSuppressions.addResourceSuppressions(
+            avaIotPolicy,
+            [
+                {
+                    id: "AwsSolutions-IAM5",
+                    reason: "To connect IoT and attach IoT policy to Cognito identity cannot specify the specific resources."
+                }
+            ],
+            true
+        );
+
         this.identityPoolRole.attachInlinePolicy(avaIotPolicy);
 
         this.identityPoolRole.attachInlinePolicy(new Policy(this, 'AVACognitoPolicy', {
@@ -223,7 +265,8 @@ export class FrontEnd extends Construct {
             })
         }));
 
-        this.identityPoolRole.attachInlinePolicy(new Policy(this, 'AVAEventImagePolicy', {
+
+        const avaEventImagePolicy = new Policy(this, 'AVAEventImagePolicy', {
             policyName: 'AVAEventImagePolicy',
             document: new PolicyDocument({
                 statements: [
@@ -238,7 +281,19 @@ export class FrontEnd extends Construct {
                     })
                 ]
             })
-        }));
+        })
+        this.identityPoolRole.attachInlinePolicy(avaEventImagePolicy);
+
+        NagSuppressions.addResourceSuppressions(
+            avaEventImagePolicy,
+            [
+                {
+                    id: "AwsSolutions-IAM5",
+                    reason: "Identity pool needs access to all resources under specific key path folder in website hosting bucket"
+                }
+            ],
+            true
+        );
 
         this.identityPoolRole.attachInlinePolicy(new Policy(this, 'AVAListEventImagePolicy', {
             policyName: 'AVAListEventImagePolicy',
@@ -353,8 +408,19 @@ export class FrontEnd extends Construct {
             }
         });
 
-        const cognitoTriggerLambda = new LambdaFunction(this, 'CognitoTriggerFunction', {
-            runtime: Runtime.NODEJS_14_X,
+        NagSuppressions.addResourceSuppressions(
+          cognitoTriggerFunctionRole,
+          [
+              {
+                  id: "AwsSolutions-IAM5",
+                  reason: "Cloudwatch logs policy needs access to all logs arns because it's creating log groups"
+              }
+          ],
+          true
+        );
+
+        const cognitoTriggerLambda = new Function(this, 'CognitoTriggerFunction', {
+            runtime: Runtime.NODEJS_18_X,
             handler: 'cognito-trigger/index.handler',
             timeout: Duration.seconds(60),
             description: `${props.solutionDisplayName} (${props.solutionVersion}): Cognito Trigger. Used when a new user is confirmed in the user pool to allow for custom actions to be taken`,
@@ -365,7 +431,7 @@ export class FrontEnd extends Construct {
             }
         });
 
-        new LambdaPermission(this, 'CognitoTriggerFunctionPermission', {
+        new CfnPermission(this, 'CognitoTriggerFunctionPermission', {
             action: 'lambda:InvokeFunction',
             principal: 'cognito-idp.amazonaws.com',
             functionName: cognitoTriggerLambda.functionName,
@@ -410,6 +476,6 @@ export class FrontEnd extends Construct {
         });
 
         (customResource.node.defaultChild as CfnResource).cfnOptions.condition = this.cognitoSAMLCondition;
-        (customResource.node.defaultChild as CfnResource).addDependsOn(putWebsiteConfigCustomResource.node.defaultChild as CfnResource);
+        (customResource.node.defaultChild as CfnResource).addDependency(putWebsiteConfigCustomResource.node.defaultChild as CfnResource);
     }
 }

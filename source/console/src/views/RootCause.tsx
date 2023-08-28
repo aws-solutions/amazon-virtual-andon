@@ -185,8 +185,10 @@ class RootCause extends React.Component<IProps, IState> {
     } catch (error) {
       let message = I18n.get('error.add.rootcause');
 
-      if (error.errors) {
-        const { errorType } = error.errors[0];
+      const castError = error as any;
+
+      if (castError.errors) {
+        const { errorType } = castError.errors[0];
 
         if (errorType === 'Unauthorized') {
           message = I18n.get('error.not.authorized');
@@ -195,7 +197,7 @@ class RootCause extends React.Component<IProps, IState> {
         }
       }
 
-      LOGGER.error('Error occurred while adding a root cause.', error);
+      LOGGER.error('Error occurred while adding a root cause.', castError);
       this.props.handleNotification(message, 'error', 5);
       this.setState({ isModalProcessing: false });
     }
@@ -226,8 +228,10 @@ class RootCause extends React.Component<IProps, IState> {
     } catch (error) {
       let message = I18n.get('error.delete.rootcause');
 
-      if (error.errors) {
-        const { errorType } = error.errors[0];
+      const castError = error as any;
+
+      if (castError.errors) {
+        const { errorType } = castError.errors[0];
 
         if (errorType === 'Unauthorized') {
           message = I18n.get('error.not.authorized');
@@ -236,7 +240,7 @@ class RootCause extends React.Component<IProps, IState> {
         }
       }
 
-      LOGGER.error('Error while deleting root cause', error);
+      LOGGER.error('Error while deleting root cause', castError);
       this.props.handleNotification(message, 'error', 5);
       this.setState({ isModalProcessing: false });
     }
@@ -293,22 +297,7 @@ class RootCause extends React.Component<IProps, IState> {
                   result: I18n.get('text.success')
                 });
               } catch (error) {
-                let message = I18n.get('text.failure');
-
-                if (error.errors) {
-                  const { errorType } = error.errors[0];
-
-                  if (errorType === 'Unauthorized') {
-                    message = I18n.get('error.not.authorized');
-                  } else if (errorType === 'DataDuplicatedError') {
-                    message = I18n.get('error.duplicate.rootcause');
-                  }
-                }
-
-                uploadResult.push({
-                  name: rootCause,
-                  result: message
-                });
+                errorMessage(error, uploadResult, rootCause);
               }
             } else {
               uploadResult.push({
@@ -655,3 +644,24 @@ class RootCause extends React.Component<IProps, IState> {
 }
 
 export default RootCause;
+
+function errorMessage(error: unknown, uploadResult: IUploadResult[], rootCause: string) {
+  let message = I18n.get('text.failure');
+
+  const castError = error as any;
+
+  if (castError.errors) {
+    const { errorType } = castError.errors[0];
+
+    if (errorType === 'Unauthorized') {
+      message = I18n.get('error.not.authorized');
+    } else if (errorType === 'DataDuplicatedError') {
+      message = I18n.get('error.duplicate.rootcause');
+    }
+  }
+
+  uploadResult.push({
+    name: rootCause,
+    result: message
+  });
+}

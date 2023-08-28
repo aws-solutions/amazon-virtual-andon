@@ -184,9 +184,9 @@ class Area extends React.Component<IProps, IState> {
       });
     } catch (error) {
       let message = I18n.get('error.delete.area');
-
-      if (error.errors) {
-        const { errorType } = error.errors[0];
+      const castError = error as any;
+      if (castError.errors) {
+        const { errorType } = castError.errors[0];
 
         if (errorType === 'Unauthorized') {
           message = I18n.get('error.not.authorized');
@@ -238,8 +238,10 @@ class Area extends React.Component<IProps, IState> {
     } catch (error) {
       let message = I18n.get('error.create.area');
 
-      if (error.errors) {
-        const { errorType } = error.errors[0];
+      const castError = error as any;
+
+      if (castError.errors) {
+        const { errorType } = castError.errors[0];
 
         if (errorType === 'Unauthorized') {
           message = I18n.get('error.not.authorized');
@@ -248,7 +250,7 @@ class Area extends React.Component<IProps, IState> {
         }
       }
 
-      LOGGER.error('Error while adding area', error);
+      LOGGER.error('Error while adding area', castError);
       this.props.handleNotification(message, 'error', 5);
       this.setState({ isModalProcessing: false });
     }

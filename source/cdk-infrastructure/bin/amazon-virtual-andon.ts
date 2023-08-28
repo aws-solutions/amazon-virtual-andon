@@ -1,10 +1,12 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import * as cdk from '@aws-cdk/core';
+import * as cdk from "aws-cdk-lib";
 import { AmazonVirtualAndonStack, AmazonVirtualAndonStackProps } from '../lib/amazon-virtual-andon-stack';
+import { AwsSolutionsChecks } from "cdk-nag";
 
 const app = new cdk.App();
+cdk.Aspects.of(app).add(new AwsSolutionsChecks());
 
 new AmazonVirtualAndonStack(app, 'AmazonVirtualAndonStack', getProps());    // NOSONAR: typescript:S1848
 
@@ -33,6 +35,7 @@ function getProps(): AmazonVirtualAndonStackProps {
     const solutionName = SOLUTION_NAME_PLACEHOLDER;
     const solutionAssetHostingBucketNamePrefix = SOLUTION_BUCKET_NAME_PLACEHOLDER;
     const description = `(${solutionId}) - ${solutionDisplayName}. Version ${solutionVersion}`;
+    const synthesizer = new cdk.DefaultStackSynthesizer({generateBootstrapVersionRule: false});
 
     return {
         description,
@@ -40,6 +43,7 @@ function getProps(): AmazonVirtualAndonStackProps {
         solutionName,
         solutionDisplayName,
         solutionVersion,
-        solutionAssetHostingBucketNamePrefix
+        solutionAssetHostingBucketNamePrefix,
+        synthesizer
     };
 }

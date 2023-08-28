@@ -1,3 +1,5 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
 declare module 'aws-amplify-react' {
     interface IAuthProps {
         authData?: any;

@@ -1,12 +1,14 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import { Construct, CustomResource, Duration, Stack, ArnFormat } from '@aws-cdk/core';
-import { Bucket, IBucket } from '@aws-cdk/aws-s3';
-import { Function as LambdaFunction, Runtime, Code } from '@aws-cdk/aws-lambda';
-import { Effect, PolicyStatement, Role, ServicePrincipal, PolicyDocument, Policy } from '@aws-cdk/aws-iam';
 import { addCfnSuppressRules, ISetupPutWebsiteConfigCustomResourceProps } from '../../../utils/utils';
 import { CustomResourceActions, ICopyWebsiteRequestProps, ICustomResourceRequestProps, IPutWebsiteConfigRequestProps, ISolutionLifecycleRequestProps } from '../../../../solution-helper/lib/utils';
+import { Construct } from 'constructs';
+import { Code, Function, Runtime } from 'aws-cdk-lib/aws-lambda';
+import { Bucket, IBucket } from 'aws-cdk-lib/aws-s3';
+import { Effect, Policy, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { ArnFormat, CustomResource, Duration, Stack } from 'aws-cdk-lib';
+import { NagSuppressions } from 'cdk-nag';
 
 export interface SolutionHelperProps {
     readonly sourceCodeBucketName: string;
@@ -23,7 +25,7 @@ export interface SolutionHelperProps {
  * A Custom Resource Lambda function is created along with various CloudFormation Custom Resources
  */
 export class SolutionHelper extends Construct {
-    public readonly solutionHelperLambda: LambdaFunction;
+    public readonly solutionHelperLambda: Function;
     private readonly sourceCodeBucket: IBucket;
     private readonly sourceCodeKeyPrefix: string;
     private readonly sendAnonymousData: string;
@@ -58,8 +60,19 @@ export class SolutionHelper extends Construct {
             }
         });
 
-        const generateSolutionConstantsLambda = new LambdaFunction(this, 'GenerateSolutionConstantsFunction', {
-            runtime: Runtime.NODEJS_14_X,
+        NagSuppressions.addResourceSuppressions(
+            generateSolutionConstantsRole,
+            [
+                {
+                    id: "AwsSolutions-IAM5",
+                    reason: "Needs to be able to describe any IoT endpoint and Cloudwatch logs policy needs access to all logs arns because it's creating log groups"
+                }
+            ],
+            true
+        );
+
+        const generateSolutionConstantsLambda = new Function(this, 'GenerateSolutionConstantsFunction', {
+            runtime: Runtime.NODEJS_18_X,
             handler: 'solution-helper/index.handler',
             timeout: Duration.seconds(60),
             description: `${props.solutionDisplayName} (${props.solutionVersion}): Generate Solution Constants`,
@@ -98,8 +111,19 @@ export class SolutionHelper extends Construct {
             }
         });
 
-        this.solutionHelperLambda = new LambdaFunction(this, 'SolutionHelperFunction', {
-            runtime: Runtime.NODEJS_14_X,
+        NagSuppressions.addResourceSuppressions(
+          solutionHelperLambdaRole,
+          [
+              {
+                  id: "AwsSolutions-IAM5",
+                  reason: "Cloudwatch logs policy needs access to all logs arns because it's creating log groups"
+              }
+          ],
+          true
+        );
+
+        this.solutionHelperLambda = new Function(this, 'SolutionHelperFunction', {
+            runtime: Runtime.NODEJS_18_X,
             handler: 'solution-helper/index.handler',
             timeout: Duration.seconds(60),
             description: `${props.solutionDisplayName} (${props.solutionVersion}): Solution Helper`,
@@ -191,6 +215,18 @@ export class SolutionHelper extends Construct {
                 ]
             })
         });
+
+
+        NagSuppressions.addResourceSuppressions(
+            iotPolicy,
+            [
+                {
+                    id: "AwsSolutions-IAM5",
+                    reason: "IoT policy has to be able to detach any principal policy to work"
+                }
+            ],
+            true
+        );
 
         addCfnSuppressRules(iotPolicy, [{ id: 'W12', reason: 'To connect IoT and attach IoT policy to Cognito identity cannot specify the specific resources.' }]);
 

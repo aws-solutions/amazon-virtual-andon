@@ -5,7 +5,7 @@
 import { I18n } from 'aws-amplify';
 import { Logger, ICredentials } from '@aws-amplify/core';
 import Auth from '@aws-amplify/auth';
-import AWS from 'aws-sdk';
+import AWS, { AWSError, Response } from 'aws-sdk';
 
 // Import custom setting including customized Amplify, footer, and util
 import { LOGGING_LEVEL, CustomError, validateEmailAddress } from './CustomUtil';
@@ -21,7 +21,7 @@ const UNAUTHORIZED_ERROR = {
 };
 
 // Declare Amazon Virtual Andon console configuration
-declare var andon_config: any;
+declare let andon_config: any;
 
 /**
  * Amazon Cognito controller class.
@@ -370,7 +370,7 @@ class CognitoController {
    */
   private async setUserGroups(username: string, groups: string[]) {
     try {
-      const promises = [];
+      const promises: Promise<{ $response: Response<{}, AWSError>; }>[] = [];
 
       for (let group of groups) {
         const params = {
@@ -401,7 +401,7 @@ class CognitoController {
   private async removeUserGroups(username: string, groups: string[]) {
     if (groups.length > 0) {
       try {
-        const promises = [];
+        const promises: Promise<{ $response: Response<{}, AWSError>; }>[] = [];
 
         for (let group of groups) {
           const params = {
