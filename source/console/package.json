@@ -6,7 +6,7 @@
     "url": "https://aws.amazon.com/solutions"
   },
   "description": "Amazon Virtual Andon",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "private": true,
   "dependencies": {
     "@aws-amplify/pubsub": "^4.1.10",
@@ -36,8 +36,13 @@
     "uuid": "~8.3.2"
   },
   "devDependencies": {
+    "@types/react": "^17.0.65",
     "@types/react-router-dom": "^5.3.3",
     "react-scripts": "^5.0.1"
+  },
+  "overrides": {
+    "fast-xml-parser": "4.3.2",
+    "nth-check": "2.1.1"
   },
   "scripts": {
     "start": "react-scripts start",

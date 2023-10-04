@@ -1,10 +1,11 @@
 {
   "name": "amazon-virtual-andon",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "author": {
     "name": "Amazon Web Services",
     "url": "https://aws.amazon.com/solutions"
   },
+  "description": "CDK Infrastructure that will be used by this solution",
   "license": "Apache-2.0",
   "bin": {
     "amazon-virtual-andon": "bin/amazon-virtual-andon.js"
@@ -20,14 +21,14 @@
     "cdk": "cdk"
   },
   "devDependencies": {
-    "@aws-cdk/aws-glue-alpha": "^2.88.0-alpha.0",
-    "@aws-cdk/aws-servicecatalogappregistry-alpha": "^2.88.0-alpha.0",
-    "@aws-solutions-constructs/aws-cloudfront-s3": "2.41.0",
-    "@aws-solutions-constructs/aws-iot-lambda": "2.41.0",
+    "@aws-cdk/aws-glue-alpha": "^2.99.1-alpha.0",
+    "@aws-cdk/aws-servicecatalogappregistry-alpha": "^2.99.1-alpha.0",
+    "@aws-solutions-constructs/aws-cloudfront-s3": "2.44.0",
+    "@aws-solutions-constructs/aws-iot-lambda": "2.44.0",
     "@types/jest": "^29.5.0",
     "@types/node": "^18.15.11",
-    "aws-cdk": "2.88.0",
-    "aws-cdk-lib": "2.88.0",
+    "aws-cdk": "2.99.1",
+    "aws-cdk-lib": "2.99.1",
     "constructs": "^10.1.283",
     "jest": "^29.5.0",
     "ts-jest": "^29.1.0",
