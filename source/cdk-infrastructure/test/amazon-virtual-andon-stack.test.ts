@@ -19,7 +19,7 @@ describe('CDK Infra Tests', () => {
       solutionDisplayName: 'AVA Test',
       solutionId: 'SOxyz',
       solutionName: 'ava-test',
-      solutionVersion: 'v3.0.2',
+      solutionVersion: 'v3.0.3',
     });
   });
 
