@@ -46,6 +46,19 @@ aws s3 cp ./regional-s3-assets/ s3://$DIST_OUTPUT_BUCKET-$REGION/$SOLUTION_NAME/
 * Get the link of the amazon-virtual-andon.template uploaded to your Amazon S3 bucket.
 * Deploy the Amazon Virtual Andon solution to your account by launching a new AWS CloudFormation stack using the link of the amazon-virtual-andon.template.
 
+## Deploying using cloudformation command
+
+```bash
+aws cloudformation create-stack \
+   --profile ${AWS_PROFILE:-default} \
+   --region ${REGION} \
+   --template-url https://${DIST_BUCKET_PREFIX}-${REGION}.s3.amazonaws.com/${SOLUTION_NAME}/${VERSION}/amazon-virtual-andon.template \
+   --stack-name AmazonVirtualAndon \
+   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+   --parameters \
+        ParameterKey=AdministratorEmail,ParameterValue=(email)
+```
+
 ## Collection of operational metrics
 This solution collects anonymous operational metrics to help AWS improve the
 quality of features of the solution. For more information, including how to disable
@@ -66,16 +79,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
-## Deploying using cloudformation command
-
-```bash
-aws cloudformation create-stack \
-   --profile ${AWS_PROFILE:-default} \
-   --region ${REGION} \
-   --template-url https://${DIST_BUCKET_PREFIX}-${REGION}.s3.amazonaws.com/${SOLUTION_NAME}/${VERSION}/amazon-virtual-andon.template \
-   --stack-name AmazonVirtualAndon \
-   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
-   --parameters \
-        ParameterKey=AdministratorEmail,ParameterValue=(email)
-```
