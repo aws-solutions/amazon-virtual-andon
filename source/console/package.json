@@ -6,7 +6,7 @@
     "url": "https://aws.amazon.com/solutions"
   },
   "description": "Amazon Virtual Andon",
-  "version": "3.0.4",
+  "version": "3.0.6",
   "private": true,
   "dependencies": {
     "@aws-amplify/pubsub": "^4.1.10",
